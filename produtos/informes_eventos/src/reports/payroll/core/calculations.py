@@ -2,12 +2,43 @@
 Calculations and transformations for payroll data.
 
 This module provides functions for calculating moving averages,
-formatting release summaries, and other data transformations.
+formatting release summaries, pt-BR date formatting, and summary text generation.
 """
 
 from typing import Any
 
 import pandas as pd
+
+# Mapeamento de meses em pt-BR (sem depender de locale)
+MESES_PTBR: dict[int, str] = {
+    1: "jan",
+    2: "fev",
+    3: "mar",
+    4: "abr",
+    5: "mai",
+    6: "jun",
+    7: "jul",
+    8: "ago",
+    9: "set",
+    10: "out",
+    11: "nov",
+    12: "dez",
+}
+
+MESES_PTBR_FULL: dict[int, str] = {
+    1: "janeiro",
+    2: "fevereiro",
+    3: "marco",
+    4: "abril",
+    5: "maio",
+    6: "junho",
+    7: "julho",
+    8: "agosto",
+    9: "setembro",
+    10: "outubro",
+    11: "novembro",
+    12: "dezembro",
+}
 
 
 def calculate_moving_averages(
@@ -281,3 +312,110 @@ def get_trend_assessment(df: pd.DataFrame, column: str = "NFP") -> str:
         return "Desacelerando"
     else:
         return "Estavel"
+
+
+def format_date_ptbr(date: Any, fmt: str = "%b-%y") -> str:
+    """Format a date using pt-BR month abbreviations.
+
+    Supports format tokens: %b (abrev.), %B (full), %y (2-digit year), %Y (4-digit year),
+    %m (zero-padded month), %d (zero-padded day).
+
+    Args:
+        date: Date-like object (datetime, Timestamp, string).
+        fmt: Format string using %-style tokens.
+
+    Returns:
+        Formatted date string in pt-BR.
+    """
+    if isinstance(date, str):
+        date = pd.to_datetime(date)
+
+    result = fmt
+    result = result.replace("%B", MESES_PTBR_FULL.get(date.month, ""))
+    result = result.replace("%b", MESES_PTBR.get(date.month, ""))
+    result = result.replace("%Y", str(date.year))
+    result = result.replace("%y", f"{date.year % 100:02d}")
+    result = result.replace("%m", f"{date.month:02d}")
+    result = result.replace("%d", f"{date.day:02d}")
+    return result
+
+
+def generate_summary_text(
+    release_data: dict[str, dict[str, Any]],
+    industry_data: pd.DataFrame | None = None,
+) -> str:
+    """Generate a narrative summary paragraph in pt-BR for the Word report.
+
+    Args:
+        release_data: Dictionary from get_latest_release().
+        industry_data: Optional industry breakdown DataFrame.
+
+    Returns:
+        Summary text paragraph in Portuguese.
+    """
+    nfp = release_data.get("NFP", {})
+    unemp = release_data.get("Unemployment", {})
+    ahe_mom = release_data.get("AHE_MoM", {})
+    ahe_yoy = release_data.get("AHE_YoY", {})
+
+    nfp_actual = nfp.get("actual")
+    nfp_survey = nfp.get("survey")
+    nfp_prior = nfp.get("prior")
+    unemp_actual = unemp.get("actual")
+    ahe_mom_actual = ahe_mom.get("actual")
+    ahe_yoy_actual = ahe_yoy.get("actual")
+    period = nfp.get("period", "")
+
+    # Determine month name
+    month_name = period
+    if isinstance(period, str) and "-" in period:
+        try:
+            dt = pd.to_datetime(period)
+            month_name = format_date_ptbr(dt, "%B/%Y")
+        except Exception:
+            pass
+
+    parts = []
+
+    # NFP headline
+    if nfp_actual is not None:
+        direction = "acima" if (nfp_survey and nfp_actual > nfp_survey) else "abaixo"
+        if nfp_survey and abs(nfp_actual - nfp_survey) < 10:
+            direction = "em linha com"
+        parts.append(
+            f"A economia americana criou {nfp_actual:.0f} mil empregos em {month_name}, "
+            f"{direction} da expectativa de {nfp_survey:.0f} mil"
+            if nfp_survey
+            else f"A economia americana criou {nfp_actual:.0f} mil empregos em {month_name}"
+        )
+        if nfp_prior is not None:
+            parts[-1] += f" (anterior: {nfp_prior:.0f} mil)."
+        else:
+            parts[-1] += "."
+
+    # Unemployment
+    if unemp_actual is not None:
+        parts.append(f"A taxa de desemprego ficou em {unemp_actual:.1f}%.")
+
+    # Wages
+    if ahe_mom_actual is not None and ahe_yoy_actual is not None:
+        parts.append(
+            f"Os salarios por hora avancaram {ahe_mom_actual:.1f}% no mes "
+            f"e {ahe_yoy_actual:.1f}% na comparacao anual."
+        )
+
+    # Top industries
+    if industry_data is not None and len(industry_data) > 0:
+        top = industry_data[
+            ~industry_data["industry"].str.contains(
+                "Total|private|Goods|service", case=False
+            )
+        ].nlargest(3, "current_month")
+        if len(top) > 0:
+            sectors = ", ".join(
+                f"{row['industry']} ({row['current_month']:+.0f}k)"
+                for _, row in top.iterrows()
+            )
+            parts.append(f"Os setores que mais contribuiram foram: {sectors}.")
+
+    return " ".join(parts)

@@ -16,6 +16,7 @@ WORD_DPI: int = 150  # Good balance of quality vs file size
 WORD_FIGSIZE: tuple[float, float] = (7.0, 4.0)  # Standard chart
 WORD_FIGSIZE_TALL: tuple[float, float] = (7.0, 8.0)  # Tall charts
 WORD_FIGSIZE_DASHBOARD: tuple[float, float] = (7.0, 5.0)  # 2x2 dashboard
+WORD_FIGSIZE_WIDE: tuple[float, float] = (7.0, 3.5)  # Half-page charts
 
 # === Word Table Styling Colors ===
 HEADER_COLOR: str = "#2E4C59"  # COPOM[0] - dark teal
@@ -262,3 +263,107 @@ def apply_word_chart_style(ax: plt.Axes) -> None:
     # Set tick positions
     ax.xaxis.set_ticks_position("bottom")
     ax.yaxis.set_ticks_position("left")
+
+
+def create_unemployment_u6_chart(
+    data: pd.DataFrame,
+    u6_data: pd.DataFrame,
+    output_path: Path,
+    plot_start_date: str | None = None,
+) -> None:
+    """Create U3 + U6 unemployment chart on the same axis.
+
+    Args:
+        data: Main payroll DataFrame with 'Unemployment' column.
+        u6_data: Extended DataFrame with 'U6' column.
+        output_path: Path to save the chart.
+        plot_start_date: Optional start date to filter the chart.
+    """
+    from classes.config import COPOM, clean_axes
+
+    merged = data[["Unemployment"]].join(u6_data[["U6"]], how="inner")
+    if plot_start_date:
+        merged = merged[merged.index >= pd.to_datetime(plot_start_date)]
+
+    if merged.empty:
+        return
+
+    fig, ax = plt.subplots(figsize=WORD_FIGSIZE_WIDE, dpi=WORD_DPI)
+
+    ax.plot(merged.index, merged["Unemployment"], color=COPOM[0], linewidth=2, label="U3 - Taxa de Desemprego")
+    ax.plot(merged.index, merged["U6"], color=COPOM[5], linewidth=2, linestyle="--", label="U6 - Desemprego Ampliado")
+    ax.fill_between(merged.index, merged["Unemployment"], merged["U6"], alpha=0.1, color=COPOM[9])
+
+    ax.set_title("Desemprego U3 vs U6 (%)", fontsize=WORD_TITLE_SIZE, fontweight="bold")
+    ax.set_ylabel("%", fontsize=WORD_LABEL_SIZE)
+    ax.tick_params(axis="both", labelsize=WORD_TICK_SIZE)
+    ax.legend(loc="upper right", fontsize=WORD_LEGEND_SIZE)
+    clean_axes(ax)
+
+    plt.tight_layout()
+    save_chart_for_word(fig, output_path)
+    plt.close(fig)
+
+
+def create_beveridge_curve(
+    unemployment: pd.Series,
+    jolts: pd.Series,
+    output_path: Path,
+    plot_start_date: str | None = None,
+) -> None:
+    """Create Beveridge curve (JOLTS Job Openings vs Unemployment Rate).
+
+    Args:
+        unemployment: Series with unemployment rate.
+        jolts: Series with JOLTS job openings (thousands).
+        output_path: Path to save the chart.
+        plot_start_date: Optional start date to filter.
+    """
+    from classes.config import COPOM, clean_axes
+
+    merged = pd.DataFrame({"Unemployment": unemployment, "JOLTS": jolts}).dropna()
+    if plot_start_date:
+        merged = merged[merged.index >= pd.to_datetime(plot_start_date)]
+
+    if merged.empty:
+        return
+
+    fig, ax = plt.subplots(figsize=WORD_FIGSIZE_WIDE, dpi=WORD_DPI)
+
+    n = len(merged)
+
+    ax.scatter(
+        merged["Unemployment"],
+        merged["JOLTS"],
+        c=range(n),
+        cmap="viridis",
+        s=30,
+        alpha=0.7,
+        zorder=3,
+    )
+
+    # Connect with line
+    ax.plot(merged["Unemployment"], merged["JOLTS"], color=COPOM[9], linewidth=0.5, alpha=0.5, zorder=2)
+
+    # Mark latest point
+    ax.scatter(
+        merged["Unemployment"].iloc[-1],
+        merged["JOLTS"].iloc[-1],
+        color=COPOM[5],
+        s=100,
+        zorder=4,
+        edgecolors="black",
+        linewidth=1.5,
+        label="Ultimo",
+    )
+
+    ax.set_title("Curva de Beveridge", fontsize=WORD_TITLE_SIZE, fontweight="bold")
+    ax.set_xlabel("Taxa de Desemprego (%)", fontsize=WORD_LABEL_SIZE)
+    ax.set_ylabel("JOLTS Job Openings (mil)", fontsize=WORD_LABEL_SIZE)
+    ax.tick_params(axis="both", labelsize=WORD_TICK_SIZE)
+    ax.legend(loc="upper right", fontsize=WORD_LEGEND_SIZE)
+    clean_axes(ax)
+
+    plt.tight_layout()
+    save_chart_for_word(fig, output_path)
+    plt.close(fig)
