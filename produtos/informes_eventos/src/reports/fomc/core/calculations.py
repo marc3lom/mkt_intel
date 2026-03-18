@@ -31,6 +31,107 @@ INDICATOR_SHORT_LABELS: dict[str, str] = {
     "Federal funds rate": "Fed Funds",
 }
 
+# Direção hawkish por indicador
+# True = valor maior é hawkish; False = valor menor é hawkish
+HAWKISH_WHEN_UP: dict[str, bool] = {
+    "Change in real GDP": True,        # PIB maior → mais hawkish (economia forte)
+    "Unemployment rate": False,        # Desemprego maior → dovish
+    "PCE inflation": True,             # Inflação maior → hawkish
+    "Core PCE inflation": True,        # Core PCE maior → hawkish
+    "Federal funds rate": True,        # Taxa maior → hawkish
+}
+
+# Meses das reuniões SEP
+SEP_MONTHS = [3, 6, 9, 12]
+
+# Meses em português (abreviado, para labels)
+MESES_PTBR_SHORT: dict[int, str] = {
+    1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr",
+    5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago",
+    9: "Set", 10: "Out", 11: "Nov", 12: "Dez",
+}
+
+MESES_EN_FULL: dict[int, str] = {
+    1: "January", 2: "February", 3: "March", 4: "April",
+    5: "May", 6: "June", 7: "July", 8: "August",
+    9: "September", 10: "October", 11: "November", 12: "December",
+}
+
+
+def _get_year_columns(df: pd.DataFrame) -> list[str]:
+    """Extrai colunas de anos do DataFrame (dinâmico, sem hardcode)."""
+    return [c for c in df.columns if str(c).isdigit()]
+
+
+def classify_change_direction(variable: str, change: float) -> str:
+    """Classifica a direção de uma mudança como hawkish/dovish/neutral.
+
+    Args:
+        variable: Nome do indicador econômico.
+        change: Diferença (current - prior).
+
+    Returns:
+        "hawkish", "dovish" ou "neutral".
+    """
+    if abs(change) < 0.001:
+        return "neutral"
+
+    is_up = change > 0
+    hawkish_when_up = HAWKISH_WHEN_UP.get(variable, True)
+
+    if hawkish_when_up:
+        return "hawkish" if is_up else "dovish"
+    else:
+        return "dovish" if is_up else "hawkish"
+
+
+def get_prior_sep_meeting_date(current_date: str) -> str | None:
+    """Retorna a data da reunião SEP anterior à data fornecida.
+
+    Args:
+        current_date: Data no formato YYYYMMDD.
+
+    Returns:
+        Data da reunião SEP anterior (YYYYMMDD) ou None.
+    """
+    from .data_loader import get_fomc_dates
+
+    dt = pd.to_datetime(current_date, format="%Y%m%d")
+    current_month = dt.month
+
+    # Encontrar o mês SEP anterior
+    prior_sep_months = [m for m in SEP_MONTHS if m < current_month]
+    if prior_sep_months:
+        target_month = prior_sep_months[-1]
+        target_year = dt.year
+    else:
+        # Último SEP do ano anterior (dezembro)
+        target_month = SEP_MONTHS[-1]
+        target_year = dt.year - 1
+
+    # Buscar nas datas disponíveis
+    fomc_dates = get_fomc_dates()
+    for date_str in fomc_dates:
+        d = pd.to_datetime(date_str, format="%Y%m%d")
+        if d.year == target_year and d.month == target_month:
+            return date_str
+
+    return None
+
+
+def get_prior_meeting_label(prior_date: str) -> str:
+    """Gera label para a reunião anterior (ex: 'September projection').
+
+    Args:
+        prior_date: Data da reunião anterior (YYYYMMDD).
+
+    Returns:
+        Label em inglês (ex: "September projection").
+    """
+    dt = pd.to_datetime(prior_date, format="%Y%m%d")
+    month_name = MESES_EN_FULL.get(dt.month, "")
+    return f"{month_name} projection"
+
 
 def process_dot_plot(
     projection_data: dict[str, pd.DataFrame],
@@ -63,9 +164,9 @@ def process_dot_plot(
         logger.warning("No federal funds rate in projections")
         return pd.DataFrame()
 
-    # Create dot plot data from medians
+    # Create dot plot data from medians — dynamic year columns
     records = []
-    years = ["2025", "2026", "2027", "2028"]
+    years = _get_year_columns(medians_df)
 
     for year in years:
         if year in ff_row.columns:
@@ -106,10 +207,17 @@ def calculate_projection_changes(
         suffixes=("_current", "_prior"),
     )
 
+    # Detectar anos dinamicamente
+    year_cols = [
+        c.replace("_current", "")
+        for c in merged.columns
+        if c.endswith("_current") and c.replace("_current", "").isdigit()
+    ]
+
     result_records = []
     for _, row in merged.iterrows():
         var = row["Variable"]
-        for year in ["2025", "2026", "2027", "2028"]:
+        for year in year_cols:
             current_col = f"{year}_current"
             prior_col = f"{year}_prior"
 
@@ -119,6 +227,7 @@ def calculate_projection_changes(
 
                 if pd.notna(current_val) and pd.notna(prior_val):
                     change = current_val - prior_val
+                    direction = classify_change_direction(var, change)
                     result_records.append(
                         {
                             "Variable": var,
@@ -126,6 +235,7 @@ def calculate_projection_changes(
                             "Current": current_val,
                             "Prior": prior_val,
                             "Change": change,
+                            "Direction": direction,
                         }
                     )
 
@@ -158,9 +268,8 @@ def format_projection_table(
         lambda x: INDICATOR_LABELS.get(x, x)
     )
 
-    # Reorder columns
-    year_cols = ["2025", "2026", "2027", "2028"]
-    available_years = [c for c in year_cols if c in formatted.columns]
+    # Reorder columns — dynamic years
+    available_years = _get_year_columns(formatted)
 
     result = formatted[["Indicador"] + available_years].copy()
 
@@ -204,7 +313,7 @@ def calculate_rate_path(
     records = []
     prev_rate = current_rate
 
-    for year in ["2025", "2026", "2027", "2028"]:
+    for year in _get_year_columns(medians_df):
         if year in ff_row.columns:
             rate = ff_row[year].values[0]
             if pd.notna(rate):
@@ -357,14 +466,13 @@ def get_meeting_summary(
     # Projections summary
     if projection_data and "medians" in projection_data:
         medians = projection_data["medians"]
+        years = _get_year_columns(medians)
         for _, row in medians.iterrows():
             var = row["Variable"]
             short_label = INDICATOR_SHORT_LABELS.get(var, var)
-            if "2025" in row:
+            if years:
                 summary["projecoes_resumo"][short_label] = {
-                    "2025": row.get("2025"),
-                    "2026": row.get("2026"),
-                    "2027": row.get("2027"),
+                    y: row.get(y) for y in years[:3]
                 }
 
     return summary

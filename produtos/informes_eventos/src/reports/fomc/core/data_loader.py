@@ -15,6 +15,9 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+# Meses das reuniões com SEP (Summary of Economic Projections)
+SEP_MONTHS = {3, 6, 9, 12}
+
 # Bloomberg tickers for FOMC-related market data
 FOMC_TICKERS: dict[str, str] = {
     "UST_2Y": "USGG2YR Index",
@@ -22,6 +25,21 @@ FOMC_TICKERS: dict[str, str] = {
     "SPX": "SPX Index",
     "DXY": "DXY Curncy",
     "FED_FUNDS": "FDTR Index",
+}
+
+# Bloomberg tickers para DOTS medians por horizonte
+DOTS_TICKERS: dict[str, str] = {
+    "Dots Median Ano Corrente": "DOTDY0MD Index",
+    "Dots Median Ano+1": "DOTDY1MD Index",
+    "Dots Median Ano+2": "DOTDY2MD Index",
+    "Dots Median Longer Run": "DOTDLTMD Index",
+}
+
+# Mapeamento de meses em português (abreviado)
+_MONTH_NAMES_PTBR: dict[int, str] = {
+    1: "jan", 2: "fev", 3: "mar", 4: "abr",
+    5: "mai", 6: "jun", 7: "jul", 8: "ago",
+    9: "set", 10: "out", 11: "nov", 12: "dez",
 }
 
 # Document type patterns
@@ -231,6 +249,75 @@ def load_sep_data(sheet_name: str | None = None) -> pd.DataFrame:
         raise RuntimeError(f"Failed to load SEP data: {e}")
 
 
+def is_sep_meeting(date: str) -> bool:
+    """Verifica se a data corresponde a uma reunião com SEP.
+
+    Reuniões SEP ocorrem em março, junho, setembro e dezembro.
+
+    Args:
+        date: Data no formato YYYYMMDD.
+
+    Returns:
+        True se é reunião com SEP.
+    """
+    meeting_dt = dt.datetime.strptime(date, "%Y%m%d")
+    return meeting_dt.month in SEP_MONTHS
+
+
+def get_prior_sep_projections(
+    current_date: str,
+) -> pd.DataFrame | None:
+    """Carrega projeções da reunião SEP anterior.
+
+    Tenta carregar do SEP.xlsx primeiro, depois fallback para PDF.
+
+    Args:
+        current_date: Data da reunião atual (YYYYMMDD).
+
+    Returns:
+        DataFrame com projeções da reunião anterior, ou None.
+    """
+    from .calculations import get_prior_sep_meeting_date
+
+    prior_date = get_prior_sep_meeting_date(current_date)
+    if prior_date is None:
+        logger.warning("Não foi possível determinar a reunião SEP anterior")
+        return None
+
+    # Tentar carregar do SEP.xlsx
+    try:
+        # Mapear mês para nome de sheet (formato: "set 25", "dez 25")
+        prior_dt = dt.datetime.strptime(prior_date, "%Y%m%d")
+        month_names = {
+            1: "jan", 2: "fev", 3: "mar", 4: "abr",
+            5: "mai", 6: "jun", 7: "jul", 8: "ago",
+            9: "set", 10: "out", 11: "nov", 12: "dez",
+        }
+        sheet = f"{month_names[prior_dt.month]} {prior_dt.year % 100:02d}"
+        data = load_sep_data(sheet_name=sheet)
+        if not data.empty:
+            logger.info(f"Projeções anteriores carregadas do SEP.xlsx (sheet: {sheet})")
+            return data
+    except (RuntimeError, KeyError):
+        logger.info("SEP.xlsx não possui sheet para reunião anterior, tentando PDF")
+
+    # Fallback: parse do PDF da reunião anterior
+    try:
+        from .pdf_parser import parse_projection_table
+
+        documents = get_meeting_documents(prior_date)
+        if documents.get("projections"):
+            proj_data = parse_projection_table(documents["projections"])
+            medians = proj_data.get("medians")
+            if medians is not None and not medians.empty:
+                logger.info(f"Projeções anteriores carregadas do PDF ({prior_date})")
+                return medians
+    except RuntimeError:
+        logger.warning(f"Não foi possível carregar projeções da reunião {prior_date}")
+
+    return None
+
+
 def load_market_reaction_data(sheet_name: str = "Market Reaction") -> pd.DataFrame:
     """Load market reaction data from Excel file.
 
@@ -257,3 +344,232 @@ def load_market_reaction_data(sheet_name: str = "Market Reaction") -> pd.DataFra
 
     except Exception as e:
         raise RuntimeError(f"Failed to load market reaction data: {e}")
+
+
+def load_dots_history(
+    start_date: str = "2012-01-01",
+    end_date: str | None = None,
+) -> pd.DataFrame:
+    """Baixa série histórica dos DOTS medians via Bloomberg.
+
+    Cada ponto na série corresponde ao valor publicado em cada reunião SEP.
+
+    Args:
+        start_date: Data de início (YYYY-MM-DD).
+        end_date: Data de fim. Se None, usa hoje.
+
+    Returns:
+        DataFrame indexado por data, uma coluna por horizonte.
+
+    Raises:
+        RuntimeError: Se Bloomberg não estiver disponível.
+    """
+    blp = _get_bloomberg_client()
+
+    tickers = list(DOTS_TICKERS.values())
+    names = list(DOTS_TICKERS.keys())
+
+    if end_date is None:
+        end_date = dt.date.today().strftime("%Y-%m-%d")
+
+    logger.info(f"Fetching DOTS history from {start_date} to {end_date}")
+
+    try:
+        data = blp.bdh(
+            tickers=tickers,
+            flds="PX_LAST",
+            start_date=start_date,
+            end_date=end_date,
+        )
+    except Exception as e:
+        raise RuntimeError(f"Failed to fetch DOTS history from Bloomberg: {e}")
+
+    if data is None or data.empty:
+        raise RuntimeError("No DOTS history returned from Bloomberg")
+
+    # Flatten MultiIndex columns (ticker, field) → friendly names
+    if isinstance(data.columns, pd.MultiIndex):
+        ticker_to_name = dict(zip(tickers, names))
+        data.columns = [ticker_to_name.get(col[0], col[0]) for col in data.columns]
+    else:
+        data.columns = names[:len(data.columns)]
+
+    # Drop rows where all values are NaN (non-SEP dates)
+    data = data.dropna(how="all")
+
+    logger.info(f"DOTS history: {len(data)} observations loaded")
+    return data
+
+
+def load_dots_snapshot(
+    grid_path: str | Path | None = None,
+) -> dict[str, float]:
+    """Lê último valor dos DOTS do grid1.xlsx como fallback.
+
+    Args:
+        grid_path: Caminho para grid1.xlsx. Se None, busca em input/.
+
+    Returns:
+        Dict ticker → último valor (ex: {"DOTDY0MD Index": 3.375}).
+    """
+    if grid_path is None:
+        # Tentar caminho padrão do projeto
+        grid_path = Path(__file__).parents[4] / "input" / "grid1.xlsx"
+
+    grid_path = Path(grid_path)
+    if not grid_path.exists():
+        raise RuntimeError(f"Grid file not found: {grid_path}")
+
+    logger.info(f"Loading DOTS snapshot from: {grid_path}")
+
+    df = pd.read_excel(grid_path)
+
+    # Buscar colunas de ticker e valor
+    # O grid1.xlsx tipicamente tem colunas: Ticker, Last, ...
+    # Procurar por nomes comuns
+    ticker_col = None
+    value_col = None
+
+    for col in df.columns:
+        col_lower = str(col).lower()
+        if "ticker" in col_lower:
+            ticker_col = col
+        elif col_lower in ("last", "px_last", "value", "valor"):
+            value_col = col
+
+    if ticker_col is None or value_col is None:
+        # Fallback: assume primeira coluna = ticker, segunda = valor
+        ticker_col = df.columns[0]
+        value_col = df.columns[1]
+
+    # Filtrar apenas tickers de DOTS
+    dots_tickers_set = set(DOTS_TICKERS.values())
+    result = {}
+    for _, row in df.iterrows():
+        ticker = str(row[ticker_col]).strip()
+        if ticker in dots_tickers_set:
+            try:
+                result[ticker] = float(row[value_col])
+            except (ValueError, TypeError):
+                continue
+
+    if result:
+        logger.info(f"DOTS snapshot: {len(result)} tickers loaded")
+    else:
+        logger.warning("No DOTS tickers found in grid file")
+
+    return result
+
+
+def save_sep_to_excel(
+    meeting_date: str,
+    medians: pd.DataFrame,
+    prior_medians: pd.DataFrame | None = None,
+    prior_label: str = "Prior projection",
+    ct: pd.DataFrame | None = None,
+    ranges: pd.DataFrame | None = None,
+) -> Path:
+    """Salva dados do SEP no arquivo SEP.xlsx, adicionando nova sheet.
+
+    A sheet é nomeada com o mês/ano da reunião (ex: "mar 26").
+    Se a sheet já existe, ela é sobrescrita.
+
+    Args:
+        meeting_date: Data da reunião (YYYYMMDD).
+        medians: DataFrame com medianas atuais.
+        prior_medians: DataFrame com medianas anteriores (opcional).
+        prior_label: Label da reunião anterior.
+        ct: DataFrame com central tendency (opcional).
+        ranges: DataFrame com ranges (opcional).
+
+    Returns:
+        Path do arquivo SEP.xlsx.
+    """
+    import openpyxl
+
+    sep_path = _get_module_path() / "input" / "email_info" / "SEP.xlsx"
+
+    # Calcular nome da sheet: "mar 26"
+    meeting_dt = dt.datetime.strptime(meeting_date, "%Y%m%d")
+    sheet_name = f"{_MONTH_NAMES_PTBR[meeting_dt.month]} {meeting_dt.year % 100:02d}"
+
+    logger.info(f"Saving SEP data to sheet: {sheet_name}")
+
+    # Abrir ou criar workbook
+    if sep_path.exists():
+        wb = openpyxl.load_workbook(str(sep_path))
+    else:
+        sep_path.parent.mkdir(parents=True, exist_ok=True)
+        wb = openpyxl.Workbook()
+        # Remover sheet padrão "Sheet"
+        if "Sheet" in wb.sheetnames:
+            del wb["Sheet"]
+
+    # Remover sheet existente se houver
+    if sheet_name in wb.sheetnames:
+        del wb[sheet_name]
+
+    ws = wb.create_sheet(sheet_name, 0)  # Inserir no início
+
+    # --- Layout da sheet ---
+    year_cols = [c for c in medians.columns if c != "Variable"]
+
+    # Header: Medianas
+    ws.cell(row=1, column=1, value="Variable")
+    ws.cell(row=1, column=2, value="Mediana (Current)")
+    for j, year in enumerate(year_cols):
+        ws.cell(row=2, column=2 + j, value=str(year))
+
+    # Medianas atuais
+    row = 3
+    for _, var_row in medians.iterrows():
+        ws.cell(row=row, column=1, value=var_row["Variable"])
+        for j, year in enumerate(year_cols):
+            val = var_row.get(year)
+            if pd.notna(val):
+                ws.cell(row=row, column=2 + j, value=val)
+        row += 1
+
+    # Medianas anteriores
+    if prior_medians is not None and not prior_medians.empty:
+        row += 1
+        ws.cell(row=row, column=1, value=f"Mediana ({prior_label})")
+        row += 1
+        for _, var_row in prior_medians.iterrows():
+            ws.cell(row=row, column=1, value=var_row["Variable"])
+            for j, year in enumerate(year_cols):
+                val = var_row.get(year)
+                if pd.notna(val):
+                    ws.cell(row=row, column=2 + j, value=val)
+            row += 1
+
+    # Central Tendency
+    if ct is not None and not ct.empty:
+        row += 1
+        ws.cell(row=row, column=1, value="Central Tendency (Current)")
+        row += 1
+        for _, var_row in ct.iterrows():
+            ws.cell(row=row, column=1, value=var_row["Variable"])
+            for j, year in enumerate(year_cols):
+                val = var_row.get(year)
+                if val is not None and str(val) != "nan":
+                    ws.cell(row=row, column=2 + j, value=str(val))
+            row += 1
+
+    # Ranges
+    if ranges is not None and not ranges.empty:
+        row += 1
+        ws.cell(row=row, column=1, value="Range (Current)")
+        row += 1
+        for _, var_row in ranges.iterrows():
+            ws.cell(row=row, column=1, value=var_row["Variable"])
+            for j, year in enumerate(year_cols):
+                val = var_row.get(year)
+                if val is not None and str(val) != "nan":
+                    ws.cell(row=row, column=2 + j, value=str(val))
+            row += 1
+
+    wb.save(str(sep_path))
+    logger.info(f"SEP data saved to: {sep_path} (sheet: {sheet_name})")
+
+    return sep_path
