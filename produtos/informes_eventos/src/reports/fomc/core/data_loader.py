@@ -169,36 +169,41 @@ def fetch_market_reaction(
         dt.datetime.strptime(end_time, "%H:%M").time(),
     )
 
-    tickers = list(FOMC_TICKERS.values())
-
     logger.info(f"Fetching intraday data for {date} from {start_time} to {end_time}")
 
-    try:
-        data = blp.bdib(
-            ticker=tickers,
-            dt=meeting_date.date(),
-            session="allday",
-        )
-    except Exception as e:
-        raise RuntimeError(f"Failed to fetch intraday data: {e}")
+    from classes.functions.bloomberg import _run_async
 
-    if data is None or data.empty:
+    # xbbg 1.0: bdib() aceita apenas 1 ticker por vez
+    frames = {}
+    for name, ticker in FOMC_TICKERS.items():
+        try:
+            df = _run_async(
+                blp.abdib(
+                    ticker=ticker,
+                    dt=meeting_date.date(),
+                    session="allday",
+                    backend="pandas",
+                )
+            )
+            if df is not None and not df.empty:
+                # xbbg 1.0 retorna OHLCV — usar close
+                if "close" in df.columns:
+                    frames[name] = df["close"]
+                elif len(df.columns) == 1:
+                    frames[name] = df.iloc[:, 0]
+                else:
+                    frames[name] = df.iloc[:, 3]  # close = 4th col (OHLCV)
+        except Exception as e:
+            logger.warning(f"Failed to fetch intraday data for {ticker}: {e}")
+
+    if not frames:
         raise RuntimeError("No intraday data returned from Bloomberg")
 
-    # Rename columns from tickers to friendly names
-    ticker_to_name = {v: k for k, v in FOMC_TICKERS.items()}
+    data = pd.DataFrame(frames)
 
-    # Filter to time range and rename
+    # Filter to time range
     if isinstance(data.index, pd.DatetimeIndex):
         data = data[(data.index >= start_dt) & (data.index <= end_dt)]
-
-    # Flatten multi-index columns if needed
-    if isinstance(data.columns, pd.MultiIndex):
-        data.columns = [
-            ticker_to_name.get(col[0], col[0]) for col in data.columns
-        ]
-    else:
-        data = data.rename(columns=ticker_to_name)
 
     logger.info(f"Retrieved {len(data)} data points")
     return data
@@ -374,12 +379,17 @@ def load_dots_history(
 
     logger.info(f"Fetching DOTS history from {start_date} to {end_date}")
 
+    from classes.functions.bloomberg import _run_async
+
     try:
-        data = blp.bdh(
-            tickers=tickers,
-            flds="PX_LAST",
-            start_date=start_date,
-            end_date=end_date,
+        data = _run_async(
+            blp.abdh(
+                tickers=tickers,
+                flds="PX_LAST",
+                start_date=start_date,
+                end_date=end_date,
+                backend="pandas",
+            )
         )
     except Exception as e:
         raise RuntimeError(f"Failed to fetch DOTS history from Bloomberg: {e}")
@@ -387,9 +397,14 @@ def load_dots_history(
     if data is None or data.empty:
         raise RuntimeError("No DOTS history returned from Bloomberg")
 
-    # Flatten MultiIndex columns (ticker, field) → friendly names
-    if isinstance(data.columns, pd.MultiIndex):
-        ticker_to_name = dict(zip(tickers, names))
+    # xbbg 1.0: LONG format [ticker, date, field, value] (tudo string)
+    ticker_to_name = dict(zip(tickers, names))
+    if "ticker" in data.columns and "value" in data.columns:
+        data["date"] = pd.to_datetime(data["date"])
+        data["value"] = pd.to_numeric(data["value"], errors="coerce")
+        data = data.pivot(index="date", columns="ticker", values="value")
+        data.columns = [ticker_to_name.get(c, c) for c in data.columns]
+    elif isinstance(data.columns, pd.MultiIndex):
         data.columns = [ticker_to_name.get(col[0], col[0]) for col in data.columns]
     else:
         data.columns = names[:len(data.columns)]

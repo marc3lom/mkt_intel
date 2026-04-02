@@ -85,22 +85,34 @@ def _fetch_from_bloomberg(
     blp = _get_bloomberg_client()
     tickers = list(PAYROLL_TICKERS.values())
 
-    data = blp.bdh(
-        tickers=tickers,
-        flds="PX_LAST",
-        start_date=start_date,
-        end_date=end_date,
-        Per="M",
+    from classes.functions.bloomberg import _run_async
+
+    data = _run_async(
+        blp.abdh(
+            tickers=tickers,
+            flds="PX_LAST",
+            start_date=start_date,
+            end_date=end_date,
+            periodicitySelection="MONTHLY",
+            backend="pandas",
+        )
     )
 
     if data is None or data.empty:
         raise RuntimeError("No payroll data returned from Bloomberg")
 
-    if isinstance(data.columns, pd.MultiIndex):
-        data.columns = data.columns.get_level_values(0)
-
+    # xbbg 1.0: LONG format [ticker, date, field, value] (tudo string)
     ticker_to_name = {v: k for k, v in PAYROLL_TICKERS.items()}
-    data = data.rename(columns=ticker_to_name)
+    if "ticker" in data.columns and "value" in data.columns:
+        data["date"] = pd.to_datetime(data["date"])
+        data["value"] = pd.to_numeric(data["value"], errors="coerce")
+        data = data.pivot(index="date", columns="ticker", values="value")
+        data.columns = [ticker_to_name.get(c, c) for c in data.columns]
+    elif isinstance(data.columns, pd.MultiIndex):
+        data.columns = data.columns.get_level_values(0)
+        data = data.rename(columns=ticker_to_name)
+    else:
+        data = data.rename(columns=ticker_to_name)
 
     for col in PAYROLL_TICKERS.keys():
         if col not in data.columns:
@@ -223,13 +235,22 @@ def get_latest_release() -> dict[str, dict[str, Any]]:
 
     logger.info("Fetching latest release data")
 
+    from classes.functions.bloomberg import _run_async
+
     try:
-        data = blp.bdp(tickers=tickers, flds=RELEASE_FIELDS)
+        data = _run_async(
+            blp.abdp(tickers=tickers, flds=RELEASE_FIELDS, backend="pandas")
+        )
     except Exception as e:
         raise RuntimeError(f"Failed to fetch release data: {e}")
 
     if data is None or data.empty:
         raise RuntimeError("No release data returned from Bloomberg")
+
+    # xbbg 1.0: LONG format [ticker, field, value] → pivot to ticker x field
+    if "ticker" in data.columns and "value" in data.columns:
+        data = data.pivot(index="ticker", columns="field", values="value")
+        data.columns = [c.lower() for c in data.columns]
 
     result: dict[str, dict[str, Any]] = {}
 
