@@ -34,11 +34,11 @@ INDICATOR_SHORT_LABELS: dict[str, str] = {
 # Direção hawkish por indicador
 # True = valor maior é hawkish; False = valor menor é hawkish
 HAWKISH_WHEN_UP: dict[str, bool] = {
-    "Change in real GDP": True,        # PIB maior → mais hawkish (economia forte)
-    "Unemployment rate": False,        # Desemprego maior → dovish
-    "PCE inflation": True,             # Inflação maior → hawkish
-    "Core PCE inflation": True,        # Core PCE maior → hawkish
-    "Federal funds rate": True,        # Taxa maior → hawkish
+    "Change in real GDP": True,  # PIB maior → mais hawkish (economia forte)
+    "Unemployment rate": False,  # Desemprego maior → dovish
+    "PCE inflation": True,  # Inflação maior → hawkish
+    "Core PCE inflation": True,  # Core PCE maior → hawkish
+    "Federal funds rate": True,  # Taxa maior → hawkish
 }
 
 # Meses das reuniões SEP
@@ -46,15 +46,33 @@ SEP_MONTHS = [3, 6, 9, 12]
 
 # Meses em português (abreviado, para labels)
 MESES_PTBR_SHORT: dict[int, str] = {
-    1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr",
-    5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago",
-    9: "Set", 10: "Out", 11: "Nov", 12: "Dez",
+    1: "Jan",
+    2: "Fev",
+    3: "Mar",
+    4: "Abr",
+    5: "Mai",
+    6: "Jun",
+    7: "Jul",
+    8: "Ago",
+    9: "Set",
+    10: "Out",
+    11: "Nov",
+    12: "Dez",
 }
 
 MESES_EN_FULL: dict[int, str] = {
-    1: "January", 2: "February", 3: "March", 4: "April",
-    5: "May", 6: "June", 7: "July", 8: "August",
-    9: "September", 10: "October", 11: "November", 12: "December",
+    1: "January",
+    2: "February",
+    3: "March",
+    4: "April",
+    5: "May",
+    6: "June",
+    7: "July",
+    8: "August",
+    9: "September",
+    10: "October",
+    11: "November",
+    12: "December",
 }
 
 
@@ -156,9 +174,7 @@ def process_dot_plot(
         return pd.DataFrame()
 
     # Extract fed funds rate projections
-    ff_row = medians_df[
-        medians_df["Variable"].str.contains("federal funds", case=False)
-    ]
+    ff_row = medians_df[medians_df["Variable"].str.contains("federal funds", case=False)]
 
     if ff_row.empty:
         logger.warning("No federal funds rate in projections")
@@ -264,9 +280,7 @@ def format_projection_table(
     formatted = medians_df.copy()
 
     # Rename Variable column to Portuguese
-    formatted["Indicador"] = formatted["Variable"].map(
-        lambda x: INDICATOR_LABELS.get(x, x)
-    )
+    formatted["Indicador"] = formatted["Variable"].map(lambda x: INDICATOR_LABELS.get(x, x))
 
     # Reorder columns — dynamic years
     available_years = _get_year_columns(formatted)
@@ -303,9 +317,7 @@ def calculate_rate_path(
         return pd.DataFrame()
 
     # Extract fed funds projections
-    ff_row = medians_df[
-        medians_df["Variable"].str.contains("federal funds", case=False)
-    ]
+    ff_row = medians_df[medians_df["Variable"].str.contains("federal funds", case=False)]
 
     if ff_row.empty:
         return pd.DataFrame()
@@ -449,9 +461,7 @@ def get_meeting_summary(
         "cut": "Corte",
         "hike": "Alta",
     }
-    summary["decisao"] = decision_map.get(
-        statement_data.get("decision", ""), "N/A"
-    )
+    summary["decisao"] = decision_map.get(statement_data.get("decision", ""), "N/A")
 
     # Format target rate
     low = statement_data.get("target_rate_low")
@@ -471,8 +481,6 @@ def get_meeting_summary(
             var = row["Variable"]
             short_label = INDICATOR_SHORT_LABELS.get(var, var)
             if years:
-                summary["projecoes_resumo"][short_label] = {
-                    y: row.get(y) for y in years[:3]
-                }
+                summary["projecoes_resumo"][short_label] = {y: row.get(y) for y in years[:3]}
 
     return summary

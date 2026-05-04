@@ -290,8 +290,21 @@ def create_unemployment_u6_chart(
 
     fig, ax = plt.subplots(figsize=WORD_FIGSIZE_WIDE, dpi=WORD_DPI)
 
-    ax.plot(merged.index, merged["Unemployment"], color=COPOM[0], linewidth=2, label="U3 - Taxa de Desemprego")
-    ax.plot(merged.index, merged["U6"], color=COPOM[5], linewidth=2, linestyle="--", label="U6 - Desemprego Ampliado")
+    ax.plot(
+        merged.index,
+        merged["Unemployment"],
+        color=COPOM[0],
+        linewidth=2,
+        label="U3 - Taxa de Desemprego",
+    )
+    ax.plot(
+        merged.index,
+        merged["U6"],
+        color=COPOM[5],
+        linewidth=2,
+        linestyle="--",
+        label="U6 - Desemprego Ampliado",
+    )
     ax.fill_between(merged.index, merged["Unemployment"], merged["U6"], alpha=0.1, color=COPOM[9])
 
     ax.set_title("Desemprego U3 vs U6 (%)", fontsize=WORD_TITLE_SIZE, fontweight="bold")
@@ -343,7 +356,9 @@ def create_beveridge_curve(
     )
 
     # Connect with line
-    ax.plot(merged["Unemployment"], merged["JOLTS"], color=COPOM[9], linewidth=0.5, alpha=0.5, zorder=2)
+    ax.plot(
+        merged["Unemployment"], merged["JOLTS"], color=COPOM[9], linewidth=0.5, alpha=0.5, zorder=2
+    )
 
     # Mark latest point
     ax.scatter(

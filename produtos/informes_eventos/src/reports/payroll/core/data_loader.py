@@ -60,9 +60,7 @@ def _get_bloomberg_client() -> Any:
 
         return blp
     except ImportError:
-        raise RuntimeError(
-            "Bloomberg (xbbg) not available. Install with: uv add xbbg"
-        )
+        raise RuntimeError("Bloomberg (xbbg) not available. Install with: uv add xbbg")
 
 
 def _get_fred_client() -> Any:
@@ -71,9 +69,7 @@ def _get_fred_client() -> Any:
 
     api_key = os.getenv("FRED_API_KEY")
     if api_key is None:
-        raise ValueError(
-            "FRED API key not found. Set FRED_API_KEY in etc/.env"
-        )
+        raise ValueError("FRED API key not found. Set FRED_API_KEY in etc/.env")
     return Fred(api_key=api_key)
 
 
@@ -238,9 +234,7 @@ def get_latest_release() -> dict[str, dict[str, Any]]:
     from classes.functions.bloomberg import _run_async
 
     try:
-        data = _run_async(
-            blp.abdp(tickers=tickers, flds=RELEASE_FIELDS, backend="pandas")
-        )
+        data = _run_async(blp.abdp(tickers=tickers, flds=RELEASE_FIELDS, backend="pandas"))
     except Exception as e:
         raise RuntimeError(f"Failed to fetch release data: {e}")
 

@@ -8,9 +8,8 @@ and tables matching the styling of the reference Word documents.
 import logging
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import numpy as np
+import matplotlib.pyplot as plt
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -115,8 +114,12 @@ def create_dot_plot_chart(
 
     if dot_data.empty:
         ax.text(
-            0.5, 0.5, "Dados nao disponiveis",
-            ha="center", va="center", fontsize=WORD_LABEL_SIZE,
+            0.5,
+            0.5,
+            "Dados nao disponiveis",
+            ha="center",
+            va="center",
+            fontsize=WORD_LABEL_SIZE,
         )
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
@@ -130,7 +133,8 @@ def create_dot_plot_chart(
             y = row["rate"]
 
             ax.scatter(
-                x, y,
+                x,
+                y,
                 s=100,
                 c=COPOM_COLORS[0],
                 edgecolors="white",
@@ -151,8 +155,14 @@ def create_dot_plot_chart(
         ax.set_axisbelow(True)
 
         # Add horizontal line at 2% (inflation target)
-        ax.axhline(y=2.0, color=COPOM_COLORS[4], linestyle="--",
-                   linewidth=1, alpha=0.7, label="Meta Inflacao (2%)")
+        ax.axhline(
+            y=2.0,
+            color=COPOM_COLORS[4],
+            linestyle="--",
+            linewidth=1,
+            alpha=0.7,
+            label="Meta Inflacao (2%)",
+        )
 
     ax.set_title(title, fontsize=WORD_TITLE_SIZE, fontweight="bold")
     ax.spines["top"].set_visible(False)
@@ -197,20 +207,16 @@ def create_sep_charts(
 
     for var_name, title, ax in indicators:
         # Get current values
-        current_row = medians_df[
-            medians_df["Variable"].str.contains(var_name, case=False)
-        ]
+        current_row = medians_df[medians_df["Variable"].str.contains(var_name, case=False)]
 
         if not current_row.empty:
             current_values = [
-                current_row[year].values[0]
-                for year in years
-                if year in current_row.columns
+                current_row[year].values[0] for year in years if year in current_row.columns
             ]
 
             # Plot current
             ax.plot(
-                x_positions[:len(current_values)],
+                x_positions[: len(current_values)],
                 current_values,
                 marker="o",
                 markersize=8,
@@ -221,17 +227,13 @@ def create_sep_charts(
 
             # Plot prior if available
             if prior_df is not None and not prior_df.empty:
-                prior_row = prior_df[
-                    prior_df["Variable"].str.contains(var_name, case=False)
-                ]
+                prior_row = prior_df[prior_df["Variable"].str.contains(var_name, case=False)]
                 if not prior_row.empty:
                     prior_values = [
-                        prior_row[year].values[0]
-                        for year in years
-                        if year in prior_row.columns
+                        prior_row[year].values[0] for year in years if year in prior_row.columns
                     ]
                     ax.plot(
-                        x_positions[:len(prior_values)],
+                        x_positions[: len(prior_values)],
                         prior_values,
                         marker="s",
                         markersize=6,
@@ -386,7 +388,9 @@ def create_summary_table_image(
 
     # Add title label on left
     ax.text(
-        -0.02, 0.5, title,
+        -0.02,
+        0.5,
+        title,
         transform=ax.transAxes,
         fontsize=WORD_LABEL_SIZE,
         fontweight="bold",
@@ -420,8 +424,12 @@ def create_rate_path_chart(
 
     if rate_path.empty:
         ax.text(
-            0.5, 0.5, "Dados nao disponiveis",
-            ha="center", va="center", fontsize=WORD_LABEL_SIZE,
+            0.5,
+            0.5,
+            "Dados nao disponiveis",
+            ha="center",
+            va="center",
+            fontsize=WORD_LABEL_SIZE,
         )
     else:
         years = rate_path["year"].values

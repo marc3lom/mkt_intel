@@ -37,9 +37,18 @@ DOTS_TICKERS: dict[str, str] = {
 
 # Mapeamento de meses em português (abreviado)
 _MONTH_NAMES_PTBR: dict[int, str] = {
-    1: "jan", 2: "fev", 3: "mar", 4: "abr",
-    5: "mai", 6: "jun", 7: "jul", 8: "ago",
-    9: "set", 10: "out", 11: "nov", 12: "dez",
+    1: "jan",
+    2: "fev",
+    3: "mar",
+    4: "abr",
+    5: "mai",
+    6: "jun",
+    7: "jul",
+    8: "ago",
+    9: "set",
+    10: "out",
+    11: "nov",
+    12: "dez",
 }
 
 # Document type patterns
@@ -65,9 +74,7 @@ def _get_bloomberg_client() -> Any:
 
         return blp
     except ImportError:
-        raise RuntimeError(
-            "Bloomberg (xbbg) not available. Install with: uv add xbbg"
-        )
+        raise RuntimeError("Bloomberg (xbbg) not available. Install with: uv add xbbg")
 
 
 def _get_module_path() -> Path:
@@ -222,9 +229,7 @@ def load_sep_data(sheet_name: str | None = None) -> pd.DataFrame:
     Raises:
         RuntimeError: If SEP file not found or parsing fails.
     """
-    sep_path = (
-        _get_module_path() / "input" / "email_info" / "SEP.xlsx"
-    )
+    sep_path = _get_module_path() / "input" / "email_info" / "SEP.xlsx"
 
     if not sep_path.exists():
         raise RuntimeError(f"SEP file not found: {sep_path}")
@@ -237,8 +242,11 @@ def load_sep_data(sheet_name: str | None = None) -> pd.DataFrame:
         if sheet_name is None:
             # Filter to month-year sheets and get most recent
             date_sheets = [
-                s for s in sheets
-                if re.match(r"(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\s+\d{2}", s, re.IGNORECASE)
+                s
+                for s in sheets
+                if re.match(
+                    r"(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\s+\d{2}", s, re.IGNORECASE
+                )
             ]
             if date_sheets:
                 sheet_name = date_sheets[0]  # Assuming sorted by recency
@@ -294,9 +302,18 @@ def get_prior_sep_projections(
         # Mapear mês para nome de sheet (formato: "set 25", "dez 25")
         prior_dt = dt.datetime.strptime(prior_date, "%Y%m%d")
         month_names = {
-            1: "jan", 2: "fev", 3: "mar", 4: "abr",
-            5: "mai", 6: "jun", 7: "jul", 8: "ago",
-            9: "set", 10: "out", 11: "nov", 12: "dez",
+            1: "jan",
+            2: "fev",
+            3: "mar",
+            4: "abr",
+            5: "mai",
+            6: "jun",
+            7: "jul",
+            8: "ago",
+            9: "set",
+            10: "out",
+            11: "nov",
+            12: "dez",
         }
         sheet = f"{month_names[prior_dt.month]} {prior_dt.year % 100:02d}"
         data = load_sep_data(sheet_name=sheet)
@@ -335,9 +352,7 @@ def load_market_reaction_data(sheet_name: str = "Market Reaction") -> pd.DataFra
     Raises:
         RuntimeError: If file not found or parsing fails.
     """
-    file_path = (
-        _get_module_path() / "input" / "email_info" / "Market_Reaction_FOMC.xlsm"
-    )
+    file_path = _get_module_path() / "input" / "email_info" / "Market_Reaction_FOMC.xlsm"
 
     if not file_path.exists():
         raise RuntimeError(f"Market reaction file not found: {file_path}")
@@ -407,7 +422,7 @@ def load_dots_history(
     elif isinstance(data.columns, pd.MultiIndex):
         data.columns = [ticker_to_name.get(col[0], col[0]) for col in data.columns]
     else:
-        data.columns = names[:len(data.columns)]
+        data.columns = names[: len(data.columns)]
 
     # Drop rows where all values are NaN (non-SEP dates)
     data = data.dropna(how="all")

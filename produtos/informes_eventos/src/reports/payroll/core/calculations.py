@@ -212,11 +212,7 @@ def style_release_table(df: pd.DataFrame) -> Any:
             return ["font-weight: bold"] * len(col)
         return [""] * len(col)
 
-    return (
-        df.style.set_table_styles(styles)
-        .apply(bold_atual, axis=0)
-        .hide(axis="index")
-    )
+    return df.style.set_table_styles(styles).apply(bold_atual, axis=0).hide(axis="index")
 
 
 def _format_value(value: Any, unit: str) -> str:
@@ -263,9 +259,7 @@ def _format_surprise(value: Any, unit: str) -> str:
         return f"{sign}{value}"
 
 
-def calculate_period_stats(
-    df: pd.DataFrame, column: str = "NFP"
-) -> dict[str, float]:
+def calculate_period_stats(df: pd.DataFrame, column: str = "NFP") -> dict[str, float]:
     """Calculate summary statistics for a period.
 
     Args:
@@ -407,14 +401,11 @@ def generate_summary_text(
     # Top industries
     if industry_data is not None and len(industry_data) > 0:
         top = industry_data[
-            ~industry_data["industry"].str.contains(
-                "Total|private|Goods|service", case=False
-            )
+            ~industry_data["industry"].str.contains("Total|private|Goods|service", case=False)
         ].nlargest(3, "current_month")
         if len(top) > 0:
             sectors = ", ".join(
-                f"{row['industry']} ({row['current_month']:+.0f}k)"
-                for _, row in top.iterrows()
+                f"{row['industry']} ({row['current_month']:+.0f}k)" for _, row in top.iterrows()
             )
             parts.append(f"Os setores que mais contribuiram foram: {sectors}.")
 
