@@ -45,9 +45,7 @@ def fetch_industry_breakdown() -> pd.DataFrame:
     logger.info(f"Fetching BLS data from {BLS_TABLE_B_URL}")
 
     try:
-        response = requests.get(
-            BLS_TABLE_B_URL, headers=BLS_REQUEST_HEADERS, timeout=30
-        )
+        response = requests.get(BLS_TABLE_B_URL, headers=BLS_REQUEST_HEADERS, timeout=30)
         response.raise_for_status()
     except requests.RequestException as e:
         raise RuntimeError(f"Failed to fetch BLS data: {e}")
@@ -108,9 +106,7 @@ def _process_employment_table(table: pd.DataFrame) -> pd.DataFrame:
     header_idx = 0
     for i in range(min(5, len(table))):
         row_str = " ".join(table.iloc[i].astype(str))
-        if re.search(
-            r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)", row_str
-        ):
+        if re.search(r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)", row_str):
             header_idx = i
             break
 
@@ -120,9 +116,7 @@ def _process_employment_table(table: pd.DataFrame) -> pd.DataFrame:
         table = table.iloc[header_idx + 1 :].reset_index(drop=True)
 
     # First column is industry name
-    table.columns = ["industry"] + [
-        f"col_{i}" for i in range(1, len(table.columns))
-    ]
+    table.columns = ["industry"] + [f"col_{i}" for i in range(1, len(table.columns))]
 
     # Clean industry names and determine hierarchy level
     records = []

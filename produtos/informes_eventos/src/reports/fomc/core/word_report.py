@@ -36,13 +36,22 @@ MARGIN_BOTTOM = Cm(0.85)
 
 # Cores para tabela SEP
 HAWKISH_COLOR = "FFFF00"  # Amarelo
-DOVISH_COLOR = "00B0F0"   # Azul
+DOVISH_COLOR = "00B0F0"  # Azul
 
 # Mapeamento de meses para português (abreviado)
 MESES_PTBR = {
-    1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril",
-    5: "maio", 6: "junho", 7: "julho", 8: "agosto",
-    9: "setembro", 10: "outubro", 11: "novembro", 12: "dezembro",
+    1: "janeiro",
+    2: "fevereiro",
+    3: "março",
+    4: "abril",
+    5: "maio",
+    6: "junho",
+    7: "julho",
+    8: "agosto",
+    9: "setembro",
+    10: "outubro",
+    11: "novembro",
+    12: "dezembro",
 }
 
 # Meses das reuniões SEP anteriores (ordem reversa)
@@ -51,11 +60,11 @@ SEP_MONTHS = [3, 6, 9, 12]
 # Indicadores e direção hawkish
 # True = valor maior é hawkish; False = valor maior é dovish
 HAWKISH_WHEN_UP: dict[str, bool] = {
-    "Change in real GDP": True,        # PIB maior → hawkish (economia forte)
-    "Unemployment rate": False,        # Desemprego maior → dovish
-    "PCE inflation": True,             # Inflação maior → hawkish
-    "Core PCE inflation": True,        # Core PCE maior → hawkish
-    "Federal funds rate": True,        # Taxa maior → hawkish
+    "Change in real GDP": True,  # PIB maior → hawkish (economia forte)
+    "Unemployment rate": False,  # Desemprego maior → dovish
+    "PCE inflation": True,  # Inflação maior → hawkish
+    "Core PCE inflation": True,  # Core PCE maior → hawkish
+    "Federal funds rate": True,  # Taxa maior → hawkish
 }
 
 
@@ -64,9 +73,7 @@ def _load_template(template_path: Path | str | None = None) -> Document:
     template_path = Path(template_path) if template_path else TEMPLATE_SOURCE
 
     if not template_path.exists():
-        logger.warning(
-            f"Template não encontrado: {template_path}. Criando documento em branco."
-        )
+        logger.warning(f"Template não encontrado: {template_path}. Criando documento em branco.")
         return _create_blank_document()
 
     logger.info(f"Carregando template: {template_path}")
@@ -273,12 +280,18 @@ def _add_sep_section(
 
     # Header row 1: Variable | Mediana (merged) | Tendência Central (merged)
     _set_cell_text(
-        table.rows[0].cells[0], "Variable",
-        bold=True, size=BODY_SIZE, align=WD_ALIGN_PARAGRAPH.CENTER,
+        table.rows[0].cells[0],
+        "Variable",
+        bold=True,
+        size=BODY_SIZE,
+        align=WD_ALIGN_PARAGRAPH.CENTER,
     )
     _set_cell_text(
-        table.rows[0].cells[1], "Mediana",
-        bold=True, size=BODY_SIZE, align=WD_ALIGN_PARAGRAPH.CENTER,
+        table.rows[0].cells[1],
+        "Mediana",
+        bold=True,
+        size=BODY_SIZE,
+        align=WD_ALIGN_PARAGRAPH.CENTER,
     )
     if n_median_cols > 1:
         for i in range(2, 1 + n_median_cols):
@@ -287,8 +300,11 @@ def _add_sep_section(
     if show_ct:
         ct_start = 1 + n_median_cols
         _set_cell_text(
-            table.rows[0].cells[ct_start], "Tendência Central",
-            bold=True, size=BODY_SIZE, align=WD_ALIGN_PARAGRAPH.CENTER,
+            table.rows[0].cells[ct_start],
+            "Tendência Central",
+            bold=True,
+            size=BODY_SIZE,
+            align=WD_ALIGN_PARAGRAPH.CENTER,
         )
         if n_ct_cols > 1:
             for i in range(ct_start + 1, ct_start + n_ct_cols):
@@ -299,16 +315,22 @@ def _add_sep_section(
     for j, col_name in enumerate(median_data_cols):
         display_name = "LR" if col_name == "Longer run" else str(col_name)
         _set_cell_text(
-            table.rows[1].cells[1 + j], display_name,
-            bold=True, size=BODY_SIZE, align=WD_ALIGN_PARAGRAPH.CENTER,
+            table.rows[1].cells[1 + j],
+            display_name,
+            bold=True,
+            size=BODY_SIZE,
+            align=WD_ALIGN_PARAGRAPH.CENTER,
         )
 
     if show_ct:
         for j, col_name in enumerate(ct_data_cols):
             display_name = "LR" if col_name == "Longer run" else str(col_name)
             _set_cell_text(
-                table.rows[1].cells[1 + n_median_cols + j], display_name,
-                bold=True, size=BODY_SIZE, align=WD_ALIGN_PARAGRAPH.CENTER,
+                table.rows[1].cells[1 + n_median_cols + j],
+                display_name,
+                bold=True,
+                size=BODY_SIZE,
+                align=WD_ALIGN_PARAGRAPH.CENTER,
             )
 
     # Shading for header rows
@@ -325,8 +347,10 @@ def _add_sep_section(
 
         # Current row (bold)
         _set_cell_text(
-            table.rows[row_idx].cells[0], variable,
-            bold=True, size=BODY_SIZE,
+            table.rows[row_idx].cells[0],
+            variable,
+            bold=True,
+            size=BODY_SIZE,
         )
 
         # Median columns
@@ -334,8 +358,11 @@ def _add_sep_section(
             val = var_row.get(col)
             text = f"{val:.1f}" if pd.notna(val) else "—"
             _set_cell_text(
-                table.rows[row_idx].cells[1 + j], text,
-                bold=True, size=BODY_SIZE, align=WD_ALIGN_PARAGRAPH.CENTER,
+                table.rows[row_idx].cells[1 + j],
+                text,
+                bold=True,
+                size=BODY_SIZE,
+                align=WD_ALIGN_PARAGRAPH.CENTER,
             )
 
             # Color-coding: comparar com prior
@@ -348,13 +375,9 @@ def _add_sep_section(
                         if abs(change) > 0.001:
                             direction = classify_change_direction(variable, change)
                             if direction == "hawkish":
-                                _apply_cell_shading(
-                                    table.rows[row_idx].cells[1 + j], HAWKISH_COLOR
-                                )
+                                _apply_cell_shading(table.rows[row_idx].cells[1 + j], HAWKISH_COLOR)
                             elif direction == "dovish":
-                                _apply_cell_shading(
-                                    table.rows[row_idx].cells[1 + j], DOVISH_COLOR
-                                )
+                                _apply_cell_shading(table.rows[row_idx].cells[1 + j], DOVISH_COLOR)
 
         # CT columns
         if show_ct:
@@ -366,8 +389,11 @@ def _add_sep_section(
                 else:
                     text = "—"
                 _set_cell_text(
-                    table.rows[row_idx].cells[1 + n_median_cols + j], text,
-                    bold=True, size=Pt(9), align=WD_ALIGN_PARAGRAPH.CENTER,
+                    table.rows[row_idx].cells[1 + n_median_cols + j],
+                    text,
+                    bold=True,
+                    size=Pt(9),
+                    align=WD_ALIGN_PARAGRAPH.CENTER,
                 )
 
         row_idx += 1
@@ -376,8 +402,10 @@ def _add_sep_section(
         if has_prior:
             prior_var_row = sep_prior[sep_prior["Variable"] == variable]
             _set_cell_text(
-                table.rows[row_idx].cells[0], f"  {prior_label}",
-                italic=True, size=BODY_SIZE,
+                table.rows[row_idx].cells[0],
+                f"  {prior_label}",
+                italic=True,
+                size=BODY_SIZE,
             )
 
             # Prior medians
@@ -388,8 +416,11 @@ def _add_sep_section(
                 else:
                     text = "—"
                 _set_cell_text(
-                    table.rows[row_idx].cells[1 + j], text,
-                    italic=True, size=BODY_SIZE, align=WD_ALIGN_PARAGRAPH.CENTER,
+                    table.rows[row_idx].cells[1 + j],
+                    text,
+                    italic=True,
+                    size=BODY_SIZE,
+                    align=WD_ALIGN_PARAGRAPH.CENTER,
                 )
 
             # Prior CT
@@ -402,14 +433,20 @@ def _add_sep_section(
                     else:
                         text = "—"
                     _set_cell_text(
-                        table.rows[row_idx].cells[1 + n_median_cols + j], text,
-                        italic=True, size=Pt(9), align=WD_ALIGN_PARAGRAPH.CENTER,
+                        table.rows[row_idx].cells[1 + n_median_cols + j],
+                        text,
+                        italic=True,
+                        size=Pt(9),
+                        align=WD_ALIGN_PARAGRAPH.CENTER,
                     )
             elif show_ct:
                 for j in range(n_ct_cols):
                     _set_cell_text(
-                        table.rows[row_idx].cells[1 + n_median_cols + j], "—",
-                        italic=True, size=Pt(9), align=WD_ALIGN_PARAGRAPH.CENTER,
+                        table.rows[row_idx].cells[1 + n_median_cols + j],
+                        "—",
+                        italic=True,
+                        size=Pt(9),
+                        align=WD_ALIGN_PARAGRAPH.CENTER,
                     )
 
             row_idx += 1

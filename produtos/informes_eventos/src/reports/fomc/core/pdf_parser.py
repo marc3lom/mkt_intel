@@ -37,9 +37,7 @@ def _ensure_pdfplumber() -> Any:
 
         return pdfplumber
     except ImportError:
-        raise RuntimeError(
-            "pdfplumber not available. Install with: uv add pdfplumber"
-        )
+        raise RuntimeError("pdfplumber not available. Install with: uv add pdfplumber")
 
 
 def parse_projection_table(pdf_path: Path | str) -> dict[str, Any]:
@@ -118,7 +116,11 @@ def _extract_full_table1(pdf: Any) -> dict[str, Any]:
 
     for pdf_label, var_name, has_lr in _TABLE1_VARIABLES:
         block = _extract_variable_block(
-            text, pdf_label, var_name, n_years, has_lr and has_longer_run,
+            text,
+            pdf_label,
+            var_name,
+            n_years,
+            has_lr and has_longer_run,
         )
         if block is None:
             continue
@@ -139,12 +141,18 @@ def _extract_full_table1(pdf: Any) -> dict[str, Any]:
 
     result = {
         "medians": _records_to_df(medians_records, df_cols),
-        "prior_medians": _records_to_df(prior_medians_records, df_cols) if prior_medians_records else pd.DataFrame(),
+        "prior_medians": _records_to_df(prior_medians_records, df_cols)
+        if prior_medians_records
+        else pd.DataFrame(),
         "prior_label": prior_label,
         "central_tendency": _records_to_df(ct_records, df_cols),
-        "prior_ct": _records_to_df(prior_ct_records, df_cols) if prior_ct_records else pd.DataFrame(),
+        "prior_ct": _records_to_df(prior_ct_records, df_cols)
+        if prior_ct_records
+        else pd.DataFrame(),
         "range": _records_to_df(range_records, df_cols),
-        "prior_range": _records_to_df(prior_range_records, df_cols) if prior_range_records else pd.DataFrame(),
+        "prior_range": _records_to_df(prior_range_records, df_cols)
+        if prior_range_records
+        else pd.DataFrame(),
         "year_columns": df_cols,
     }
 
@@ -251,7 +259,9 @@ def _extract_variable_block(
 
     # Parse tokens into Median / CT / Range sections
     current_parsed = _parse_variable_tokens(current_tokens, n_years, has_longer_run)
-    prior_parsed = _parse_variable_tokens(prior_tokens, n_years, has_longer_run) if prior_tokens else None
+    prior_parsed = (
+        _parse_variable_tokens(prior_tokens, n_years, has_longer_run) if prior_tokens else None
+    )
 
     result = {
         "current_medians": {"Variable": var_name, **current_parsed["medians"]},
@@ -310,8 +320,10 @@ def _parse_variable_tokens(
         return {"medians": medians, "ct": {}, "range": {}}
 
     median_tokens = tokens[:section_size]
-    ct_tokens = tokens[section_size:section_size * 2] if len(tokens) >= section_size * 2 else []
-    range_tokens = tokens[section_size * 2:section_size * 3] if len(tokens) >= section_size * 3 else []
+    ct_tokens = tokens[section_size : section_size * 2] if len(tokens) >= section_size * 2 else []
+    range_tokens = (
+        tokens[section_size * 2 : section_size * 3] if len(tokens) >= section_size * 3 else []
+    )
 
     medians = _assign_to_years(median_tokens, n_years, has_longer_run)
     ct = _assign_to_years(ct_tokens, n_years, has_longer_run)

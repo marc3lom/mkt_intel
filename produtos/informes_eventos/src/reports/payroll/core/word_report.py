@@ -63,9 +63,7 @@ def _add_title_header(doc: Document, release_date: str) -> None:
 
     title = doc.add_paragraph()
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = title.add_run(
-        f"DADOS DO RELATORIO DE EMPREGO DOS EUA - {month_name.upper()}/{year}"
-    )
+    run = title.add_run(f"DADOS DO RELATORIO DE EMPREGO DOS EUA - {month_name.upper()}/{year}")
     run.bold = True
     run.font.size = Pt(14)
     run.font.name = FONT_NAME
