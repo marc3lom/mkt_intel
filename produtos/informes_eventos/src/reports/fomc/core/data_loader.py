@@ -320,7 +320,7 @@ def get_prior_sep_projections(
         if not data.empty:
             logger.info(f"Projeções anteriores carregadas do SEP.xlsx (sheet: {sheet})")
             return data
-    except (RuntimeError, KeyError):
+    except RuntimeError, KeyError:
         logger.info("SEP.xlsx não possui sheet para reunião anterior, tentando PDF")
 
     # Fallback: parse do PDF da reunião anterior
@@ -480,7 +480,7 @@ def load_dots_snapshot(
         if ticker in dots_tickers_set:
             try:
                 result[ticker] = float(row[value_col])
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 continue
 
     if result:
