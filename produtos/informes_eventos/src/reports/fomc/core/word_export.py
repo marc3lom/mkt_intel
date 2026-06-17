@@ -348,11 +348,11 @@ MARKET_REACTION_PANELS: list[tuple[str, str, str, int]] = [
     ("VIX", "VIX", "{:.2f}", 9),
 ]
 
-# Eventos do FOMC: chave, rótulo, estilo de linha. Ordem = z-order de legenda.
+# Eventos do FOMC a marcar com linha vertical: chave, rótulo, estilo de linha.
+# Só a decisão é desenhada; para reativar as linhas da coletiva, basta re-adicionar
+# ("presser_ini", "Início coletiva", "--") e ("presser_fim", "Fim coletiva", ":").
 MARKET_REACTION_EVENTS: list[tuple[str, str, str]] = [
     ("decisao", "Decisão FOMC", "-"),
-    ("presser_ini", "Início coletiva", "--"),
-    ("presser_fim", "Fim coletiva", ":"),
 ]
 
 
@@ -370,22 +370,25 @@ def create_market_reaction_grid(
     event_times: dict[str, pd.Timestamp] | None = None,
     meeting_date: str | None = None,
     output_path: Path | str | None = None,
+    axis_end: pd.Timestamp | None = None,
 ) -> plt.Figure:
     """Cria o grid 3x3 de reação de mercado intraday (estilo COPOM).
 
     Reproduz o Chart Grid da Bloomberg com 9 painéis (Nasdaq 100, S&P 500,
-    Russell 2000, UST 2Y, UST 10Y, 2s10s, OIS 1Y1Y, DXY, VIX) e marca 3 linhas
-    verticais de evento (decisão, início e fim da coletiva). Eixo X em horário
-    de Brasília.
+    Russell 2000, UST 2Y, UST 10Y, 2s10s, OIS 1Y1Y, DXY, VIX) e marca as linhas
+    verticais de evento passadas em event_times. Eixo X em horário de Brasília.
 
     Args:
         market_data: DataFrame intraday (uma coluna por painel, ver
             MARKET_REACTION_PANELS). Índice datetime (tz-aware BRT ou naive BRT).
-        event_times: dict {"decisao", "presser_ini", "presser_fim"} → Timestamp
-            (tz-aware ou naive, em horário de Brasília). Chaves ausentes ou None
-            são ignoradas (ex.: fim da coletiva quando ainda não informado).
+        event_times: dict de eventos {chave → Timestamp} (tz-aware ou naive, em
+            horário de Brasília); só as chaves em MARKET_REACTION_EVENTS são
+            desenhadas. Chaves ausentes/None são ignoradas.
         meeting_date: Data da reunião (YYYYMMDD) para o título. Opcional.
         output_path: Caminho para salvar o PNG. Opcional.
+        axis_end: Limite direito do eixo X (Timestamp em BRT). Se dado, estende
+            todos os painéis com dados até esse horário, ainda que não haja dados
+            até lá (área em branco à direita). Opcional.
 
     Returns:
         Figura matplotlib (3x3).
@@ -394,6 +397,8 @@ def create_market_reaction_grid(
     data = market_data.copy()
     if isinstance(data.index, pd.DatetimeIndex) and data.index.tz is not None:
         data.index = data.index.tz_convert(_TZ_BRT).tz_localize(None)
+
+    axis_end_naive = _to_naive_brt(axis_end) if axis_end is not None else None
 
     events_naive: dict[str, pd.Timestamp] = {}
     if event_times:
@@ -435,6 +440,10 @@ def create_market_reaction_grid(
                 color=color,
                 clip_on=False,
             )
+
+            # Estender o eixo X até axis_end (mesmo sem dados até lá)
+            if axis_end_naive is not None:
+                ax.set_xlim(right=axis_end_naive)
 
             # Locator adaptativo (a janela pode ir da Ásia ao fim da coletiva)
             ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=4, maxticks=7))
