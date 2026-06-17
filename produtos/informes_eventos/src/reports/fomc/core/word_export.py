@@ -7,12 +7,16 @@ and tables matching the styling of the reference Word documents.
 
 import logging
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+# Fuso de exibição do grid intraday (horário de Brasília)
+_TZ_BRT = ZoneInfo("America/Sao_Paulo")
 
 # === Word Export Constants ===
 WORD_PAGE_WIDTH_INCHES: float = 7.0
@@ -320,6 +324,176 @@ def create_market_reaction_charts(
         ax.spines["right"].set_visible(False)
 
     plt.tight_layout()
+
+    if output_path:
+        save_chart_for_word(fig, output_path)
+
+    return fig
+
+
+# === Grid de reação de mercado (3x3, estilo COPOM) ===
+
+# Ordem dos 9 painéis (chave em market_data, título pt-BR, fmt do valor, cor COPOM).
+# Evita o índice 4 (vermelho), reservado às linhas de evento.
+MARKET_REACTION_PANELS: list[tuple[str, str, str, int]] = [
+    ("NASDAQ", "Nasdaq 100", "{:,.0f}", 0),
+    ("SPX", "S&P 500", "{:,.0f}", 5),
+    ("RUSSELL", "Russell 2000", "{:,.0f}", 7),
+    ("UST_2Y", "UST 2 Anos (%)", "{:.3f}", 0),
+    ("UST_10Y", "UST 10 Anos (%)", "{:.3f}", 2),
+    ("SPREAD_2S10S", "Inclinação 2s10s (bps)", "{:.1f}", 8),
+    ("OIS_1Y1Y", "OIS Fwd 1Y1Y (%)", "{:.3f}", 6),
+    ("DXY", "Dollar Index", "{:.2f}", 3),
+    ("VIX", "VIX", "{:.2f}", 9),
+]
+
+# Eventos do FOMC a marcar com linha vertical: chave, rótulo, estilo de linha.
+# Só a decisão é desenhada; para reativar as linhas da coletiva, basta re-adicionar
+# ("presser_ini", "Início coletiva", "--") e ("presser_fim", "Fim coletiva", ":").
+MARKET_REACTION_EVENTS: list[tuple[str, str, str]] = [
+    ("decisao", "Decisão FOMC", "-"),
+]
+
+
+def _to_naive_brt(ts: pd.Timestamp) -> pd.Timestamp:
+    """Normaliza um Timestamp para horário de Brasília *naive* (p/ plot sem
+    ambiguidade de fuso do matplotlib). tz-aware → converte e remove tz."""
+    ts = pd.Timestamp(ts)
+    if ts.tz is not None:
+        ts = ts.tz_convert(_TZ_BRT).tz_localize(None)
+    return ts
+
+
+def create_market_reaction_grid(
+    market_data: pd.DataFrame,
+    event_times: dict[str, pd.Timestamp] | None = None,
+    meeting_date: str | None = None,
+    output_path: Path | str | None = None,
+    axis_end: pd.Timestamp | None = None,
+) -> plt.Figure:
+    """Cria o grid 3x3 de reação de mercado intraday (estilo COPOM).
+
+    Reproduz o Chart Grid da Bloomberg com 9 painéis (Nasdaq 100, S&P 500,
+    Russell 2000, UST 2Y, UST 10Y, 2s10s, OIS 1Y1Y, DXY, VIX) e marca as linhas
+    verticais de evento passadas em event_times. Eixo X em horário de Brasília.
+
+    Args:
+        market_data: DataFrame intraday (uma coluna por painel, ver
+            MARKET_REACTION_PANELS). Índice datetime (tz-aware BRT ou naive BRT).
+        event_times: dict de eventos {chave → Timestamp} (tz-aware ou naive, em
+            horário de Brasília); só as chaves em MARKET_REACTION_EVENTS são
+            desenhadas. Chaves ausentes/None são ignoradas.
+        meeting_date: Data da reunião (YYYYMMDD). Atualmente não usado (o gráfico
+            não tem título); mantido por compatibilidade. Opcional.
+        output_path: Caminho para salvar o PNG. Opcional.
+        axis_end: Limite direito do eixo X (Timestamp em BRT). Se dado, estende
+            todos os painéis com dados até esse horário, ainda que não haja dados
+            até lá (área em branco à direita). Opcional.
+
+    Returns:
+        Figura matplotlib (3x3).
+    """
+    # Índice em BRT naive para o matplotlib formatar a hora literal correta
+    data = market_data.copy()
+    if isinstance(data.index, pd.DatetimeIndex) and data.index.tz is not None:
+        data.index = data.index.tz_convert(_TZ_BRT).tz_localize(None)
+
+    axis_end_naive = _to_naive_brt(axis_end) if axis_end is not None else None
+
+    events_naive: dict[str, pd.Timestamp] = {}
+    if event_times:
+        for key, ts in event_times.items():
+            if ts is not None:
+                events_naive[key] = _to_naive_brt(ts)
+
+    fig, axes = plt.subplots(3, 3, figsize=(WORD_PAGE_WIDTH_INCHES, 8.5), dpi=WORD_DPI)
+    axes_flat = axes.flatten()
+    event_color = COPOM_COLORS[4]
+
+    for idx, (ax, (key, title, vfmt, color_idx)) in enumerate(
+        zip(axes_flat, MARKET_REACTION_PANELS)
+    ):
+        color = COPOM_COLORS[color_idx % len(COPOM_COLORS)]
+        series = data[key].dropna() if key in data.columns else pd.Series(dtype="float64")
+
+        if not series.empty:
+            ax.plot(series.index, series.values, color=color, linewidth=1.3)
+
+            # Linha de referência no nível inicial da janela (estilo Bloomberg)
+            ax.axhline(
+                series.iloc[0],
+                color="#AEAEAE",
+                linestyle=":",
+                linewidth=0.8,
+                alpha=0.7,
+            )
+
+            # Rótulo do último valor
+            last_val = series.iloc[-1]
+            ax.annotate(
+                vfmt.format(last_val),
+                xy=(series.index[-1], last_val),
+                xytext=(4, 0),
+                textcoords="offset points",
+                va="center",
+                ha="left",
+                fontsize=WORD_TICK_SIZE - 1,
+                fontweight="bold",
+                color=color,
+                clip_on=False,
+            )
+
+            # Estender o eixo X até axis_end (mesmo sem dados até lá)
+            if axis_end_naive is not None:
+                ax.set_xlim(right=axis_end_naive)
+
+            # Locator adaptativo (a janela pode ir da Ásia ao fim da coletiva)
+            ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=4, maxticks=7))
+            ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+            ax.tick_params(axis="both", labelsize=WORD_TICK_SIZE - 2)
+        else:
+            ax.text(
+                0.5,
+                0.5,
+                "sem dados",
+                ha="center",
+                va="center",
+                fontsize=WORD_TICK_SIZE,
+                color="#999999",
+                transform=ax.transAxes,
+            )
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+        # Linhas verticais de evento (rótulo inline só no 1º painel = Nasdaq 100)
+        for ekey, elabel, els in MARKET_REACTION_EVENTS:
+            ets = events_naive.get(ekey)
+            if ets is None:
+                continue
+            ax.axvline(ets, color=event_color, linestyle=els, linewidth=1.2, alpha=0.85)
+            if idx == 0:
+                ax.annotate(
+                    elabel,
+                    xy=(ets, 1.0),
+                    xycoords=("data", "axes fraction"),
+                    xytext=(-4, -4),
+                    textcoords="offset points",
+                    rotation=90,
+                    va="top",
+                    ha="right",
+                    fontsize=WORD_TICK_SIZE - 1,
+                    fontweight="bold",
+                    color=event_color,
+                )
+
+        ax.set_title(title, fontsize=WORD_LABEL_SIZE, fontweight="bold")
+        ax.yaxis.grid(True, linestyle="--", alpha=0.4)
+        ax.set_axisbelow(True)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
+
+    fig.tight_layout()
 
     if output_path:
         save_chart_for_word(fig, output_path)

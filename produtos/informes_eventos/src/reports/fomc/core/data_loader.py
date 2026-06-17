@@ -10,22 +10,46 @@ import logging
 import re
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pandas as pd
+
+# Fusos usados na reação de mercado intraday
+_TZ_ET = ZoneInfo("America/New_York")  # horários do FOMC são fixos em ET
+_TZ_BRT = ZoneInfo("America/Sao_Paulo")  # fuso de exibição (Brasília)
 
 logger = logging.getLogger(__name__)
 
 # Meses das reuniões com SEP (Summary of Economic Projections)
 SEP_MONTHS = {3, 6, 9, 12}
 
-# Bloomberg tickers for FOMC-related market data
+# Bloomberg tickers para o grid de reação de mercado (espelhando o Chart Grid da
+# Bloomberg). Bolsas usam E-mini futures (front contínuo) para capturar a sessão
+# asiática/overnight — só os futuros negociam ~23h. Dois painéis são DERIVADOS:
+# a inclinação 2s10s (de UST_2Y/UST_10Y) e o OIS forward 1Y1Y (dos OIS 1Y/2Y).
 FOMC_TICKERS: dict[str, str] = {
+    # Bolsas — E-mini futures contínuos (overnight desde a Ásia)
+    "NASDAQ": "NQ1 Index",  # Nasdaq 100 E-mini
+    "SPX": "ES1 Index",  # S&P 500 E-mini
+    "RUSSELL": "RTY1 Index",  # Russell 2000 E-mini
+    # Juros
     "UST_2Y": "USGG2YR Index",
     "UST_10Y": "USGG10YR Index",
-    "SPX": "SPX Index",
+    # FX / Volatilidade
     "DXY": "DXY Curncy",
-    "FED_FUNDS": "FDTR Index",
+    "VIX": "VIX Index",
 }
+
+# Tickers auxiliares: OIS USD (SOFR) 1Y e 2Y, usados para derivar o forward 1Y1Y
+# intraday (não há ticker intraday direto do 1Y1Y). Não viram painel próprio.
+OIS_HELPER_TICKERS: dict[str, str] = {
+    "OIS_1Y": "USSO1 Curncy",  # USD SWAP OIS 1Y
+    "OIS_2Y": "USSO2 Curncy",  # USD SWAP OIS 2Y
+}
+
+# Chaves das séries derivadas, calculadas em fetch_market_reaction.
+SPREAD_2S10S_KEY = "SPREAD_2S10S"  # inclinação 2s10s (bps) = (10Y - 2Y) * 100
+OIS_1Y1Y_KEY = "OIS_1Y1Y"  # forward 1Y1Y (%) via fatores de desconto dos OIS 1Y/2Y
 
 # Bloomberg tickers para DOTS medians por horizonte
 DOTS_TICKERS: dict[str, str] = {
@@ -145,18 +169,26 @@ def get_meeting_documents(date: str) -> dict[str, Path | None]:
 
 def fetch_market_reaction(
     date: str,
-    start_time: str = "13:00",
-    end_time: str = "16:00",
+    start_time: str | None = None,
+    end_time: str | None = None,
 ) -> pd.DataFrame:
     """Fetch intraday market data around an FOMC announcement.
 
+    Busca os painéis de FOMC_TICKERS (+ OIS 1Y/2Y auxiliares) via Bloomberg,
+    deriva a inclinação 2s10s (bps) e o OIS forward 1Y1Y (%), e devolve a série
+    com índice tz-aware em horário de Brasília. Por padrão traz o dia inteiro
+    (session="allday"), começando na sessão asiática — os E-mini futures
+    negociam overnight, então o grid mostra todo o caminho até a reação ao FOMC.
+
     Args:
         date: FOMC meeting date in YYYYMMDD format.
-        start_time: Start time for data (HH:MM). Default 13:00 ET.
-        end_time: End time for data (HH:MM). Default 16:00 ET.
+        start_time: Filtro opcional de início (HH:MM, em ET). None = sem corte.
+        end_time: Filtro opcional de fim (HH:MM, em ET). None = sem corte.
 
     Returns:
-        DataFrame with intraday prices for UST 2Y, 10Y, SPX, DXY.
+        DataFrame intraday (index tz-aware em America/Sao_Paulo) com uma coluna
+        por painel: NASDAQ, SPX, RUSSELL, UST_2Y, UST_10Y, SPREAD_2S10S,
+        OIS_1Y1Y, DXY, VIX (as que o Bloomberg retornar).
 
     Raises:
         RuntimeError: If Bloomberg is not available or data fetch fails.
@@ -166,25 +198,24 @@ def fetch_market_reaction(
     # Parse date
     meeting_date = dt.datetime.strptime(date, "%Y%m%d")
 
-    # Construct datetime range
-    start_dt = dt.datetime.combine(
-        meeting_date.date(),
-        dt.datetime.strptime(start_time, "%H:%M").time(),
+    win = (
+        "dia inteiro (Ásia→US)"
+        if start_time is None and end_time is None
+        else f"{start_time}-{end_time} ET"
     )
-    end_dt = dt.datetime.combine(
-        meeting_date.date(),
-        dt.datetime.strptime(end_time, "%H:%M").time(),
-    )
+    logger.info(f"Fetching intraday data for {date} — janela: {win}")
 
-    logger.info(f"Fetching intraday data for {date} from {start_time} to {end_time}")
+    import narwhals as nw
 
     from classes.functions.bloomberg import _run_async
 
-    # xbbg 1.0: bdib() aceita apenas 1 ticker por vez
+    # xbbg 1.0 (backend rust): abdib() aceita 1 ticker por vez e devolve colunas
+    # [ticker, time, open, high, low, close, volume, ...] com RangeIndex; o
+    # timestamp ("time", em UTC) é uma COLUNA, não o índice.
     frames = {}
-    for name, ticker in FOMC_TICKERS.items():
+    for name, ticker in {**FOMC_TICKERS, **OIS_HELPER_TICKERS}.items():
         try:
-            df = _run_async(
+            raw = _run_async(
                 blp.abdib(
                     ticker=ticker,
                     dt=meeting_date.date(),
@@ -192,14 +223,22 @@ def fetch_market_reaction(
                     backend="pandas",
                 )
             )
-            if df is not None and not df.empty:
-                # xbbg 1.0 retorna OHLCV — usar close
-                if "close" in df.columns:
-                    frames[name] = df["close"]
-                elif len(df.columns) == 1:
-                    frames[name] = df.iloc[:, 0]
-                else:
-                    frames[name] = df.iloc[:, 3]  # close = 4th col (OHLCV)
+            if raw is None:
+                continue
+            # Normaliza eventual wrapper narwhals/pyarrow para pandas
+            try:
+                df = nw.from_native(raw).to_pandas()
+            except TypeError, AttributeError:
+                df = raw
+            if df is None or df.empty or "time" not in df.columns or "close" not in df.columns:
+                continue
+            series = pd.Series(
+                df["close"].to_numpy(),
+                index=pd.DatetimeIndex(df["time"]),  # tz-aware UTC
+                name=name,
+            ).dropna()
+            if not series.empty:
+                frames[name] = series
         except Exception as e:
             logger.warning(f"Failed to fetch intraday data for {ticker}: {e}")
 
@@ -208,9 +247,41 @@ def fetch_market_reaction(
 
     data = pd.DataFrame(frames)
 
-    # Filter to time range
+    # Derivar inclinação 2s10s (bps) quando ambos os yields existem
+    if {"UST_2Y", "UST_10Y"} <= set(data.columns):
+        spread = (data["UST_10Y"] - data["UST_2Y"]) * 100
+        data = data.assign(**{SPREAD_2S10S_KEY: spread})
+
+    # Derivar OIS forward 1Y1Y (%) dos OIS 1Y/2Y via fatores de desconto:
+    #   f(1y,1y) = (1 + S2)^2 / (1 + S1) - 1
+    if {"OIS_1Y", "OIS_2Y"} <= set(data.columns):
+        s1 = data["OIS_1Y"] / 100
+        s2 = data["OIS_2Y"] / 100
+        fwd = ((1 + s2) ** 2 / (1 + s1) - 1) * 100
+        data = data.assign(**{OIS_1Y1Y_KEY: fwd})
+
+    # Descartar tickers auxiliares (não são painéis)
+    data = data.drop(columns=list(OIS_HELPER_TICKERS), errors="ignore")
+
+    # Converter o índice para horário de Brasília (e filtrar à janela ET, se dada)
     if isinstance(data.index, pd.DatetimeIndex):
-        data = data[(data.index >= start_dt) & (data.index <= end_dt)]
+        # Garantir índice tz-aware em ET (abdib devolve "time" em UTC)
+        if data.index.tz is None:
+            data.index = data.index.tz_localize(_TZ_ET)
+        else:
+            data.index = data.index.tz_convert(_TZ_ET)
+
+        if start_time is not None:
+            start_t = dt.datetime.strptime(start_time, "%H:%M").time()
+            start_et = pd.Timestamp(dt.datetime.combine(meeting_date.date(), start_t), tz=_TZ_ET)
+            data = data[data.index >= start_et]
+        if end_time is not None:
+            end_t = dt.datetime.strptime(end_time, "%H:%M").time()
+            end_et = pd.Timestamp(dt.datetime.combine(meeting_date.date(), end_t), tz=_TZ_ET)
+            data = data[data.index <= end_et]
+
+        # Exibição em horário de Brasília
+        data.index = data.index.tz_convert(_TZ_BRT)
 
     logger.info(f"Retrieved {len(data)} data points")
     return data
