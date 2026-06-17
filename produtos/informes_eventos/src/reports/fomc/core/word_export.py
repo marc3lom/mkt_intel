@@ -12,7 +12,6 @@ from zoneinfo import ZoneInfo
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib.lines import Line2D
 
 logger = logging.getLogger(__name__)
 
@@ -384,7 +383,8 @@ def create_market_reaction_grid(
         event_times: dict de eventos {chave → Timestamp} (tz-aware ou naive, em
             horário de Brasília); só as chaves em MARKET_REACTION_EVENTS são
             desenhadas. Chaves ausentes/None são ignoradas.
-        meeting_date: Data da reunião (YYYYMMDD) para o título. Opcional.
+        meeting_date: Data da reunião (YYYYMMDD). Atualmente não usado (o gráfico
+            não tem título); mantido por compatibilidade. Opcional.
         output_path: Caminho para salvar o PNG. Opcional.
         axis_end: Limite direito do eixo X (Timestamp em BRT). Se dado, estende
             todos os painéis com dados até esse horário, ainda que não haja dados
@@ -410,7 +410,9 @@ def create_market_reaction_grid(
     axes_flat = axes.flatten()
     event_color = COPOM_COLORS[4]
 
-    for ax, (key, title, vfmt, color_idx) in zip(axes_flat, MARKET_REACTION_PANELS):
+    for idx, (ax, (key, title, vfmt, color_idx)) in enumerate(
+        zip(axes_flat, MARKET_REACTION_PANELS)
+    ):
         color = COPOM_COLORS[color_idx % len(COPOM_COLORS)]
         series = data[key].dropna() if key in data.columns else pd.Series(dtype="float64")
 
@@ -463,11 +465,26 @@ def create_market_reaction_grid(
             ax.set_xticks([])
             ax.set_yticks([])
 
-        # Linhas verticais de evento
-        for ekey, _elabel, els in MARKET_REACTION_EVENTS:
+        # Linhas verticais de evento (rótulo inline só no 1º painel = Nasdaq 100)
+        for ekey, elabel, els in MARKET_REACTION_EVENTS:
             ets = events_naive.get(ekey)
-            if ets is not None:
-                ax.axvline(ets, color=event_color, linestyle=els, linewidth=1.2, alpha=0.85)
+            if ets is None:
+                continue
+            ax.axvline(ets, color=event_color, linestyle=els, linewidth=1.2, alpha=0.85)
+            if idx == 0:
+                ax.annotate(
+                    elabel,
+                    xy=(ets, 1.0),
+                    xycoords=("data", "axes fraction"),
+                    xytext=(-4, -4),
+                    textcoords="offset points",
+                    rotation=90,
+                    va="top",
+                    ha="right",
+                    fontsize=WORD_TICK_SIZE - 1,
+                    fontweight="bold",
+                    color=event_color,
+                )
 
         ax.set_title(title, fontsize=WORD_LABEL_SIZE, fontweight="bold")
         ax.yaxis.grid(True, linestyle="--", alpha=0.4)
@@ -476,33 +493,7 @@ def create_market_reaction_grid(
         ax.spines["right"].set_visible(False)
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
 
-    # Legenda única das 3 linhas de evento (apenas as presentes)
-    handles = [
-        Line2D([0], [0], color=event_color, linestyle=els, linewidth=1.4, label=elabel)
-        for ekey, elabel, els in MARKET_REACTION_EVENTS
-        if ekey in events_naive
-    ]
-    if handles:
-        fig.legend(
-            handles=handles,
-            loc="lower center",
-            ncol=len(handles),
-            frameon=False,
-            fontsize=WORD_LEGEND_SIZE,
-            bbox_to_anchor=(0.5, -0.01),
-        )
-
-    # Título geral
-    title_txt = "Reação de Mercado Intraday (horário de Brasília)"
-    if meeting_date:
-        try:
-            dt_fmt = pd.to_datetime(meeting_date, format="%Y%m%d").strftime("%d/%m/%Y")
-            title_txt = f"Reação de Mercado Intraday — FOMC {dt_fmt} (horário de Brasília)"
-        except ValueError, TypeError:
-            pass
-    fig.suptitle(title_txt, fontsize=WORD_TITLE_SIZE, fontweight="bold")
-
-    fig.tight_layout(rect=(0, 0.03, 1, 0.97))
+    fig.tight_layout()
 
     if output_path:
         save_chart_for_word(fig, output_path)
