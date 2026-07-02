@@ -370,6 +370,7 @@ def create_market_reaction_grid(
     meeting_date: str | None = None,
     output_path: Path | str | None = None,
     axis_end: pd.Timestamp | None = None,
+    events: list[tuple[str, str, str]] | None = None,
 ) -> plt.Figure:
     """Cria o grid 3x3 de reação de mercado intraday (estilo COPOM).
 
@@ -381,7 +382,7 @@ def create_market_reaction_grid(
         market_data: DataFrame intraday (uma coluna por painel, ver
             MARKET_REACTION_PANELS). Índice datetime (tz-aware BRT ou naive BRT).
         event_times: dict de eventos {chave → Timestamp} (tz-aware ou naive, em
-            horário de Brasília); só as chaves em MARKET_REACTION_EVENTS são
+            horário de Brasília); só as chaves presentes em events são
             desenhadas. Chaves ausentes/None são ignoradas.
         meeting_date: Data da reunião (YYYYMMDD). Atualmente não usado (o gráfico
             não tem título); mantido por compatibilidade. Opcional.
@@ -389,10 +390,15 @@ def create_market_reaction_grid(
         axis_end: Limite direito do eixo X (Timestamp em BRT). Se dado, estende
             todos os painéis com dados até esse horário, ainda que não haja dados
             até lá (área em branco à direita). Opcional.
+        events: Definições dos eventos a marcar, lista de tuplas
+            (chave, rótulo, estilo de linha). Default: MARKET_REACTION_EVENTS
+            (decisão FOMC). Permite reusar o grid p/ outros eventos (ex.: payroll).
 
     Returns:
         Figura matplotlib (3x3).
     """
+    event_defs = MARKET_REACTION_EVENTS if events is None else events
+
     # Índice em BRT naive para o matplotlib formatar a hora literal correta
     data = market_data.copy()
     if isinstance(data.index, pd.DatetimeIndex) and data.index.tz is not None:
@@ -466,7 +472,7 @@ def create_market_reaction_grid(
             ax.set_yticks([])
 
         # Linhas verticais de evento (rótulo inline só no 1º painel = Nasdaq 100)
-        for ekey, elabel, els in MARKET_REACTION_EVENTS:
+        for ekey, elabel, els in event_defs:
             ets = events_naive.get(ekey)
             if ets is None:
                 continue
