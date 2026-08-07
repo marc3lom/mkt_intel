@@ -354,6 +354,32 @@ MARKET_REACTION_EVENTS: list[tuple[str, str, str]] = [
     ("decisao", "Decisão FOMC", "-"),
 ]
 
+# Estilos do grid intraday. "word" = visual original (Word/impressão); "bloomberg"
+# = estrutura do Chart Grid da Bloomberg (área preenchida, eixo Y à direita, caixa
+# do último valor, subtítulo com variação e horário do último tick), mas mantendo
+# a paleta clara COPOM.
+MARKET_REACTION_STYLES: tuple[str, ...] = ("word", "bloomberg")
+
+# Cores de alta/baixa do subtítulo (estilo "bloomberg"), dentro da paleta COPOM
+_UP_COLOR: str = COPOM_COLORS[7]  # Forest green
+_DOWN_COLOR: str = COPOM_COLORS[4]  # Red
+
+# Abreviações de mês em pt-BR (evita depender de locale do sistema)
+_PT_BR_MONTHS: tuple[str, ...] = (
+    "jan",
+    "fev",
+    "mar",
+    "abr",
+    "mai",
+    "jun",
+    "jul",
+    "ago",
+    "set",
+    "out",
+    "nov",
+    "dez",
+)
+
 
 def _to_naive_brt(ts: pd.Timestamp) -> pd.Timestamp:
     """Normaliza um Timestamp para horário de Brasília *naive* (p/ plot sem
@@ -371,6 +397,7 @@ def create_market_reaction_grid(
     output_path: Path | str | None = None,
     axis_end: pd.Timestamp | None = None,
     events: list[tuple[str, str, str]] | None = None,
+    style: str = "word",
 ) -> plt.Figure:
     """Cria o grid 3x3 de reação de mercado intraday (estilo COPOM).
 
@@ -389,14 +416,28 @@ def create_market_reaction_grid(
         output_path: Caminho para salvar o PNG. Opcional.
         axis_end: Limite direito do eixo X (Timestamp em BRT). Se dado, estende
             todos os painéis com dados até esse horário, ainda que não haja dados
-            até lá (área em branco à direita). Opcional.
+            até lá (área em branco à direita). Opcional. Nunca *corta* dados: se a
+            série passar de axis_end, o eixo vai até o último tick real — assim a
+            linha sempre termina no horário de fato, não na moldura do gráfico.
         events: Definições dos eventos a marcar, lista de tuplas
             (chave, rótulo, estilo de linha). Default: MARKET_REACTION_EVENTS
             (decisão FOMC). Permite reusar o grid p/ outros eventos (ex.: payroll).
+        style: "word" (default) mantém o visual original do relatório FOMC.
+            "bloomberg" reproduz a estrutura do Chart Grid da Bloomberg na paleta
+            clara: área preenchida sob a curva, eixo Y à direita com caixa do
+            último valor, linha pontilhada do nível de abertura da janela, ticks
+            de hora sem rotação e subtítulo "T=valor  variação  %  HH:MM".
 
     Returns:
         Figura matplotlib (3x3).
+
+    Raises:
+        ValueError: Se style não estiver em MARKET_REACTION_STYLES.
     """
+    if style not in MARKET_REACTION_STYLES:
+        raise ValueError(f"style inválido: {style!r} (esperado: {MARKET_REACTION_STYLES})")
+
+    bbg = style == "bloomberg"
     event_defs = MARKET_REACTION_EVENTS if events is None else events
 
     # Índice em BRT naive para o matplotlib formatar a hora literal correta
@@ -412,9 +453,46 @@ def create_market_reaction_grid(
             if ts is not None:
                 events_naive[key] = _to_naive_brt(ts)
 
+    # Janela X comum a todos os painéis (só no estilo bloomberg). Sem isso o VIX,
+    # que não tem cotação overnight, começa ~7h depois dos futuros: o intervalo
+    # visível fica mais curto, o AutoDateLocator escolhe outro passo e o painel
+    # aparece com mais ticks que os vizinhos, quebrando a comparação visual.
+    x_lim: tuple[pd.Timestamp, pd.Timestamp] | None = None
+    if bbg:
+        starts, ends = [], []
+        for key, *_ in MARKET_REACTION_PANELS:
+            if key not in data.columns:
+                continue
+            s = data[key].dropna()
+            if not s.empty:
+                starts.append(s.index[0])
+                ends.append(s.index[-1])
+        if starts:
+            x_min, x_max = min(starts), max(ends)
+            if axis_end_naive is not None:
+                x_max = max(axis_end_naive, x_max)
+            # Margem à esquerda p/ a linha não nascer colada na moldura
+            x_lim = (x_min - (x_max - x_min) * 0.01, x_max)
+
+    # Passo dos ticks de hora, decidido uma única vez para valer em todos os
+    # painéis (ancorado na meia-noite, então o horário de corte também ganha
+    # rótulo). Em painel de ~2 pol, 5 rótulos "HH:MM" horizontais se sobrepõem —
+    # daí o alvo de ~3.
+    x_hour_step: int | None = None
+    if x_lim is not None:
+        span_h = (x_lim[1] - x_lim[0]).total_seconds() / 3600
+        if span_h >= 2:
+            x_hour_step = next((s for s in (1, 2, 3, 4, 6, 8, 12) if span_h / s <= 3.0), 12)
+
     fig, axes = plt.subplots(3, 3, figsize=(WORD_PAGE_WIDTH_INCHES, 8.5), dpi=WORD_DPI)
     axes_flat = axes.flatten()
     event_color = COPOM_COLORS[4]
+
+    # Linha de evento no estilo bloomberg: translúcida e *atrás* da série (a área
+    # preenchida fica em zorder 1, a série em 2). Sem isso o vermelho passa por cima
+    # justamente do movimento da reação, que é o que se quer ler.
+    event_alpha = 0.45 if bbg else 0.85
+    event_zorder = 1.5 if bbg else 2  # 2 = default do Line2D
 
     for idx, (ax, (key, title, vfmt, color_idx)) in enumerate(
         zip(axes_flat, MARKET_REACTION_PANELS)
@@ -425,36 +503,127 @@ def create_market_reaction_grid(
         if not series.empty:
             ax.plot(series.index, series.values, color=color, linewidth=1.3)
 
+            open_val = series.iloc[0]
+            last_val = series.iloc[-1]
+            last_ts = series.index[-1]
+
             # Linha de referência no nível inicial da janela (estilo Bloomberg)
             ax.axhline(
-                series.iloc[0],
+                open_val,
                 color="#AEAEAE",
                 linestyle=":",
                 linewidth=0.8,
                 alpha=0.7,
             )
 
-            # Rótulo do último valor
-            last_val = series.iloc[-1]
-            ax.annotate(
-                vfmt.format(last_val),
-                xy=(series.index[-1], last_val),
-                xytext=(4, 0),
-                textcoords="offset points",
-                va="center",
-                ha="left",
-                fontsize=WORD_TICK_SIZE - 1,
-                fontweight="bold",
-                color=color,
-                clip_on=False,
-            )
+            # Estender o eixo X até axis_end sem nunca truncar a série: se os dados
+            # passarem de axis_end, o limite direito é o último tick real.
+            # No estilo bloomberg vale a janela comum (x_lim), que já embute
+            # axis_end e o último tick de todos os painéis.
+            if x_lim is not None:
+                ax.set_xlim(*x_lim)
+            elif axis_end_naive is not None:
+                ax.set_xlim(right=max(axis_end_naive, last_ts))
 
-            # Estender o eixo X até axis_end (mesmo sem dados até lá)
-            if axis_end_naive is not None:
-                ax.set_xlim(right=axis_end_naive)
+            if bbg:
+                # Escala Y explícita p/ preencher a área até o piso do painel
+                lo, hi = float(series.min()), float(series.max())
+                span = hi - lo
+                pad = span * 0.10 if span > 0 else max(abs(hi) * 0.001, 1e-6)
+                ax.set_ylim(lo - pad, hi + pad)
+                ax.fill_between(
+                    series.index,
+                    series.values,
+                    lo - pad,
+                    color=color,
+                    alpha=0.16,
+                    linewidth=0,
+                )
 
-            # Locator adaptativo (a janela pode ir da Ásia ao fim da coletiva)
-            ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=4, maxticks=7))
+                # Marcador horizontal do último valor até a borda direita + caixa
+                right_num = ax.get_xlim()[1]
+                ax.plot(
+                    [mdates.date2num(last_ts), right_num],
+                    [last_val, last_val],
+                    color=color,
+                    linewidth=0.8,
+                    alpha=0.55,
+                )
+                ax.annotate(
+                    vfmt.format(last_val),
+                    xy=(1.0, last_val),
+                    xycoords=("axes fraction", "data"),
+                    xytext=(4, 0),
+                    textcoords="offset points",
+                    va="center",
+                    ha="left",
+                    fontsize=WORD_TICK_SIZE - 3,
+                    fontweight="bold",
+                    color="#FFFFFF",
+                    # Borda branca: a caixa mascara o rótulo do eixo por baixo
+                    # (mesmo comportamento do Chart Grid da Bloomberg)
+                    bbox={
+                        "boxstyle": "square,pad=0.3",
+                        "facecolor": color,
+                        "edgecolor": "#FFFFFF",
+                        "linewidth": 1.0,
+                    },
+                    clip_on=False,
+                    annotation_clip=False,
+                    zorder=5,
+                )
+
+                # Subtítulo estilo Bloomberg: último valor, variação e horário real
+                chg = last_val - open_val
+                pct = (chg / open_val * 100) if open_val else float("nan")
+                sign = "+" if chg >= 0 else "-"
+                ax.text(
+                    0.0,
+                    1.02,
+                    f"T={vfmt.format(last_val)}  {sign}{vfmt.format(abs(chg))}  "
+                    f"{sign}{abs(pct):.2f}%  {last_ts:%H:%M}",
+                    transform=ax.transAxes,
+                    va="bottom",
+                    ha="left",
+                    fontsize=WORD_TICK_SIZE - 3,
+                    fontweight="bold",
+                    color=_UP_COLOR if chg >= 0 else _DOWN_COLOR,
+                )
+
+                # Eixo Y à direita (Bloomberg) + data da sessão na linha de baixo
+                ax.yaxis.tick_right()
+                ax.yaxis.set_label_position("right")
+                if idx >= 6:
+                    ax.set_xlabel(
+                        f"{last_ts.day:02d} {_PT_BR_MONTHS[last_ts.month - 1]} {last_ts.year}",
+                        fontsize=WORD_TICK_SIZE - 3,
+                        color="#666666",
+                    )
+            else:
+                # Rótulo do último valor
+                ax.annotate(
+                    vfmt.format(last_val),
+                    xy=(last_ts, last_val),
+                    xytext=(4, 0),
+                    textcoords="offset points",
+                    va="center",
+                    ha="left",
+                    fontsize=WORD_TICK_SIZE - 1,
+                    fontweight="bold",
+                    color=color,
+                    clip_on=False,
+                )
+
+            # Locator adaptativo (a janela pode ir da Ásia ao fim da coletiva).
+            # No estilo bloomberg, passo de hora fixo: como a janela X é comum a
+            # todos os painéis, os ticks saem idênticos em todos eles (o VIX não
+            # tem overnight e, com locator automático, ganhava mais ticks).
+            if x_hour_step is not None:
+                ax.xaxis.set_major_locator(mdates.HourLocator(byhour=range(0, 24, x_hour_step)))
+            elif bbg:
+                ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=3, maxticks=5))
+            else:
+                ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=4, maxticks=7))
             ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
             ax.tick_params(axis="both", labelsize=WORD_TICK_SIZE - 2)
         else:
@@ -476,7 +645,14 @@ def create_market_reaction_grid(
             ets = events_naive.get(ekey)
             if ets is None:
                 continue
-            ax.axvline(ets, color=event_color, linestyle=els, linewidth=1.2, alpha=0.85)
+            ax.axvline(
+                ets,
+                color=event_color,
+                linestyle=els,
+                linewidth=1.2,
+                alpha=event_alpha,
+                zorder=event_zorder,
+            )
             if idx == 0:
                 ax.annotate(
                     elabel,
@@ -492,12 +668,28 @@ def create_market_reaction_grid(
                     color=event_color,
                 )
 
-        ax.set_title(title, fontsize=WORD_LABEL_SIZE, fontweight="bold")
-        ax.yaxis.grid(True, linestyle="--", alpha=0.4)
-        ax.set_axisbelow(True)
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
+        if bbg:
+            # Título à esquerda na cor do painel + moldura só nos eixos usados
+            ax.set_title(
+                title,
+                fontsize=WORD_LABEL_SIZE - 1,
+                fontweight="bold",
+                loc="left",
+                color=color,
+                pad=16,
+            )
+            ax.grid(True, linestyle=":", linewidth=0.6, alpha=0.45)
+            ax.set_axisbelow(True)
+            ax.spines["top"].set_visible(False)
+            ax.spines["left"].set_visible(False)
+            plt.setp(ax.xaxis.get_majorticklabels(), rotation=0, ha="center")
+        else:
+            ax.set_title(title, fontsize=WORD_LABEL_SIZE, fontweight="bold")
+            ax.yaxis.grid(True, linestyle="--", alpha=0.4)
+            ax.set_axisbelow(True)
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+            plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
 
     fig.tight_layout()
 
