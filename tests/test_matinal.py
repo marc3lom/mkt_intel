@@ -12,7 +12,7 @@ import pytest
 
 from comentario_matinal.calendario import Evento, eventos_do_dia
 from comentario_matinal.config import TZ_BR, carrega_config
-from comentario_matinal.dados import _com_variacao_confiavel
+from comentario_matinal.dados import _com_variacao_confiavel, ancora_fechamento_anterior
 from comentario_matinal.texto import _direcao, monta_texto
 
 ASOF = datetime(2026, 8, 14, 7, 40, tzinfo=TZ_BR)
@@ -86,6 +86,49 @@ def test_percentual_recalculado_tem_o_sinal_da_variacao_liquida():
         net = saida.at[ticker, "chg_net_1d"]
         pct = saida.at[ticker, "chg_pct_1d"]
         assert (net > 0) == (pct > 0), f"sinal divergente em {ticker}"
+
+
+# --- base de cálculo da variação --------------------------------------------
+
+
+def test_ancora_faz_a_variacao_ser_a_do_dia_e_nao_a_da_sessao():
+    """O caso do Nikkei em 14/08/2026, que expôs o erro.
+
+    O futuro abriu 730 pontos ACIMA do fechamento anterior e encerrou 80 abaixo
+    dele. O painel calcula a variação como último menos primeiro ponto da série;
+    sem a âncora, "primeiro" é a abertura e a conta devolve -1,18 % — a queda
+    dentro do pregão — em vez dos -0,12 % do dia. Em mercado asiático já fechado
+    o gap de abertura é a maior parte do movimento, então o erro é grande.
+    """
+    fechamento_anterior = 68690.0
+    barras = pd.Series([69420.0, 69000.0, 68610.0])
+
+    sem_ancora = barras.iloc[-1] - barras.iloc[0]
+    assert round(sem_ancora / barras.iloc[0] * 100, 2) == -1.17  # a sessão
+
+    ancorada = ancora_fechamento_anterior(barras, fechamento_anterior)
+    com_ancora = ancorada.iloc[-1] - ancorada.iloc[0]
+    assert ancorada.iloc[0] == fechamento_anterior
+    assert len(ancorada) == len(barras) + 1
+    assert round(com_ancora / fechamento_anterior * 100, 2) == -0.12  # o dia
+
+
+def test_ancora_preserva_o_sinal_quando_o_gap_inverte_a_direcao():
+    """Gap de alta seguido de queda leve: o dia sobe, a sessão cai."""
+    ancorada = ancora_fechamento_anterior(pd.Series([110.0, 108.0, 105.0]), 100.0)
+    assert ancorada.iloc[-1] - ancorada.iloc[0] > 0     # dia: +5
+    assert 105.0 - 110.0 < 0                            # sessão: -5
+
+
+@pytest.mark.parametrize("anterior", [None, float("nan")])
+def test_ancora_sem_fechamento_anterior_devolve_a_serie_intacta(anterior):
+    barras = pd.Series([1.0, 2.0])
+    assert ancora_fechamento_anterior(barras, anterior).equals(barras)
+
+
+def test_ancora_em_serie_vazia_nao_inventa_ponto():
+    vazia = pd.Series(dtype="float64")
+    assert ancora_fechamento_anterior(vazia, 100.0).empty
 
 
 # --- status de divulgação ---------------------------------------------------

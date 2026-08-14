@@ -66,7 +66,7 @@ def main() -> int:
         return 1
 
     print("Coletando barras intradiárias...", file=sys.stderr)
-    intraday = coleta_intraday(cfg.ativos, asof)
+    intraday = coleta_intraday(cfg.ativos, asof, ref)
 
     # --- Saída 1: o painel em imagem ---------------------------------------
     from daily.monitor import build_monitor_panel

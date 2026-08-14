@@ -88,12 +88,41 @@ def coleta_referencia(ativos: list[Ativo]) -> tuple[pd.DataFrame, list[str]]:
     return _com_variacao_confiavel(ref), indisponiveis
 
 
-def coleta_intraday(ativos: list[Ativo], quando: datetime) -> dict[str, pd.Series]:
+def ancora_fechamento_anterior(serie: pd.Series, anterior: float) -> pd.Series:
+    """Prepende o fechamento anterior como primeiro ponto da série.
+
+    O painel calcula a variação como último menos primeiro ponto da série. Sem
+    esta âncora, "primeiro" é a abertura da sessão, e a variação exibida passa a
+    ser a de dentro do pregão — não a do dia. A diferença entre as duas é o gap
+    de abertura, que em mercado asiático já fechado costuma ser a maior parte do
+    movimento: em 14/08/2026 o futuro de Nikkei abriu 730 pontos acima do
+    fechamento anterior e encerrou 80 pontos abaixo dele, de modo que a sessão
+    marcava -1,18 % enquanto o dia era -0,12 %.
+
+    É também o que o cabeçalho do bloco direcional afirma medir: direção apurada
+    contra o fechamento anterior.
+    """
+    if serie.empty or anterior is None or pd.isna(anterior):
+        return serie
+    try:
+        instante = serie.index[0] - pd.Timedelta(minutes=1)
+    except TypeError:
+        # Índice não temporal: a posição basta, o painel só usa a ordem.
+        instante = -1
+    return pd.concat([pd.Series([float(anterior)], index=[instante]), serie])
+
+
+def coleta_intraday(
+    ativos: list[Ativo],
+    quando: datetime,
+    referencia: pd.DataFrame,
+) -> dict[str, pd.Series]:
     """Puxa as barras intradiárias de cada ativo, para as sparklines.
 
     Uma chamada por ativo: é assim que a API de barras funciona, não há forma de
     pedir vários instrumentos de uma vez. Falha de um ativo não derruba o painel —
-    o tile correspondente cai para a imagem de mercado fechado.
+    o tile correspondente cai para a imagem de mercado fechado, e daí a variação
+    sai do dado de referência, que já é contra o fechamento anterior.
     """
     from xbbg import blp
 
@@ -116,7 +145,10 @@ def coleta_intraday(ativos: list[Ativo], quando: datetime) -> dict[str, pd.Serie
             else:
                 serie = barras["close"] if "close" in barras.columns else pd.Series(dtype="float64")
 
-            series[ativo.ticker] = pd.to_numeric(serie, errors="coerce").dropna()
+            serie = pd.to_numeric(serie, errors="coerce").dropna()
+            anterior = (referencia.at[ativo.ticker, "px_close_1d"]
+                        if ativo.ticker in referencia.index else None)
+            series[ativo.ticker] = ancora_fechamento_anterior(serie, anterior)
         except Exception as e:  # noqa: BLE001 — um ativo não pode derrubar o painel
             print(f"Aviso: barras intradiárias indisponíveis para {ativo.ticker} "
                   f"({type(e).__name__}: {e})", file=sys.stderr)
