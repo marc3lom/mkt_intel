@@ -157,17 +157,30 @@ hora adicional da conversão.
 
 ### Após o envio
 
-Salvar o texto final em `arquivo/AAAA/MM/AAAAMMDD.md`. Comentários que a chefia
-destacar como exemplares vão para `exemplos/aprovados/` e alimentam os exemplos
-few-shot do guia de estilo.
+Salvar o texto final em `arquivo/AAAA/MM/AAAAMMDD.md` — Markdown, data ISO no nome do
+arquivo, apenas o corpo do comentário. Não incluir painel, calendário nem bloco de
+auditoria.
+
+O formato é Markdown por decisão deliberada: o arquivo precisa ser pesquisável por texto
+para alimentar os exemplos few-shot e permitir conferência de consistência entre dias.
+Comentários anteriores em `.docx`, sob a convenção antiga `AAAA/AAAAMM/`, permanecem como
+estão; não há migração retroativa.
+
+Comentários que a chefia destacar como exemplares vão para `exemplos/aprovados/` e
+alimentam os exemplos few-shot do guia de estilo. Trechos rejeitados vão para
+`exemplos/rejeitados/`, com o motivo da rejeição no cabeçalho do arquivo.
 
 ---
 
 ## Notas
 
 - O bloco de auditoria nunca vai no e-mail.
-- Os PDFs da Bloomberg trazem marcação de uso exclusivo e vedação à redistribuição. O
-  uso do material em serviço externo de IA deve estar coberto pela governança de IA e
-  pelos contratos da instituição antes de o processo virar rotina de divisão.
-- Os tickers em `config/painel.toml` devem ser conferidos contra o terminal antes do
-  primeiro uso em produção.
+- Os PDFs da Bloomberg trazem marcação de uso exclusivo nominal e vedação à
+  redistribuição. O material não é redistribuído em nenhuma hipótese: apenas o conteúdo
+  informa a redação do comentário, que é produto derivado e interno. Os PDFs não entram
+  no repositório (ver `.gitignore`).
+- O Project do Claude está hoje em assinatura pessoal. Na migração para o ambiente
+  corporativo, solicitar projeto compartilhado com permissão de edição restrita, de modo
+  que os gestores de plantão usem sem divergir, e submeter o fluxo à governança de IA da
+  instituição.
+- Repositório privado. Contém comentários institucionais enviados à diretoria.
