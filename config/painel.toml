@@ -1,0 +1,43 @@
+# Configuração do painel e do calendário econômico.
+# Conferir todos os tickers no terminal antes do primeiro uso em produção.
+
+[painel]
+# Limiar em desvios-padrão intradiários abaixo do qual o movimento é reportado
+# como "estável" em vez de direcional. Evita descrever ruído como movimento.
+limiar_estabilidade = 0.25
+
+# Ativos de taxa: a variação é reportada em direção da TAXA (alta = juros subindo).
+[painel.taxas]
+"USGG10YR Index" = "Treasury 10a"
+"GDBR10 Index"   = "Bund 10a"
+"GUKG10 Index"   = "Gilt 10a"
+"GJGB10 Index"   = "JGB 10a"
+"GCNY10YR Index" = "CGB 10a"
+
+# Ativos de preço: a variação é reportada em direção do PREÇO.
+[painel.precos]
+"ES1 Index"    = "Futuro S&P 500"
+"VG1 Index"    = "Futuro EuroStoxx 50"
+"NK1 Index"    = "Futuro Nikkei 225"
+"IFB1 Index"   = "Futuro CSI 300"
+"DXY Curncy"   = "DXY"
+"EURUSD Curncy" = "EUR"
+"USDJPY Curncy" = "USD/JPY"
+"USDCNH Curncy" = "USD/CNH"
+"XAU Curncy"   = "Ouro"
+"CO1 Comdty"   = "Brent"
+"VIX Index"    = "VIX"
+"XBTUSD Curncy" = "Bitcoin"
+
+# Releases econômicos acompanhados. O script consulta data e hora de divulgação,
+# mediana de expectativas e valor efetivo, para permitir a checagem de status.
+[calendario]
+tickers = [
+  "RSTAMOM Index",   # US retail sales advance MoM
+  "CPI CHNG Index",  # US CPI MoM
+  "FDIDFDMO Index",  # US PPI final demand MoM
+  "INJCJC Index",    # US initial jobless claims
+  "CONSSENT Index",  # U. of Michigan sentiment
+  "EUGNEMUQ Index",  # Eurozone GDP QoQ
+  "UKGRABIQ Index",  # UK GDP QoQ
+]
