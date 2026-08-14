@@ -51,3 +51,6 @@ desktop.ini
 .DS_Store
 ~$*.docx
 ~$*.doc
+
+# Saídas do comando matinal — imagens e texto regenerados a cada manhã.
+saida/

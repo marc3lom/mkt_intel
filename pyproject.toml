@@ -6,14 +6,25 @@ readme = "README.md"
 authors = [
     { name = "Marcelo Martinelli", email = "mmartinelli@gmail.com" }
 ]
-# tomllib entrou na biblioteca padrão no 3.11; o script depende dele.
-requires-python = ">=3.11"
+# O piso vem do pacote `daily`, que exige 3.14. Ele é dependência daqui, então
+# este projeto não pode pedir menos.
+requires-python = ">=3.14"
 dependencies = [
-    "numpy>=2.1",
+    "daily",
+    "matplotlib>=3.10",
     "pandas>=2.2",
-    "xbbg>=0.7.7",
+    "xbbg>=1.4",
     "blpapi>=3.24",
 ]
+
+# A camada de renderização (grade do painel, tabelas do calendário, detecção de
+# feriado) vive no repositório `daily` e é compartilhada, não copiada: ela tem
+# outros consumidores lá — os notebooks de `drafts/` e o `tests/test_render.py`.
+# Duplicar aqui criaria duas cópias divergindo com o tempo, que é a versão
+# estrutural do problema que este comando existe para resolver.
+[tool.uv.sources]
+daily = { path = "../daily", editable = true }
+blpapi = { index = "bloomberg" }
 
 # blpapi não é publicado no PyPI. Vem do índice da própria Bloomberg, declarado
 # como explicit para que nenhuma outra dependência seja resolvida a partir dele.
@@ -22,10 +33,18 @@ name = "bloomberg"
 url = "https://blpapi.bloomberg.com/repository/releases/python/simple/"
 explicit = true
 
-[tool.uv.sources]
-blpapi = { index = "bloomberg" }
+[project.scripts]
+matinal = "comentario_matinal.cli:main"
 
-# Projeto não-empacotado: os utilitários rodam direto de scripts/, via
-# `uv run scripts/gera_painel.py`. Não há nada a construir nem a distribuir.
-[tool.uv]
-package = false
+[build-system]
+requires = ["uv_build>=0.12.4,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = "src"
+module-name = "comentario_matinal"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1",
+]

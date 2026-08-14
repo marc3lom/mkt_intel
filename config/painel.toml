@@ -1,43 +1,151 @@
-# Configuração do painel e do calendário econômico.
+# Configuração do painel de mercado.
+#
+# Este arquivo é a fonte canônica dos ativos: a mesma lista, na mesma ordem,
+# alimenta a imagem enviada à diretoria e o bloco direcional em texto usado na
+# checagem do comentário. Não há segunda lista em lugar nenhum — é o que impede
+# a imagem e o texto de divergirem.
+#
 # Conferir todos os tickers no terminal antes do primeiro uso em produção.
 
 [painel]
-# Limiar em desvios-padrão intradiários abaixo do qual o movimento é reportado
-# como "estável" em vez de direcional. Evita descrever ruído como movimento.
+# Limiar em pontos percentuais abaixo do qual o movimento de um ativo de PREÇO é
+# reportado como "estável" em vez de direcional. Evita narrar ruído como movimento.
 limiar_estabilidade = 0.25
 
-# Ativos de taxa: a variação é reportada em direção da TAXA (alta = juros subindo).
-[painel.taxas]
-"USGG10YR Index" = "Treasury 10a"
-"GDBR10 Index"   = "Bund 10a"
-"GUKG10 Index"   = "Gilt 10a"
-"GJGB10 Index"   = "JGB 10a"
-"GCNY10YR Index" = "CGB 10a"
+# Limiar equivalente para ativos de TAXA, em pontos percentuais da própria taxa
+# (0.01 = 1 bp).
+limiar_estabilidade_taxa = 0.01
 
-# Ativos de preço: a variação é reportada em direção do PREÇO.
-[painel.precos]
-"ES1 Index"    = "Futuro S&P 500"
-"VG1 Index"    = "Futuro EuroStoxx 50"
-"NK1 Index"    = "Futuro Nikkei 225"
-"IFB1 Index"   = "Futuro CSI 300"
-"DXY Curncy"   = "DXY"
-"EURUSD Curncy" = "EUR"
-"USDJPY Curncy" = "USD/JPY"
-"USDCNH Curncy" = "USD/CNH"
-"XAU Curncy"   = "Ouro"
-"CO1 Comdty"   = "Brent"
-"VIX Index"    = "VIX"
-"XBTUSD Curncy" = "Bitcoin"
+# Grade do painel, [linhas, colunas]. Precisa comportar todos os ativos abaixo;
+# sobras ficam em branco. Hoje: 17 ativos em 20 tiles, com 3 vagos no fim.
+grade = [5, 4]
 
-# Releases econômicos acompanhados. O script consulta data e hora de divulgação,
-# mediana de expectativas e valor efetivo, para permitir a checagem de status.
-[calendario]
-tickers = [
-  "RSTAMOM Index",   # US retail sales advance MoM
-  "CPI CHNG Index",  # US CPI MoM
-  "FDIDFDMO Index",  # US PPI final demand MoM
-  "INJCJC Index",    # US initial jobless claims
-  "CONSSENT Index",  # U. of Michigan sentiment
-  "EUGNEMUQ Index",  # Eurozone GDP QoQ
-  "UKGRABIQ Index",  # UK GDP QoQ
-]
+# A ordem abaixo é, ao mesmo tempo, a ordem de leitura da grade (esquerda para
+# direita, cima para baixo) e a ordem das linhas do bloco direcional em texto.
+# Manter as duas iguais é deliberado: quem confere a imagem contra o texto lê os
+# ativos na mesma sequência nos dois.
+#
+# O agrupamento é por classe de ativo — taxas, bolsas, câmbio, commodities,
+# volatilidade — e não por região. Com 17 ativos em 4 colunas nenhuma divisão
+# regional fecha em linhas inteiras; por classe, ao menos a primeira linha sai
+# homogênea e a progressão é legível.
+#
+# tipo: "taxa" | "acao" | "cambio" | "commodity" | "vol"
+#   taxa      — variação reportada em direção da TAXA e formatada em bps
+#   os demais — variação reportada em direção do PREÇO
+#
+# rotulo       — usado no bloco direcional em texto; precisa ser inequívoco
+# rotulo_grade — usado no tile da imagem, onde o espaço é curto
+
+# --- Taxas longas ---
+[[painel.ativo]]
+ticker = "USGG10YR Index"
+rotulo = "Treasury 10a"
+rotulo_grade = "Trsy 10a"
+tipo = "taxa"
+
+[[painel.ativo]]
+ticker = "GDBR10 Index"
+rotulo = "Bund 10a"
+rotulo_grade = "Bund 10a"
+tipo = "taxa"
+
+[[painel.ativo]]
+ticker = "GUKG10 Index"
+rotulo = "Gilt 10a"
+rotulo_grade = "Gilt 10a"
+tipo = "taxa"
+
+# GJGB10 é o índice de taxa do JGB, e não o título em preço: devolve a taxa
+# direto, com variação líquida válida. O ticker de título exigiria uma consulta
+# extra de yield para chegar no mesmo número.
+[[painel.ativo]]
+ticker = "GJGB10 Index"
+rotulo = "JGB 10a"
+rotulo_grade = "JGB 10a"
+tipo = "taxa"
+
+[[painel.ativo]]
+ticker = "GCNY10YR Index"
+rotulo = "CGB 10a"
+rotulo_grade = "CGB 10a"
+tipo = "taxa"
+
+# --- Bolsas ---
+[[painel.ativo]]
+ticker = "ES1 Index"
+rotulo = "Futuro S&P 500"
+rotulo_grade = "S&P 500 Fut"
+tipo = "acao"
+
+[[painel.ativo]]
+ticker = "VG1 Index"
+rotulo = "Futuro EuroStoxx 50"
+rotulo_grade = "EuroStoxx 50 Fut"
+tipo = "acao"
+
+[[painel.ativo]]
+ticker = "NK1 Index"
+rotulo = "Futuro Nikkei 225"
+rotulo_grade = "Nikkei 225 Fut"
+tipo = "acao"
+
+[[painel.ativo]]
+ticker = "IFB1 Index"
+rotulo = "Futuro CSI 300"
+rotulo_grade = "CSI 300 Fut"
+tipo = "acao"
+
+# --- Câmbio ---
+[[painel.ativo]]
+ticker = "DXY Curncy"
+rotulo = "DXY"
+rotulo_grade = "DXY"
+tipo = "cambio"
+
+# "EUR" sem barra é inequívoco: EURUSD sobe quando o euro se fortalece.
+[[painel.ativo]]
+ticker = "EURUSD Curncy"
+rotulo = "EUR"
+rotulo_grade = "EUR"
+tipo = "cambio"
+
+# O par é USD/JPY: quando sobe, o iene ENFRAQUECE. O rótulo precisa dizer isso,
+# sob pena de o texto direcional afirmar o contrário do dado.
+[[painel.ativo]]
+ticker = "USDJPY Curncy"
+rotulo = "USD/JPY"
+rotulo_grade = "USD/JPY"
+tipo = "cambio"
+
+[[painel.ativo]]
+ticker = "USDCNH Curncy"
+rotulo = "USD/CNH"
+rotulo_grade = "USD/CNH"
+tipo = "cambio"
+
+# --- Commodities ---
+[[painel.ativo]]
+ticker = "XAU Curncy"
+rotulo = "Ouro"
+rotulo_grade = "Ouro"
+tipo = "commodity"
+
+[[painel.ativo]]
+ticker = "CO1 Comdty"
+rotulo = "Brent"
+rotulo_grade = "Brent"
+tipo = "commodity"
+
+# --- Volatilidade e cripto ---
+[[painel.ativo]]
+ticker = "VIX Index"
+rotulo = "VIX"
+rotulo_grade = "VIX"
+tipo = "vol"
+
+[[painel.ativo]]
+ticker = "XBTUSD Curncy"
+rotulo = "Bitcoin"
+rotulo_grade = "Bitcoin"
+tipo = "cambio"
