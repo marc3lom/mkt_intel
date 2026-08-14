@@ -20,7 +20,7 @@ from __future__ import annotations
 import argparse
 import sys
 import tomllib
-from datetime import datetime, date
+from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -36,6 +36,35 @@ CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "painel.toml"
 def carrega_config(path: Path = CONFIG_PATH) -> dict:
     with path.open("rb") as fh:
         return tomllib.load(fh)
+
+
+def _para_dict(bdp_resultado) -> dict[str, dict[str, object]]:
+    """Normalize a blp.bdp() result into {ticker: {field: value}}.
+
+    xbbg 1.4.x returns a Narwhals DataFrame in long format with columns
+    ('ticker', 'field', 'value') rather than the wide, ticker-indexed pandas frame
+    older versions produced. Converting once here keeps the rest of the module
+    independent of that shape, and of whichever backend Narwhals is wrapping.
+
+    Field names are lowercased so callers can use 'px_last' regardless of how the
+    request was spelled.
+    """
+    try:
+        # Narwhals exposes to_pandas(); a plain pandas frame passes through unchanged.
+        df = bdp_resultado.to_pandas()
+    except AttributeError:
+        df = bdp_resultado
+
+    if not {"ticker", "field", "value"}.issubset(df.columns):
+        raise RuntimeError(
+            "Formato inesperado no retorno de blp.bdp(): colunas "
+            f"{list(df.columns)}. Esperado ticker/field/value."
+        )
+
+    saida: dict[str, dict[str, object]] = {}
+    for _, linha in df.iterrows():
+        saida.setdefault(str(linha["ticker"]), {})[str(linha["field"]).lower()] = linha["value"]
+    return saida
 
 
 def _direcao(variacao: float, limiar: float) -> str:
@@ -58,18 +87,24 @@ def coleta_painel(cfg: dict) -> pd.DataFrame:
     tickers = list(taxas) + list(precos)
 
     # PX_LAST vs PX_CLOSE_1D gives the day-over-day move without pulling history.
-    dados = blp.bdp(tickers=tickers, flds=["PX_LAST", "PX_CLOSE_1D"])
+    dados = _para_dict(blp.bdp(tickers=tickers, flds=["PX_LAST", "PX_CLOSE_1D"]))
 
     linhas = []
     for ticker in tickers:
-        if ticker not in dados.index:
+        registro = dados.get(ticker, {})
+        ultimo_bruto = registro.get("px_last")
+        anterior_bruto = registro.get("px_close_1d")
+
+        # A ticker can come back present but with a null field (stale contract, market
+        # holiday). Both values are required, so treat either gap the same way.
+        if ultimo_bruto is None or anterior_bruto is None or pd.isna(ultimo_bruto) or pd.isna(anterior_bruto):
             linhas.append({"ticker": ticker, "rotulo": taxas.get(ticker) or precos.get(ticker),
                            "tipo": "taxa" if ticker in taxas else "preco",
                            "variacao_pct": float("nan"), "direcao": "indisponível"})
             continue
 
-        ultimo = float(dados.loc[ticker, "px_last"])
-        anterior = float(dados.loc[ticker, "px_close_1d"])
+        ultimo = float(ultimo_bruto)
+        anterior = float(anterior_bruto)
         # For yields the level IS the rate, so a percentage change on the level is a
         # poor scale. Report the move in basis points instead, but keep a percentage
         # column for the threshold test.
@@ -92,33 +127,55 @@ def coleta_painel(cfg: dict) -> pd.DataFrame:
     return pd.DataFrame(linhas)
 
 
-def coleta_calendario(cfg: dict, referencia: date) -> pd.DataFrame:
-    """Pull release timing, survey median, and actual for the tracked indicators.
+def coleta_calendario(cfg: dict, asof: datetime) -> tuple[pd.DataFrame, list[str]]:
+    """Pull release timing and survey median for the tracked indicators.
 
-    ECO_RELEASE_DT and the actual value are what let the review step distinguish a
-    published number from a scheduled one. An empty actual on a release dated today is
-    exactly the case that must never appear in the text as a fact.
+    Release status is decided by comparing the scheduled release datetime against the
+    writing time -- NOT by whether PX_LAST is populated. An economic index carries its
+    last published print indefinitely, so a non-null PX_LAST at 07h40 is June's number,
+    not this morning's. Keying off PX_LAST would mark every indicator as released and
+    defeat the whole point of this block.
+
+    ECO_RELEASE_TIME comes through in the terminal's local time zone, which for this
+    desk is Brasília -- confirmed against the desk's own calendar, where US 08h30 NY
+    releases show as 09h30.
+
+    Returns the calendar frame plus the list of tickers that returned no data at all,
+    so a bad ticker is distinguishable from an indicator simply not scheduled today.
     """
     tickers = cfg["calendario"]["tickers"]
     flds = ["NAME", "ECO_RELEASE_DT", "ECO_RELEASE_TIME", "BN_SURVEY_MEDIAN", "PX_LAST"]
-    dados = blp.bdp(tickers=tickers, flds=flds)
+    dados = _para_dict(blp.bdp(tickers=tickers, flds=flds))
 
     linhas = []
+    sem_dado = []
     for ticker in tickers:
-        if ticker not in dados.index:
+        registro = dados.get(ticker)
+        if not registro:
+            sem_dado.append(ticker)
             continue
-        linha = dados.loc[ticker]
-        data_release = pd.to_datetime(linha.get("eco_release_dt"), errors="coerce")
-        if pd.isna(data_release) or data_release.date() != referencia:
+
+        data_release = pd.to_datetime(registro.get("eco_release_dt"), errors="coerce")
+        if pd.isna(data_release) or data_release.date() != asof.date():
             continue
+
+        hora_release = pd.to_datetime(registro.get("eco_release_time"), errors="coerce")
+        if pd.isna(hora_release):
+            # Without a time we cannot rule the release out; flag it rather than guess.
+            horario_txt, divulgado = "horário não informado", None
+        else:
+            momento = datetime.combine(data_release.date(), hora_release.time(), tzinfo=asof.tzinfo)
+            horario_txt = f"{momento:%Hh%M}"
+            divulgado = momento <= asof
+
         linhas.append({
-            "evento": linha.get("name", ticker),
-            "horario": linha.get("eco_release_time", ""),
-            "estimativa": linha.get("bn_survey_median"),
-            "atual": linha.get("px_last"),
+            "evento": str(registro.get("name", ticker)).strip(),
+            "horario": horario_txt,
+            "estimativa": registro.get("bn_survey_median"),
+            "divulgado": divulgado,
         })
 
-    return pd.DataFrame(linhas)
+    return pd.DataFrame(linhas), sem_dado
 
 
 def formata(painel: pd.DataFrame, calendario: pd.DataFrame, asof: datetime) -> str:
@@ -144,14 +201,19 @@ def formata(painel: pd.DataFrame, calendario: pd.DataFrame, asof: datetime) -> s
 
     out.append("")
     out.append("CALENDÁRIO ECONÔMICO DO DIA")
+    out.append(f"Status apurado contra o horário de redação ({asof:%Hh%M} de Brasília).")
     if calendario.empty:
         out.append("  Sem releases acompanhados para a data.")
     else:
         for _, r in calendario.iterrows():
             # The status flag is the point of this block: it is what the writing and
             # review prompts key on to refuse an unreleased number.
-            divulgado = pd.notna(r.atual)
-            status = "DIVULGADO" if divulgado else "AINDA NÃO DIVULGADO"
+            if r.divulgado is None:
+                status = "STATUS INDETERMINADO — VERIFICAR"
+            elif r.divulgado:
+                status = "DIVULGADO"
+            else:
+                status = "AINDA NÃO DIVULGADO"
             out.append(f"  {r.evento} — previsto para {r.horario} — {status}")
 
     out.append("")
@@ -176,7 +238,7 @@ def main() -> int:
 
     cfg = carrega_config(args.config)
     painel = coleta_painel(cfg)
-    calendario = coleta_calendario(cfg, asof.date())
+    calendario, releases_sem_dado = coleta_calendario(cfg, asof)
     texto = formata(painel, calendario, asof)
 
     if args.saida:
@@ -187,8 +249,14 @@ def main() -> int:
 
     indisponiveis = painel[painel.direcao == "indisponível"]
     if not indisponiveis.empty:
-        print(f"\nAviso: {len(indisponiveis)} ticker(s) sem dado — "
+        print(f"\nAviso: {len(indisponiveis)} ticker(s) do painel sem dado — "
               f"{', '.join(indisponiveis.ticker)}", file=sys.stderr)
+
+    # A release ticker returning nothing is a config error; one simply not scheduled
+    # today is normal. Only the former deserves a warning.
+    if releases_sem_dado:
+        print(f"Aviso: {len(releases_sem_dado)} ticker(s) de release sem retorno — "
+              f"{', '.join(releases_sem_dado)}", file=sys.stderr)
 
     return 0
 
