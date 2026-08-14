@@ -126,4 +126,6 @@ falhe em qualquer item abaixo.
    literalmente em marcadores consecutivos.
 10. Nenhuma opinião, projeção ou avaliação normativa atribuível à divisão.
 11. Itálico e nomenclatura conforme as seções 9.1 a 9.3 do guia.
-12. Bloco de auditoria preenchido integralmente.
+12. Menções à véspera limitadas a explicações de movimento corrente, marcadas como tais
+    (seção 5.2 do guia).
+13. Bloco de auditoria preenchido integralmente, com a contagem apurada e não estimada.

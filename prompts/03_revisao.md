@@ -59,7 +59,10 @@ Verificações adicionais obrigatórias:
 3. **Coerência temporal**: reação de mercado da véspera apresentada como movimento
    corrente; sessão asiática no presente; mercado à vista americano descrito como aberto.
 4. **Precisão de atribuição**: cargo, instituição e veículo conferidos contra a fonte.
-5. **Consistência com o dia anterior**, quando fornecido: contradição não sinalizada, ou
+5. **Elegibilidade temporal**: fonte publicada após o horário de redação informado não
+   pode sustentar afirmação no texto. Menção à véspera só se admite como explicação de
+   movimento corrente, marcada como tal.
+6. **Consistência com o dia anterior**, quando fornecido: contradição não sinalizada, ou
    repetição do mesmo tema de abertura sem fato novo.
 
 ---

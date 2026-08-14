@@ -45,6 +45,11 @@ Critérios de relevância, em ordem:
    aderência direta à gestão das reservas internacionais.
 4. Ineditismo em relação ao comentário do dia anterior.
 
+Aplicar a elegibilidade temporal da seção 5.2 do guia de estilo: movimentos apenas da
+sessão corrente; evento da véspera somente quando for a explicação reportada para um
+movimento de hoje. Temas inelegíveis devem constar da tabela com o rótulo de status
+correspondente e aparecer na seção D como descartados, e não ser omitidos em silêncio.
+
 ---
 
 ## FORMATO DA SAÍDA

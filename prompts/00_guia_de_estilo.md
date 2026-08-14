@@ -1,6 +1,6 @@
 # GUIA DE ESTILO — COMENTÁRIO MATINAL (DEPIN/DIRIN)
 
-Versão 1.0 — 14/08/2026
+Versão 1.1 — 14/08/2026
 Documento de referência único. Alterações de convenção são feitas AQUI, nunca nos prompts.
 
 ---
@@ -84,6 +84,28 @@ Referência de fechamento anterior: encerramento da sessão de Nova York.
   Não apresentar reação de mercado de ontem como movimento da sessão corrente.
 - Dado macroeconômico com horário de divulgação POSTERIOR ao da redação não pode
   aparecer como fato consumado, ainda que citado em wrap de fonte.
+
+### 5.1 Horário de redação
+
+O horário de redação é o do TÉRMINO DA COLETA, não o horário nominal do plantão.
+
+- Fonte publicada após esse horário não entra no comentário.
+- Se a coleta se estender, o horário se atualiza, e as fontes novas passam a ser
+  elegíveis. O horário efetivo acompanha o texto até a revisão.
+- O painel deve ser gerado próximo ao término da coleta. Painel gerado com folga
+  significativa descreve outro instante do mercado.
+
+### 5.2 Elegibilidade temporal dos temas
+
+Descrever MOVIMENTOS DE MERCADO apenas da sessão corrente.
+
+Evento da véspera entra somente quando for a explicação reportada para um movimento
+de hoje, sempre marcado como tal ("na véspera", "ontem"). Exemplo: o leilão de trinta
+anos da véspera entra porque as fontes o apontam como origem da pressão nas taxas
+longas de hoje; a reação cambial de ontem a uma notícia de ontem não entra.
+
+Sessão asiática encerrada: seus movimentos podem ser descritos no passado quando
+relevantes para o quadro global, nunca como movimento corrente.
 
 ---
 
@@ -229,3 +251,116 @@ Cortar nesta ordem, de cima para baixo:
 5. Mercados e ativos secundários.
 6. Marcador 5 (riscos monitorados), na íntegra.
 7. **NUNCA:** tema dominante do dia, atribuição de interpretação, ressalva temporal.
+
+---
+
+## 12. EXEMPLOS ANOTADOS
+
+Os casos abaixo vêm de comentários efetivamente enviados em agosto de 2026, ANTES do
+feedback da chefia sobre extensão e atribuição. São exemplos do padrão a corrigir, não
+do padrão a seguir. A prosa é boa; o enquadramento é que está fora da norma vigente.
+
+### 12.1 Extensão — parágrafo fora de orçamento
+
+**Rejeitado** (213 palavras, comentário de 11/08, segundo marcador):
+
+> "No campo geopolítico, o ponto central é o endurecimento simultâneo das duas partes:
+> Washington amplia o escopo de suas exigências, enquanto Teerã condiciona a reabertura
+> do estreito à suspensão do bloqueio naval, à liberação de ativos congelados e ao
+> pagamento de indenizações de guerra. [...] ataques a refinarias na Arábia Saudita, na
+> Líbia e na Rússia pressionam os destilados médios, e o custo de afretamento de navios
+> na rota do Golfo para a Ásia já supera o dobro do nível pré-conflito [...] o ministro
+> da Defesa do Paquistão, país que atua como mediador, afirmou nesta manhã que os sinais
+> dos últimos dias apontam para a proximidade de algum tipo de arranjo [...]"
+
+**Motivo:** quase o dobro do teto de 115 palavras. O parágrafo acumula três assuntos —
+posições negociais, canais de transmissão do choque, e sinalização diplomática.
+
+**Corrigido** (98 palavras):
+
+> "No campo geopolítico, o endurecimento é simultâneo das duas partes: Washington amplia
+> suas exigências, enquanto Teerã condiciona a reabertura do estreito à suspensão do
+> bloqueio naval e a compensações. O choque não se restringe ao preço do barril: as
+> fontes registram pressão sobre destilados médios e forte elevação do custo de
+> afretamento na rota do Golfo para a Ásia. Em sentido oposto, o ministro da Defesa do
+> Paquistão, que atua como mediador, afirmou que os sinais recentes apontam para a
+> proximidade de um arranjo, o que ajuda a explicar por que o mercado ainda não precifica
+> ruptura definitiva."
+
+### 12.2 Inferência causal não atribuída
+
+**Rejeitado:**
+
+> "trata-se, portanto, de um choque de oferta com componente logístico relevante, que
+> tende a se transmitir com maior velocidade aos índices cheios de inflação do que um
+> movimento equivalente concentrado apenas no petróleo bruto"
+
+**Motivo:** conclusão analítica própria, sem suporte explícito nas fontes. O "portanto"
+e o "tende a" caracterizam raciocínio da divisão, não descrição.
+
+**Corrigido:**
+
+> "as fontes descrevem um choque que combina preço do barril e custo logístico,
+> apontando transmissão mais rápida aos índices cheios de inflação"
+
+### 12.3 Projeção
+
+**Rejeitado:**
+
+> "o mercado deve seguir operando com apetite seletivo por ativos de risco e com o
+> *term premium* concentrando boa parte do ajuste nas curvas"
+
+**Motivo:** projeção sobre comportamento futuro. É o item que o TESTE DE RISCO
+INSTITUCIONAL do prompt de revisão manda reescrever.
+
+**Corrigido:**
+
+> "os mercados seguem monitorando a evolução do prêmio exigido nas taxas longas e a
+> sensibilidade dos ativos de risco ao choque energético"
+
+Vale o mesmo para: "a continuidade do tom construtivo depende, essencialmente, de que
+nenhuma dessas frentes se converta em choque — e é aí que reside a assimetria da semana."
+
+### 12.4 Parágrafo de síntese
+
+**Rejeitado** (comentário de 04/08, marcador final):
+
+> "Em síntese, o mercado opera em equilíbrio entre um suporte micro robusto — os lucros
+> corporativos — e dois vetores macro não resolvidos [...]"
+
+**Motivo:** recapitula os marcadores anteriores sem acrescentar informação, contra a
+regra de que cada marcador agrega conteúdo novo. O marcador final, quando existir, trata
+de riscos sob monitoramento reportados pelas fontes.
+
+### 12.5 Primeira oração sem asserção
+
+**Rejeitado:**
+
+> "Na renda fixa, o comportamento é heterogêneo ao longo da curva."
+
+**Motivo:** a oração de abertura não carrega informação. O leitor que percorre apenas a
+primeira linha de cada marcador não retém nada sobre renda fixa.
+
+**Corrigido:**
+
+> "Na renda fixa, o recuo das vendas no varejo americanas, no maior ritmo em mais de um
+> ano, foi apontado nas fontes como reforço à cautela do Fed."
+
+### 12.6 Atribuição inflacionada
+
+**Rejeitado** — quatro atribuições nominais no mesmo texto, com cargo e instituição:
+
+> "Para Hitoshi Asaoka, estrategista-chefe da Asset Management One [...] Estrategistas do
+> Bank of America liderados por Michael Hartnett [...] Patrick Armstrong, da Plurimi
+> Wealth [...] Skylar Montgomery Koning, estrategista macro da Bloomberg"
+
+**Motivo:** cerca de setenta palavras consumidas apenas em identificação, acima do teto
+de três atribuições nominais. Cargo só quando a autoridade da fonte for relevante.
+
+**Corrigido:** manter no máximo três, agregando as demais como "estrategistas citados
+pelas fontes".
+
+### 12.7 Exemplo positivo
+
+Pendente. O primeiro comentário produzido pelo processo de três etapas e aprovado pela
+chefia sem ressalva deve ser incorporado aqui, com anotação do que demonstra.
