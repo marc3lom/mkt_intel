@@ -1,0 +1,31 @@
+[project]
+name = "comentario-matinal"
+version = "0.1.0"
+description = "Utilitários do Comentário Matinal da Mesa de Investimentos (DEPIN/DIRIN)"
+readme = "README.md"
+authors = [
+    { name = "Marcelo Martinelli", email = "mmartinelli@gmail.com" }
+]
+# tomllib entrou na biblioteca padrão no 3.11; o script depende dele.
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.1",
+    "pandas>=2.2",
+    "xbbg>=0.7.7",
+    "blpapi>=3.24",
+]
+
+# blpapi não é publicado no PyPI. Vem do índice da própria Bloomberg, declarado
+# como explicit para que nenhuma outra dependência seja resolvida a partir dele.
+[[tool.uv.index]]
+name = "bloomberg"
+url = "https://blpapi.bloomberg.com/repository/releases/python/simple/"
+explicit = true
+
+[tool.uv.sources]
+blpapi = { index = "bloomberg" }
+
+# Projeto não-empacotado: os utilitários rodam direto de scripts/, via
+# `uv run scripts/gera_painel.py`. Não há nada a construir nem a distribuir.
+[tool.uv]
+package = false

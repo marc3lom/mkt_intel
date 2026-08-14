@@ -28,8 +28,10 @@ comentario_matinal/
 │   └── AAAA/MM/AAAAMMDD.md     comentários enviados
 ├── scripts/
 │   └── gera_painel.py          painel e calendário em texto, via Bloomberg
-└── config/
-    └── painel.toml             tickers do painel e releases do calendário
+├── config/
+│   └── painel.toml             tickers do painel e releases do calendário
+├── pyproject.toml              dependências do script
+└── uv.lock                     versões exatas — versionado de propósito
 ```
 
 ---
@@ -39,7 +41,12 @@ comentario_matinal/
 1. Criar um Project no Claude chamado "Comentário Matinal — DEPIN/DIRIN".
 2. Colar `prompts/project_instructions.md` nas instruções do projeto.
 3. Anexar ao conhecimento do projeto os quatro arquivos de `prompts/`.
-4. Instalar as dependências do script: `uv sync` (requer terminal Bloomberg ativo).
+4. Instalar as dependências do script: `uv sync`.
+
+O `uv sync` cria o `.venv` e instala tudo, inclusive o `blpapi`, que não vem do PyPI —
+o `pyproject.toml` já aponta para o índice da Bloomberg. Rodar sempre do Windows nativo,
+nunca do WSL: o `blpapi` conversa com o terminal por IPC local. A instalação não exige
+terminal aberto; a execução do script, sim.
 
 Sempre que uma convenção mudar, editar `prompts/00_guia_de_estilo.md`, comitar, e
 substituir o arquivo no conhecimento do projeto. Não editar convenções nos prompts de
