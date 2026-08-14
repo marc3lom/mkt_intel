@@ -1,9 +1,9 @@
 # Configuração do painel de mercado.
 #
-# Este arquivo é a fonte canônica dos ativos: a mesma lista, na mesma ordem,
-# alimenta a imagem enviada à diretoria e o bloco direcional em texto usado na
-# checagem do comentário. Não há segunda lista em lugar nenhum — é o que impede
-# a imagem e o texto de divergirem.
+# Este arquivo é a fonte canônica dos ativos: a mesma lista alimenta a imagem
+# enviada à diretoria e o bloco direcional em texto usado na checagem do
+# comentário. Não há segunda lista em lugar nenhum — é o que impede a imagem e o
+# texto de divergirem.
 #
 # Conferir todos os tickers no terminal antes do primeiro uso em produção.
 
@@ -16,45 +16,56 @@ limiar_estabilidade = 0.25
 # (0.01 = 1 bp).
 limiar_estabilidade_taxa = 0.01
 
-# Grade do painel, [linhas, colunas]. Precisa comportar todos os ativos abaixo;
-# sobras ficam em branco. Hoje: 17 ativos em 20 tiles, com 3 vagos no fim.
+# Grade do painel, [linhas, colunas].
 grade = [5, 4]
 
-# A ordem abaixo é, ao mesmo tempo, a ordem de leitura da grade (esquerda para
-# direita, cima para baixo) e a ordem das linhas do bloco direcional em texto.
-# Manter as duas iguais é deliberado: quem confere a imagem contra o texto lê os
-# ativos na mesma sequência nos dois.
+# Cada ativo declara a COLUNA da grade a que pertence, uma categoria por coluna:
 #
-# O agrupamento é por classe de ativo — taxas, bolsas, câmbio, commodities,
-# volatilidade — e não por região. Com 17 ativos em 4 colunas nenhuma divisão
-# regional fecha em linhas inteiras; por classe, ao menos a primeira linha sai
-# homogênea e a progressão é legível.
+#   1 Yields Soberanos | 2 Índices Ações | 3 Moedas | 4 Outros
 #
-# tipo: "taxa" | "acao" | "cambio" | "commodity" | "vol"
+# Dentro da coluna, a ordem do arquivo é a ordem de cima para baixo. As colunas
+# não precisam ter o mesmo tamanho; hoje as quatro têm cinco ativos e preenchem
+# a grade exatamente. Se alguma encurtar, ela precisa ser a última — ver
+# Config.ordem_da_grade.
+#
+# O matplotlib numera os subplots por linha, então o código transpõe (ver
+# Config.ordem_da_grade). Declarar a coluna em vez de inferi-la por altura fixa é
+# deliberado: com colunas de tamanhos diferentes, inferir colocaria os ativos nas
+# células erradas sem reclamar.
+#
+# Esta é também a ordem em que o bloco direcional em texto lista os ativos, de
+# modo que cada grupo do texto corresponde a uma coluna da imagem.
+#
+# tipo: "taxa" | "acao" | "indice" | "cambio" | "commodity" | "vol"
 #   taxa      — variação reportada em direção da TAXA e formatada em bps
+#   vol       — convenção invertida: queda de volatilidade conta como positiva
+#   indice    — nível de índice, sem prefixo de moeda
 #   os demais — variação reportada em direção do PREÇO
 #
 # rotulo       — usado no bloco direcional em texto; precisa ser inequívoco
 # rotulo_grade — usado no tile da imagem, onde o espaço é curto
 
-# --- Taxas longas ---
+# =========================== Coluna 1 — Yields Soberanos ====================
 [[painel.ativo]]
 ticker = "USGG10YR Index"
 rotulo = "Treasury 10a"
-rotulo_grade = "Trsy 10a"
+rotulo_grade = "Treasury 10a"
 tipo = "taxa"
+coluna = 1
 
 [[painel.ativo]]
 ticker = "GDBR10 Index"
 rotulo = "Bund 10a"
 rotulo_grade = "Bund 10a"
 tipo = "taxa"
+coluna = 1
 
 [[painel.ativo]]
 ticker = "GUKG10 Index"
 rotulo = "Gilt 10a"
 rotulo_grade = "Gilt 10a"
 tipo = "taxa"
+coluna = 1
 
 # GJGB10 é o índice de taxa do JGB, e não o título em preço: devolve a taxa
 # direto, com variação líquida válida. O ticker de título exigiria uma consulta
@@ -64,88 +75,129 @@ ticker = "GJGB10 Index"
 rotulo = "JGB 10a"
 rotulo_grade = "JGB 10a"
 tipo = "taxa"
+coluna = 1
 
 [[painel.ativo]]
 ticker = "GCNY10YR Index"
 rotulo = "CGB 10a"
 rotulo_grade = "CGB 10a"
 tipo = "taxa"
+coluna = 1
 
-# --- Bolsas ---
+# =========================== Coluna 2 — Índices Ações =======================
 [[painel.ativo]]
 ticker = "ES1 Index"
 rotulo = "Futuro S&P 500"
 rotulo_grade = "S&P 500 Fut"
 tipo = "acao"
+coluna = 2
 
 [[painel.ativo]]
 ticker = "VG1 Index"
 rotulo = "Futuro EuroStoxx 50"
-rotulo_grade = "EuroStoxx 50 Fut"
+rotulo_grade = "Stoxx50 Fut"
 tipo = "acao"
+coluna = 2
+
+# Genérico de primeiro vencimento do futuro de FTSE 100, na ICE Futures Europe.
+# A grafia sem espaço ("Z1 Index") é inválida no terminal.
+[[painel.ativo]]
+ticker = "Z 1 Index"
+rotulo = "Futuro FTSE 100"
+rotulo_grade = "FTSE 100 Fut"
+tipo = "acao"
+coluna = 2
 
 [[painel.ativo]]
 ticker = "NK1 Index"
 rotulo = "Futuro Nikkei 225"
 rotulo_grade = "Nikkei 225 Fut"
 tipo = "acao"
+coluna = 2
 
 [[painel.ativo]]
 ticker = "IFB1 Index"
 rotulo = "Futuro CSI 300"
 rotulo_grade = "CSI 300 Fut"
 tipo = "acao"
+coluna = 2
 
-# --- Câmbio ---
+# =========================== Coluna 3 — Moedas ==============================
 [[painel.ativo]]
 ticker = "DXY Curncy"
 rotulo = "DXY"
 rotulo_grade = "DXY"
 tipo = "cambio"
+coluna = 3
 
-# "EUR" sem barra é inequívoco: EURUSD sobe quando o euro se fortalece.
+# "EUR" e "GBP" sem barra são inequívocos: as duas cotações sobem quando a moeda
+# europeia se fortalece contra o dólar.
 [[painel.ativo]]
 ticker = "EURUSD Curncy"
 rotulo = "EUR"
 rotulo_grade = "EUR"
 tipo = "cambio"
+coluna = 3
 
-# O par é USD/JPY: quando sobe, o iene ENFRAQUECE. O rótulo precisa dizer isso,
-# sob pena de o texto direcional afirmar o contrário do dado.
+[[painel.ativo]]
+ticker = "GBPUSD Curncy"
+rotulo = "GBP"
+rotulo_grade = "GBP"
+tipo = "cambio"
+coluna = 3
+
+# Estes dois são o oposto: o par é USD/XXX, e quando sobe é a moeda asiática que
+# ENFRAQUECE. O rótulo precisa dizer o par, sob pena de o texto direcional
+# afirmar o contrário do dado.
 [[painel.ativo]]
 ticker = "USDJPY Curncy"
 rotulo = "USD/JPY"
 rotulo_grade = "USD/JPY"
 tipo = "cambio"
+coluna = 3
 
 [[painel.ativo]]
 ticker = "USDCNH Curncy"
 rotulo = "USD/CNH"
 rotulo_grade = "USD/CNH"
 tipo = "cambio"
+coluna = 3
 
-# --- Commodities ---
+# =========================== Coluna 4 — Outros ==============================
 [[painel.ativo]]
 ticker = "XAU Curncy"
 rotulo = "Ouro"
 rotulo_grade = "Ouro"
 tipo = "commodity"
+coluna = 4
 
 [[painel.ativo]]
 ticker = "CO1 Comdty"
 rotulo = "Brent"
 rotulo_grade = "Brent"
 tipo = "commodity"
+coluna = 4
 
-# --- Volatilidade e cripto ---
 [[painel.ativo]]
 ticker = "VIX Index"
 rotulo = "VIX"
-rotulo_grade = "VIX"
+rotulo_grade = "Vix"
 tipo = "vol"
+coluna = 4
+
+# Índice de commodities da Bloomberg. As barras intradiárias começam às 02h00
+# UTC — 23h do dia anterior em Brasília — então na janela do plantão o gráfico
+# já está formado, ao contrário do OVX, que só abre às 10h30.
+[[painel.ativo]]
+ticker = "BCOM Index"
+rotulo = "BCOM (commodities)"
+rotulo_grade = "BCOM"
+tipo = "indice"
+coluna = 4
 
 [[painel.ativo]]
 ticker = "XBTUSD Curncy"
 rotulo = "Bitcoin"
 rotulo_grade = "Bitcoin"
 tipo = "cambio"
+coluna = 4

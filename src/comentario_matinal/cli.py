@@ -72,8 +72,10 @@ def main() -> int:
     from daily.monitor import build_monitor_panel
 
     caminho_painel = saida / f"painel_{marca}.png"
+    # A grade é desenhada na ordem de leitura por linha; o painel.toml lista por
+    # coluna. As métricas voltam indexadas por ticker, então o texto não é afetado.
     fig, metricas = build_monitor_panel(
-        cfg.para_ticker_info(), ref, intraday,
+        cfg.para_ticker_info(cfg.ordem_da_grade()), ref, intraday,
         save_path=caminho_painel,
         grid=cfg.grade,
         allowed_root=saida,

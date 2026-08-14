@@ -28,6 +28,45 @@ def test_config_real_carrega_e_cabe_na_grade():
     assert len({a.ticker for a in cfg.ativos}) == len(cfg.ativos)
 
 
+def test_grade_e_montada_por_coluna_e_lida_por_linha():
+    """O painel.toml agrupa por coluna; o matplotlib numera por linha.
+
+    Sem a transposição, a primeira linha da imagem sairia com os quatro primeiros
+    ativos do arquivo — todos yields — em vez de um de cada categoria.
+    """
+    cfg = carrega_config()
+    linhas, colunas = cfg.grade
+    ordem = cfg.ordem_da_grade()
+
+    assert len(ordem) == len(cfg.ativos)
+    assert {a.ticker for a in ordem} == {a.ticker for a in cfg.ativos}
+
+    # A primeira linha da grade tem de trazer o topo de cada coluna do arquivo.
+    topos = [next(a for a in cfg.ativos if a.coluna == c)
+             for c in range(1, colunas + 1)]
+    assert ordem[:colunas] == topos
+
+    # E cada coluna da grade tem de conter só ativos daquela coluna do arquivo.
+    for c in range(colunas):
+        da_coluna = ordem[c::colunas]
+        esperado = [a for a in cfg.ativos if a.coluna == c + 1]
+        assert da_coluna == esperado
+
+
+def test_grade_recusa_buraco_no_meio():
+    """Coluna curta antes de uma cheia deslocaria todos os ativos seguintes."""
+    from dataclasses import replace
+
+    cfg = carrega_config()
+    linhas, colunas = cfg.grade
+    # Esvazia a primeira coluna até ficar mais curta que a última.
+    primeira = [a for a in cfg.ativos if a.coluna == 1]
+    encurtada = replace(cfg, ativos=[a for a in cfg.ativos
+                                     if a.coluna != 1 or a in primeira[:1]])
+    with pytest.raises(RuntimeError, match="célula vazia no meio"):
+        encurtada.ordem_da_grade()
+
+
 def test_config_traduz_tipos_para_a_camada_de_render():
     cfg = carrega_config()
     validos = {"rate", "equity", "fx", "commodity", "vol"}
