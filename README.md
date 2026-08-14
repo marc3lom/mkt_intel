@@ -53,10 +53,29 @@ o `pyproject.toml` já aponta para o índice da Bloomberg. Rodar sempre do Windo
 nunca do WSL: o `blpapi` conversa com o terminal por IPC local. A instalação não exige
 terminal aberto; a execução do comando, sim.
 
-**O repositório `daily` precisa estar clonado ao lado deste**, em `../daily`: a camada
-que desenha a grade do painel e as tabelas do calendário mora lá e é compartilhada, não
-copiada — ela tem outros consumidores naquele repositório. Sem o `../daily` o `uv sync`
-falha.
+**O repositório `daily` precisa estar clonado ao lado deste**, em `../daily`, **e em
+`main`**: a camada que desenha a grade do painel e as tabelas do calendário mora lá e é
+compartilhada, não copiada — ela tem outros consumidores naquele repositório. Sem o
+`../daily` o `uv sync` falha.
+
+O plantão lê `../daily` diretamente do disco, sem passar pelo GitHub. Um `git checkout`
+naquele diretório muda o código que o comando `matinal` executa na manhã seguinte, sem
+aviso e sem reinstalação. Por isso `../daily` fica fixo em `main`, e o desenvolvimento
+acontece em outro lugar:
+
+```
+../daily        main      o que o plantão consome
+../daily-dev    develop   worktree de desenvolvimento
+```
+
+**Alteração na renderização se faz em `../daily-dev`, e só chega ao plantão depois de
+mesclada em `main`.** As duas pastas compartilham o mesmo repositório git, então o
+trabalho feito na worktree já está versionado — o que a separação garante é que ele não
+entre em produção antes da hora. Para conferir onde cada uma está:
+
+```
+git -C ../daily worktree list
+```
 
 Sempre que uma convenção mudar, editar `prompts/00_guia_de_estilo.md`, comitar, e
 substituir o arquivo no conhecimento do projeto. Não editar convenções nos prompts de
