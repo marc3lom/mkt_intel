@@ -176,6 +176,56 @@ def test_ancora_em_serie_vazia_nao_inventa_ponto():
     assert ancora_fechamento_anterior(vazia, 100.0).empty
 
 
+# --- markdown do comentário -------------------------------------------------
+
+
+def test_enfase_vira_italico_e_forte_vira_negrito():
+    """O guia exige itálico em termo em inglês sem equivalente limpo."""
+    from comentario_matinal.documento import trechos_de
+
+    t = trechos_de("o *term premium* concentra o ajuste")
+    assert [(x.texto, x.italico) for x in t] == [
+        ("o ", False), ("term premium", True), (" concentra o ajuste", False),
+    ]
+
+    assert trechos_de("o _outlook_ de oferta")[1].italico is True
+    forte = trechos_de("o **Nikkei** encerrou")[1]
+    assert forte.negrito is True and forte.italico is False
+
+
+def test_asterisco_duplo_nao_e_lido_como_dois_simples():
+    from comentario_matinal.documento import trechos_de
+
+    t = trechos_de("**forte** e *fraco*")
+    assert [(x.texto, x.negrito, x.italico) for x in t] == [
+        ("forte", True, False), (" e ", False, False), ("fraco", False, True),
+    ]
+
+
+def test_marcadores_juntam_linhas_quebradas(tmp_path):
+    """Marcador quebrado por largura de coluna é um marcador só."""
+    from comentario_matinal.documento import le_marcadores
+
+    md = tmp_path / "c.md"
+    md.write_text(
+        "# Título\n\n"
+        "- Primeira linha do marcador\n"
+        "  continuação do mesmo marcador\n\n"
+        "- Segundo marcador\n\n"
+        "Atenciosamente,\n",
+        encoding="utf-8",
+    )
+    marcadores, ignoradas = le_marcadores(md)
+
+    assert len(marcadores) == 2
+    assert "".join(t.texto for t in marcadores[0]) == (
+        "Primeira linha do marcador continuação do mesmo marcador"
+    )
+    # Nada some em silêncio: título e fecho voltam como ignorados.
+    assert any(i.startswith("# Título") for i in ignoradas)
+    assert any(i.startswith("Atenciosamente") for i in ignoradas)
+
+
 # --- status de divulgação ---------------------------------------------------
 
 

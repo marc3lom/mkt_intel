@@ -19,6 +19,7 @@ TZ_BR = ZoneInfo("America/Sao_Paulo")
 RAIZ = Path(__file__).resolve().parent.parent.parent
 CONFIG_PADRAO = RAIZ / "config" / "painel.toml"
 SAIDA_PADRAO = RAIZ / "saida"
+TEMPLATE_PADRAO = RAIZ / "templates" / "comentario.dotx"
 
 # Os tipos do painel.toml estão em português; a camada de renderização do daily
 # despacha o formatador por chaves em inglês. A tradução é aqui, e só aqui.

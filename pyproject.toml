@@ -15,6 +15,7 @@ dependencies = [
     "pandas>=2.2",
     "xbbg>=1.4",
     "blpapi>=3.24",
+    "python-docx>=1.2.0",
 ]
 
 # A camada de renderização (grade do painel, tabelas do calendário, detecção de

@@ -31,10 +31,13 @@ comentario_matinal/
 │   ├── dados.py                a coleta de mercado — uma só, para todas as saídas
 │   ├── calendario.py           calendário econômico e status de divulgação
 │   ├── texto.py                bloco direcional
+│   ├── documento.py            montagem do .docx a partir do template
 │   └── cli.py                  o comando
 ├── saida/                      saídas do dia (fora do repositório)
 ├── config/
 │   └── painel.toml             lista canônica de ativos do painel
+├── templates/
+│   └── comentario.dotx         template do documento enviado
 ├── pyproject.toml              dependências do comando
 └── uv.lock                     versões exatas — versionado de propósito
 ```
@@ -184,8 +187,32 @@ britânicos saem entre 3h e 6h de Nova York, dentro da janela de redação. O re
 saber contra qual momento está conferindo.
 
 Tratar primeiro as correções obrigatórias; as sugestões são opcionais e ficam a critério
-do autor. Enviar o e-mail com o painel de gráficos e o calendário econômico inseridos pela
-equipe.
+do autor.
+
+### Passo 7 — Montagem do documento
+
+Salvar o texto revisado em Markdown, um marcador por parágrafo, e montar o documento:
+
+```
+uv run matinal --comentario comentario.md
+```
+
+Sai `saida/comentario_AAAAMMDD.docx`, a partir de `templates/comentario.dotx`, com o
+painel no alto e a tabela do calendário depois dos marcadores. Do Markdown, `- ` vira
+parágrafo com o marcador do template, `*termo*` vira itálico e `**termo**` vira negrito.
+O fecho vem do template; se o Markdown trouxer um, ele é descartado com aviso.
+
+**Esta chamada não consulta o Bloomberg.** Ela reaproveita o painel e o calendário já
+gerados para a data — o comentário é escrito depois do painel, e recoletar produziria um
+documento com o mercado de agora sob um texto redigido contra o de antes. Se as imagens
+do dia não existirem em `saida/`, aí sim o comando coleta antes de montar.
+
+O comando avisa no stderr quando o comentário sai da faixa de quatro a cinco marcadores
+que o guia fixa, e quando alguma linha fora de marcador foi ignorada.
+
+Abrir o `.docx` no Word para inserir o gráfico do dia, quando houver, conferir o texto e
+exportar o PDF. **O PDF não é gerado pelo comando**: a exportação é feita do Word, na
+mesma passagem em que o analista confere o documento.
 
 ### Referência de fusos
 
