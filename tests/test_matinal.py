@@ -226,6 +226,73 @@ def test_marcadores_juntam_linhas_quebradas(tmp_path):
     assert any(i.startswith("Atenciosamente") for i in ignoradas)
 
 
+# --- encadeamento entre as etapas -------------------------------------------
+
+
+def test_secao_casa_titulo_com_grafia_variavel():
+    """O modelo escreve o título de formas diferentes; o encadeamento não pode
+    depender de uma grafia exata."""
+    from comentario_matinal.etapas import secao
+
+    for titulo in ("### C) ALERTAS", "## C — Alertas", "#### Alertas"):
+        doc = f"# Topo\n\n## A) Temas\n\ntabela\n\n{titulo}\n\nconteúdo\n\n## D) Corte\n\nx"
+        assert secao(doc, "alertas") == "conteúdo"
+
+
+def test_secao_devolve_none_quando_nao_existe():
+    from comentario_matinal.etapas import secao
+
+    assert secao("# Topo\n\ntexto", "alertas") is None
+
+
+def test_comentario_e_o_que_vem_antes_da_auditoria():
+    """A redação começa direto nos marcadores: o prompt pede 'sem cabeçalho'.
+
+    Procurar um título '1) COMENTÁRIO' falharia sempre — o que existe é o título
+    do bloco de auditoria.
+    """
+    from comentario_matinal.etapas import texto_do_comentario
+
+    doc = "- Primeiro marcador\n\n- Segundo marcador\n\n## 2) BLOCO DE AUDITORIA\n\ncontagem: 400"
+    assert texto_do_comentario(doc) == "- Primeiro marcador\n\n- Segundo marcador"
+
+
+def test_referencia_do_painel_vem_do_cabecalho():
+    """O horário de redação é o do término da coleta, carimbado no painel."""
+    from comentario_matinal.etapas import referencia_do_painel
+
+    painel = ("PAINEL DIRECIONAL\n"
+              "Referência: 14/08/2026 07:35 de Brasília (06:35 de Nova York)\n")
+    r = referencia_do_painel(painel)
+    assert (r.day, r.month, r.hour, r.minute) == (14, 8, 7, 35)
+    assert referencia_do_painel("sem cabeçalho") is None
+
+
+# --- o bloco que vira o documento enviado -----------------------------------
+
+
+def test_comentario_revisado_aceita_bloco_bem_formado():
+    from comentario_matinal.etapas import comentario_revisado
+
+    doc = ("## 3) TEXTO REVISADO\n\n```markdown\n"
+           "- Um\n- Dois\n- Três\n- Quatro\n```\n")
+    assert comentario_revisado(doc) == "- Um\n\n- Dois\n\n- Três\n\n- Quatro\n"
+
+
+@pytest.mark.parametrize("doc,trecho", [
+    ("## 3) TEXTO REVISADO\n\nsem bloco algum", "não trouxe bloco de código"),
+    ("## 3) TEXTO REVISADO\n\n```\n\n```", "vazio"),
+    ("## 3) TEXTO REVISADO\n\n```\n# Título\n- Um\n```", "não são marcadores"),
+])
+def test_comentario_revisado_falha_alto_em_formato_inesperado(doc, trecho):
+    """Único ponto em que a saída do modelo entra direto no documento que vai à
+    diretoria: formato inesperado interrompe, não grava."""
+    from comentario_matinal.etapas import FormatoInesperado, comentario_revisado
+
+    with pytest.raises(FormatoInesperado, match=trecho):
+        comentario_revisado(doc)
+
+
 # --- status de divulgação ---------------------------------------------------
 
 

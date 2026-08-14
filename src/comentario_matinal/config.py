@@ -20,6 +20,14 @@ RAIZ = Path(__file__).resolve().parent.parent.parent
 CONFIG_PADRAO = RAIZ / "config" / "painel.toml"
 SAIDA_PADRAO = RAIZ / "saida"
 TEMPLATE_PADRAO = RAIZ / "templates" / "comentario.dotx"
+FONTES_PADRAO = RAIZ / "fontes"
+PROMPTS = RAIZ / "prompts"
+GUIA_DE_ESTILO = PROMPTS / "00_guia_de_estilo.md"
+PROMPT_ETAPA = {
+    "triagem": PROMPTS / "01_triagem.md",
+    "redacao": PROMPTS / "02_redacao.md",
+    "revisao": PROMPTS / "03_revisao.md",
+}
 
 # Os tipos do painel.toml estão em português; a camada de renderização do daily
 # despacha o formatador por chaves em inglês. A tradução é aqui, e só aqui.

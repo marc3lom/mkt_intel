@@ -70,6 +70,31 @@ def coleta_calendario() -> tuple[pd.DataFrame, pd.DataFrame]:
     return eco, bancos
 
 
+def tabela_markdown(eco: pd.DataFrame, bancos: pd.DataFrame) -> str:
+    """Renderiza o calendário como texto, para alimentar as etapas de IA.
+
+    A imagem serve ao e-mail; o modelo recebe texto. É a mesma razão pela qual o
+    bloco direcional existe: pedir a um modelo que leia número em gráfico é a
+    coisa menos confiável que ele faz, e a origem dos dois erros que este
+    processo existe para impedir.
+    """
+    def bloco(titulo: str, df: pd.DataFrame) -> list[str]:
+        if df is None or df.empty:
+            return [f"### {titulo}", "", "Sem eventos.", ""]
+        colunas = list(df.columns)
+        linhas = [f"### {titulo}", "",
+                  "| " + " | ".join(colunas) + " |",
+                  "|" + "|".join(["---"] * len(colunas)) + "|"]
+        for _, r in df.iterrows():
+            celulas = ["-" if pd.isna(r[c]) else str(r[c]).strip() for c in colunas]
+            linhas.append("| " + " | ".join(celulas) + " |")
+        linhas.append("")
+        return linhas
+
+    return "\n".join(bloco("CALENDÁRIO ECONÔMICO", eco)
+                     + bloco("BANCOS CENTRAIS", bancos)).strip() + "\n"
+
+
 def _momento(data: object, horario: object) -> datetime | None:
     """Combina as colunas DATA e HORÁRIO do BQL num instante com fuso."""
     if data is None or horario is None:

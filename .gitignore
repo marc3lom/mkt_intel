@@ -54,3 +54,6 @@ desktop.ini
 
 # Saídas do comando matinal — imagens e texto regenerados a cada manhã.
 saida/
+
+# PDFs das fontes do dia, deixados pelo analista.
+fontes/

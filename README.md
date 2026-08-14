@@ -31,8 +31,12 @@ comentario_matinal/
 │   ├── dados.py                a coleta de mercado — uma só, para todas as saídas
 │   ├── calendario.py           calendário econômico e status de divulgação
 │   ├── texto.py                bloco direcional
+│   ├── fontes.py               PDFs das fontes → texto
+│   ├── modelo.py               a chamada ao modelo, atrás de uma função única
+│   ├── etapas.py               as três etapas de IA e o encadeamento
 │   ├── documento.py            montagem do .docx a partir do template
 │   └── cli.py                  o comando
+├── fontes/                     PDFs do dia (fora do repositório)
 ├── saida/                      saídas do dia (fora do repositório)
 ├── config/
 │   └── painel.toml             lista canônica de ativos do painel
@@ -84,6 +88,23 @@ Sempre que uma convenção mudar, editar `prompts/00_guia_de_estilo.md`, comitar
 substituir o arquivo no conhecimento do projeto. Não editar convenções nos prompts de
 etapa — eles apenas referenciam o guia.
 
+### As etapas de IA
+
+As três etapas rodam pelo Claude Code em modo não interativo, e exigem o `claude` no
+PATH. A chamada ao modelo está isolada em `modelo.py`, atrás de uma função única: trocar
+para Copilot CLI, Azure OpenAI ou chamada direta à API é escrever outra classe e apontar
+a variável `COMENTARIO_MATINAL_BACKEND`, sem tocar no fluxo das etapas.
+
+Os PDFs viram texto antes de chegar ao modelo, para que o insumo seja o mesmo em
+qualquer backend — um lê PDF anexo, outro não.
+
+Por padrão a etapa roda **sem ferramenta alguma**: tudo vai injetado na mensagem. `--web`
+libera busca para confirmar dado já presente nas fontes, como os prompts permitem, e
+nesse caso a etapa é instruída a registrar cada consulta no bloco de auditoria — o guia
+exige sinalização explícita, e o revisor precisa saber que houve.
+
+O modelo é o que estiver configurado na CLI do Claude Code; `--modelo` fixa por execução.
+
 ---
 
 ## Runbook do plantão
@@ -95,7 +116,8 @@ mesmas. Ciclo completo em torno de vinte e cinco minutos.
 ### Passo 1 — Coleta (T0)
 
 Reunir as fontes do dia: wraps da Bloomberg, First Word, e-mails de sell-side, matérias
-do Financial Times ou do Wall Street Journal. Salvar em PDF.
+do Financial Times ou do Wall Street Journal. **Salvar em PDF dentro de `fontes/`** — é
+de lá que as etapas de IA leem, e a pasta fica fora do repositório.
 
 Gerar as três saídas do dia:
 
@@ -109,7 +131,8 @@ Uma execução, uma consulta de mercado, três arquivos em `saida/`:
 |---|---|
 | `painel_AAAAMMDD.png` | grade de ativos, para colar no e-mail |
 | `calendario_AAAAMMDD.png` | tabela de divulgações e bancos centrais, idem |
-| `painel_AAAAMMDD.txt` | bloco direcional, para anexar ao Project na checagem |
+| `painel_AAAAMMDD.txt` | bloco direcional, insumo das etapas de IA |
+| `calendario_AAAAMMDD.md` | o mesmo calendário em texto, idem |
 
 As três saem do mesmo conjunto de dados. O texto não recalcula direção nenhuma: ele lê
 os mesmos números que cada tile da imagem renderizou. Por construção, a imagem enviada à
@@ -126,18 +149,20 @@ acompanha o trabalho até a revisão.
 
 ### Passo 2 — Triagem (T0 + 5 min)
 
-Abrir uma conversa nova no Project. Anexar os PDFs e o `painel_AAAAMMDD.txt`. Escrever:
-
 ```
-etapa 1
-horário de redação: DD/MM/AAAA, HHhMM de Brasília
+uv run matinal triagem
 ```
 
-Informar o horário efetivo, não o horário nominal do plantão. É contra ele que a triagem
-classifica cada indicador como divulgado ou pendente.
+Converte os PDFs de `fontes/` para texto, monta a mensagem com o guia de estilo, o
+prompt da etapa, as fontes, o painel e o calendário, e grava `saida/triagem_AAAAMMDD.md`
+— tabela de temas candidatos, tema dominante proposto, alertas e sugestão de corte.
 
-A saída é a tabela de temas candidatos, o tema dominante proposto, os alertas e a
-sugestão de corte.
+**O horário de redação não é informado à mão: vem do carimbo do painel**, que é o
+término da coleta. Passar `--asof` diverge disso e o comando avisa.
+
+Também é possível fazer a etapa no Project do Claude, anexando os PDFs e o
+`painel_AAAAMMDD.txt` e escrevendo `etapa 1` com o horário de redação. Os prompts são os
+mesmos; o comando apenas evita o trabalho de anexar.
 
 ### Passo 3 — Decisão editorial (T0 + 10 min)
 
@@ -149,15 +174,18 @@ Não pular esta etapa em dia corrido. É onde se evita excesso de temas e dado a
 
 ### Passo 4 — Redação (T0 + 15 min)
 
-Na mesma conversa:
+```
+uv run matinal redacao --temas "dominante | tema 2 | tema 3"
+```
 
-```
-etapa 2
-tema dominante: [ ]
-tema 2: [ ]
-tema 3: [ ]
-riscos monitorados: [ ] (ou "suprimir")
-```
+Os temas vão na ordem de relevância, o dominante primeiro. Para textos longos,
+`--temas-arquivo temas.md`. **É por aqui que a decisão do passo 3 entra no fluxo** — o
+comando recusa rodar sem os temas, porque a hierarquia é escolha do autor e não do
+modelo.
+
+A redação recebe os alertas da triagem automaticamente, extraídos da seção C do arquivo
+da etapa anterior. Sai `saida/redacao_AAAAMMDD.md`, com o comentário e o bloco de
+auditoria.
 
 Conferir o bloco de auditoria: contagem total dentro de 350–500, orçamento por marcador,
 mapeamento marcador → fonte, ressalvas.
@@ -174,12 +202,21 @@ auditoria e **o horário de redação**.
 
 ### Passo 6 — Revisão
 
-O revisor abre conversa nova no Project, anexa tudo e escreve:
+```
+uv run matinal revisao
+```
 
-```
-etapa 3
-horário de redação: DD/MM/AAAA, HHhMM de Brasília
-```
+Toma o comentário e o bloco de auditoria de `saida/redacao_AAAAMMDD.md` e grava
+`saida/revisao_AAAAMMDD.md` — correções obrigatórias, sugestões, texto revisado e
+auditoria da revisão. Grava também `saida/comentario_AAAAMMDD.md`, extraído do bloco de
+código da seção 3, que é o insumo do passo 7.
+
+**Se esse bloco não vier no formato esperado, o comando falha e não grava o `.md`.** É o
+único ponto em que a saída do modelo entra direto no documento que vai à diretoria, e um
+arquivo malformado só apareceria no Word. Nesse caso, extrair o texto à mão da revisão.
+
+O revisor também pode fazer a etapa no Project, escrevendo `etapa 3` com o horário de
+redação e anexando tudo.
 
 O horário informado é o do autor, não o do revisor. Um comentário redigido às 7h35 e
 outro às 7h55 podem descrever quadros diferentes de forma legítima — releases europeus e

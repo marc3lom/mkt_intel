@@ -1,13 +1,15 @@
-"""Comando único do plantão: painel, calendário e bloco direcional.
+"""O plantão inteiro, do mercado ao documento.
 
-Uma execução produz as três saídas do plantão a partir de uma única coleta de
-mercado. A imagem colada no e-mail e o texto usado para checar o comentário
-descrevem, por construção, os mesmos números.
+    uv run matinal                      painel, calendário e bloco direcional
+    uv run matinal triagem              etapa 1 — inventário de temas
+    uv run matinal redacao --temas "…"  etapa 2 — o texto
+    uv run matinal revisao              etapa 3 — checagem e texto revisado
+    uv run matinal --comentario x.md    o .docx a partir do template
 
-Uso:
-    uv run matinal
-    uv run matinal --asof 2026-08-14T07:35
-    uv run matinal --saida ./saida
+A coleta de mercado é única e serve a todas as saídas: a imagem colada no e-mail
+e o texto usado para checar o comentário descrevem, por construção, os mesmos
+números. Entre a triagem e a redação a decisão é humana — a redação recebe os
+temas escolhidos pelo autor.
 """
 
 from __future__ import annotations
@@ -24,9 +26,16 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt  # noqa: E402
 
-from comentario_matinal.calendario import coleta_calendario, eventos_do_dia  # noqa: E402
+from comentario_matinal.calendario import (  # noqa: E402
+    coleta_calendario,
+    eventos_do_dia,
+    tabela_markdown,
+)
 from comentario_matinal.config import (  # noqa: E402
     CONFIG_PADRAO,
+    FONTES_PADRAO,
+    GUIA_DE_ESTILO,
+    PROMPT_ETAPA,
     SAIDA_PADRAO,
     TEMPLATE_PADRAO,
     TZ_BR,
@@ -39,6 +48,26 @@ from comentario_matinal.texto import monta_texto  # noqa: E402
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("comando", nargs="?", default=None,
+                        choices=["triagem", "redacao", "revisao"],
+                        help="Etapa de IA a executar. Sem argumento, coleta o "
+                             "mercado e gera painel, calendário e texto.")
+    parser.add_argument("--temas", type=str, default=None,
+                        help="Temas escolhidos pelo autor, separados por '|': "
+                             "dominante primeiro. Só para `redacao`.")
+    parser.add_argument("--temas-arquivo", type=Path, default=None,
+                        help="Arquivo com os temas, alternativa a --temas.")
+    parser.add_argument("--fontes", type=Path, default=FONTES_PADRAO,
+                        help=f"Pasta com os PDFs do dia. Padrão: {FONTES_PADRAO}")
+    parser.add_argument("--anterior", type=Path, default=None,
+                        help="Comentário do dia anterior, em .md. Opcional.")
+    parser.add_argument("--modelo", type=str, default=None,
+                        help="Fixa o modelo da etapa. Sem isto, vale a "
+                             "configuração da CLI do Claude Code.")
+    parser.add_argument("--web", action="store_true",
+                        help="Libera busca na web para confirmar dado já "
+                             "presente nas fontes. O uso é registrado na "
+                             "auditoria da etapa.")
     parser.add_argument("--asof", type=str, default=None,
                         help="Horário de referência ISO, ex. 2026-08-14T07:35. "
                              "Padrão: agora, em horário de Brasília.")
@@ -65,6 +94,11 @@ def main() -> int:
 
     caminho_painel = saida / f"painel_{marca}.png"
     caminho_tabela = saida / f"calendario_{marca}.png"
+
+    # As etapas de IA consomem o material já gerado pela coleta; nenhuma delas
+    # toca no Bloomberg.
+    if args.comando:
+        return _roda_etapa(args, saida, marca)
 
     # O comentário é escrito depois do painel. Recoletar aqui produziria um
     # documento com o mercado de agora e um texto redigido contra o de antes —
@@ -125,6 +159,13 @@ def main() -> int:
             plt.close(fig_tab)
             print(f"Calendário: {caminho_tabela}")
 
+        # As etapas de IA leem o calendário como texto, nunca como imagem: pedir
+        # a um modelo que leia número em gráfico é a origem dos dois erros que
+        # este processo existe para impedir.
+        caminho_cal_md = saida / f"calendario_{marca}.md"
+        caminho_cal_md.write_text(tabela_markdown(eco, bancos), encoding="utf-8")
+        print(f"Calendário: {caminho_cal_md}")
+
     # --- Saída 3: o bloco direcional em texto ------------------------------
     calendario_vazio = args.sem_calendario or eco is None or eco.empty
     eventos = [] if calendario_vazio else eventos_do_dia(eco, asof)
@@ -151,6 +192,148 @@ def main() -> int:
                   "documento.", file=sys.stderr)
             return 1
         return _monta_documento(args, saida, marca, caminho_painel, caminho_tabela)
+
+    return 0
+
+
+def _le(caminho: Path) -> str | None:
+    return caminho.read_text(encoding="utf-8") if caminho.exists() else None
+
+
+def _roda_etapa(args, saida: Path, marca: str) -> int:
+    """Executa uma das três etapas de IA a partir do material já coletado."""
+    from comentario_matinal.etapas import (
+        FormatoInesperado,
+        Insumos,
+        comentario_revisado,
+        mensagem_redacao,
+        mensagem_revisao,
+        mensagem_triagem,
+        roda,
+        secao_ou_tudo,
+        texto_do_comentario,
+    )
+    from comentario_matinal.fontes import converte
+    from comentario_matinal.modelo import ErroDoModelo
+
+    etapa = args.comando
+
+    # Fontes: PDF vira texto, para que o insumo seja o mesmo em qualquer backend.
+    caminho_fontes = saida / f"fontes_{marca}.txt"
+    n, vazios = converte(args.fontes, caminho_fontes)
+    if n:
+        print(f"Fontes:     {n} PDF(s) convertidos em {caminho_fontes}",
+              file=sys.stderr)
+    else:
+        print(f"Aviso: nenhum PDF aproveitado em {args.fontes}. A etapa vai rodar "
+              "sem fontes noticiosas.", file=sys.stderr)
+    if vazios:
+        print(f"Aviso: {len(vazios)} PDF(s) não renderam texto — provavelmente "
+              f"digitalização sem OCR: {', '.join(vazios)}", file=sys.stderr)
+
+    painel_txt = _le(saida / f"painel_{marca}.txt")
+    calendario_md = _le(saida / f"calendario_{marca}.md")
+    if painel_txt is None:
+        print(f"Erro: falta o bloco direcional de {marca}. Rodar `uv run matinal` "
+              "antes das etapas.", file=sys.stderr)
+        return 1
+    if calendario_md is None:
+        print(f"Aviso: falta o calendário em texto de {marca}; a etapa roda sem "
+              "ele.", file=sys.stderr)
+
+    # O horário de redação é o do término da coleta, que é o carimbo do painel.
+    # O relógio da máquina faria a etapa analisar material das 7h35 afirmando ser
+    # meio-dia.
+    from comentario_matinal.etapas import referencia_do_painel
+
+    do_painel = referencia_do_painel(painel_txt)
+    if args.asof:
+        asof = datetime.fromisoformat(args.asof).replace(tzinfo=TZ_BR)
+        if do_painel and abs((asof - do_painel).total_seconds()) > 300:
+            print(f"Aviso: --asof ({asof:%d/%m %Hh%M}) diverge da referência do "
+                  f"painel ({do_painel:%d/%m %Hh%M}). O painel é o material que a "
+                  "etapa analisa; conferir se é mesmo o do dia.", file=sys.stderr)
+    elif do_painel:
+        asof = do_painel
+    else:
+        asof = datetime.now(TZ_BR)
+        print("Aviso: não consegui ler a referência do painel; usando o relógio.",
+              file=sys.stderr)
+
+    ins = Insumos(
+        guia=GUIA_DE_ESTILO.read_text(encoding="utf-8"),
+        fontes=caminho_fontes.read_text(encoding="utf-8") if n else "",
+        painel=painel_txt,
+        calendario=calendario_md or "",
+        asof=asof,
+        anterior=_le(args.anterior) if args.anterior else None,
+    )
+    prompt = PROMPT_ETAPA[etapa].read_text(encoding="utf-8")
+    destino = saida / f"{etapa}_{marca}.md"
+
+    if etapa == "triagem":
+        mensagem = mensagem_triagem(prompt, ins, args.web)
+
+    elif etapa == "redacao":
+        temas = args.temas
+        if args.temas_arquivo:
+            if not args.temas_arquivo.exists():
+                print(f"Erro: {args.temas_arquivo} não existe.", file=sys.stderr)
+                return 1
+            temas = args.temas_arquivo.read_text(encoding="utf-8")
+        elif temas:
+            temas = "\n".join(f"- {t.strip()}" for t in temas.split("|") if t.strip())
+        if not temas:
+            print("Erro: a redação precisa dos temas escolhidos pelo autor. "
+                  "Passar --temas \"dominante | tema 2 | tema 3\" ou "
+                  "--temas-arquivo. A decisão editorial entre a triagem e a "
+                  "redação é humana.", file=sys.stderr)
+            return 1
+
+        anterior = _le(saida / f"triagem_{marca}.md")
+        if anterior is None:
+            print(f"Erro: falta a triagem de {marca}. Rodar `uv run matinal "
+                  "triagem` antes.", file=sys.stderr)
+            return 1
+        alertas = secao_ou_tudo(anterior, "C) ALERTAS", "alertas")
+        mensagem = mensagem_redacao(prompt, ins, temas, alertas, args.web)
+
+    else:  # revisao
+        anterior = _le(saida / f"redacao_{marca}.md")
+        if anterior is None:
+            print(f"Erro: falta a redação de {marca}. Rodar `uv run matinal "
+                  "redacao` antes.", file=sys.stderr)
+            return 1
+        texto = texto_do_comentario(anterior)
+        auditoria = secao_ou_tudo(anterior, "2) BLOCO DE AUDITORIA", "auditoria")
+        mensagem = mensagem_revisao(prompt, ins, texto, auditoria, args.web)
+
+    try:
+        resposta = roda(mensagem, etapa, destino, web=args.web, modelo=args.modelo)
+    except ErroDoModelo as e:
+        print(f"Erro na etapa {etapa}: {e}", file=sys.stderr)
+        return 1
+
+    print(f"{etapa.capitalize():<11} {destino}")
+
+    if etapa == "revisao":
+        # Único ponto em que a saída do modelo entra direto no documento enviado
+        # à diretoria. Formato inesperado interrompe em vez de gravar.
+        try:
+            md = comentario_revisado(resposta)
+        except FormatoInesperado as e:
+            print(f"\nErro: {e}", file=sys.stderr)
+            print(f"A revisão completa está em {destino}.", file=sys.stderr)
+            return 1
+        caminho_md = saida / f"comentario_{marca}.md"
+        caminho_md.write_text(md, encoding="utf-8")
+        print(f"Comentário: {caminho_md}")
+        print(f"\nMontar o documento: uv run matinal --comentario {caminho_md}",
+              file=sys.stderr)
+    elif etapa == "triagem":
+        print("\nEscolher os temas e seguir para a redação:\n"
+              "  uv run matinal redacao --temas \"dominante | tema 2 | tema 3\"",
+              file=sys.stderr)
 
     return 0
 
