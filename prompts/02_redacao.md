@@ -114,7 +114,9 @@ falhe em qualquer item abaixo.
 
 1. Total entre 350 e 500 palavras, com alvo entre 400 e 450. Se exceder, aplicar a
    HIERARQUIA DE SACRIFÍCIO (seção 11 do guia) e recontar.
-2. Cada marcador dentro do seu orçamento de palavras.
+2. Cada marcador dentro do seu orçamento. Teto rígido; piso indicativo. Marcador
+   abaixo do piso NÃO deve ser esticado — sinalize o tema como insuficiente no
+   bloco de auditoria, com as opções de correção (seção 4.1 do guia).
 3. Cada marcador é prosa articulada, sem fragmento nem enumeração interna.
 4. A primeira oração de cada marcador carrega a asserção central.
 5. Nenhum nível ou variação numérica no corpo do texto.

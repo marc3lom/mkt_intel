@@ -72,7 +72,11 @@ Verificações adicionais obrigatórias:
 Cada item abaixo é aprovação ou reprovação, sem gradação:
 
 1. Extensão total entre 350 e 500 palavras. Informar a contagem apurada.
-2. Orçamento por marcador respeitado (seção 4 do guia).
+2. Orçamento por marcador respeitado (seções 4 e 4.1 do guia). Teto rígido: excesso
+   se corta. Piso indicativo: marcador abaixo do piso indica tema mal escolhido, e a
+   correção é editorial — sinalize as opções e deixe a escolha com o autor, porque
+   envolve hierarquia de temas. Nunca complete o parágrafo com material não
+   atribuível nem com enumeração do que as fontes não afirmam.
 3. Quatro ou cinco marcadores.
 4. Cada marcador é prosa articulada, sem fragmento telegráfico, frase nominal ou
    enumeração interna separada por ponto e vírgula.
@@ -120,7 +124,17 @@ Melhorias editoriais do bloco 3, no mesmo formato antes → depois. O autor deci
 
 ### 3) TEXTO REVISADO
 
-Versão final incorporando as correções obrigatórias e as sugestões, pronta para envio.
+Versão final incorporando as correções obrigatórias e as sugestões.
+
+Apresentar DENTRO DE UM BLOCO DE CÓDIGO markdown, contendo exclusivamente as linhas
+de marcador, uma por parágrafo, iniciadas por `- `. Sem título, sem cabeçalho, sem
+fecho, sem linhas em branco entre marcadores, sem comentário algum dentro do bloco.
+
+O bloco é salvo diretamente como `.md` e consumido por `uv run matinal --comentario`,
+que monta o documento a partir do template. Qualquer conteúdo extra dentro do bloco
+entra no documento final como texto.
+
+Ênfase em itálico se marca com `*asterisco simples*`, conforme a seção 9.1 do guia.
 
 ### 4) BLOCO DE AUDITORIA DA REVISÃO
 

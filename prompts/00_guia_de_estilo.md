@@ -1,6 +1,6 @@
 # GUIA DE ESTILO — COMENTÁRIO MATINAL (DEPIN/DIRIN)
 
-Versão 1.1 — 14/08/2026
+Versão 1.2 — 14/08/2026
 Documento de referência único. Alterações de convenção são feitas AQUI, nunca nos prompts.
 
 ---
@@ -69,6 +69,33 @@ Orçamento por marcador:
 | 5        | Riscos monitorados (opcional)               | 40–60    |
 
 Contagem considera apenas o corpo do texto.
+
+### 4.1 Natureza dos limites
+
+O teto de cada marcador é RÍGIDO. O piso é INDICATIVO.
+
+Marcador que não alcança o piso não deve ser esticado. Ele sinaliza tema mal
+escolhido — material insuficiente nas fontes para sustentar um bloco próprio. A
+correção é editorial, não redacional:
+
+- juntar fonte adicional sobre o tema, se houver; ou
+- rebaixar o tema, absorvendo-o em outro marcador, e promover outro à posição.
+
+A escolha entre as duas é do autor, porque envolve hierarquia de temas. O revisor
+sinaliza; não decide.
+
+**Vedado preencher orçamento com:**
+
+- enumeração do que as fontes NÃO afirmam. Negar um assunto ausente das fontes é
+  introduzi-lo: dizer que "as fontes não detalham custos logísticos e de
+  afretamento" traz ao texto um canal de transmissão que nenhuma fonte reportou.
+- repetição, em outras palavras, de conteúdo já presente em outro marcador;
+- detalhamento de mecanismo trivial para o leitor;
+- atribuição inflacionada, com cargo e instituição onde bastaria a instituição.
+
+Ressalva sobre lacunas: registrar UMA lacuna relevante em oração subordinada é
+legítimo e às vezes necessário — "sem que as fontes especifiquem o escopo" —, e
+difere de enumerar ausências para ocupar espaço.
 
 ---
 
