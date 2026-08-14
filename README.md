@@ -26,11 +26,16 @@ comentario_matinal/
 │   └── rejeitados/             trechos rejeitados, com o motivo no cabeçalho
 ├── arquivo/
 │   └── AAAA/MM/AAAAMMDD.md     comentários enviados
-├── scripts/
-│   └── gera_painel.py          painel e calendário em texto, via Bloomberg
+├── src/comentario_matinal/     o comando `matinal`
+│   ├── config.py               leitura do painel.toml
+│   ├── dados.py                a coleta de mercado — uma só, para todas as saídas
+│   ├── calendario.py           calendário econômico e status de divulgação
+│   ├── texto.py                bloco direcional
+│   └── cli.py                  o comando
+├── saida/                      saídas do dia (fora do repositório)
 ├── config/
-│   └── painel.toml             tickers do painel e releases do calendário
-├── pyproject.toml              dependências do script
+│   └── painel.toml             lista canônica de ativos do painel
+├── pyproject.toml              dependências do comando
 └── uv.lock                     versões exatas — versionado de propósito
 ```
 
@@ -41,12 +46,17 @@ comentario_matinal/
 1. Criar um Project no Claude chamado "Comentário Matinal — DEPIN/DIRIN".
 2. Colar `prompts/project_instructions.md` nas instruções do projeto.
 3. Anexar ao conhecimento do projeto os quatro arquivos de `prompts/`.
-4. Instalar as dependências do script: `uv sync`.
+4. Instalar as dependências: `uv sync`.
 
 O `uv sync` cria o `.venv` e instala tudo, inclusive o `blpapi`, que não vem do PyPI —
 o `pyproject.toml` já aponta para o índice da Bloomberg. Rodar sempre do Windows nativo,
 nunca do WSL: o `blpapi` conversa com o terminal por IPC local. A instalação não exige
-terminal aberto; a execução do script, sim.
+terminal aberto; a execução do comando, sim.
+
+**O repositório `daily` precisa estar clonado ao lado deste**, em `../daily`: a camada
+que desenha a grade do painel e as tabelas do calendário mora lá e é compartilhada, não
+copiada — ela tem outros consumidores naquele repositório. Sem o `../daily` o `uv sync`
+falha.
 
 Sempre que uma convenção mudar, editar `prompts/00_guia_de_estilo.md`, comitar, e
 substituir o arquivo no conhecimento do projeto. Não editar convenções nos prompts de
@@ -65,22 +75,36 @@ mesmas. Ciclo completo em torno de vinte e cinco minutos.
 Reunir as fontes do dia: wraps da Bloomberg, First Word, e-mails de sell-side, matérias
 do Financial Times ou do Wall Street Journal. Salvar em PDF.
 
-Gerar painel e calendário em texto:
+Gerar as três saídas do dia:
 
 ```
-uv run scripts/gera_painel.py --saida painel.txt
+uv run matinal
 ```
 
-O script carimba o horário de execução no cabeçalho do `painel.txt`. Se o painel for
-gerado bem antes da redação, regerá-lo — direção de ativo muda, e o painel é a
-referência de coerência do texto.
+Uma execução, uma consulta de mercado, três arquivos em `saida/`:
+
+| Arquivo | Uso |
+|---|---|
+| `painel_AAAAMMDD.png` | grade de ativos, para colar no e-mail |
+| `calendario_AAAAMMDD.png` | tabela de divulgações e bancos centrais, idem |
+| `painel_AAAAMMDD.txt` | bloco direcional, para anexar ao Project na checagem |
+
+As três saem do mesmo conjunto de dados. O texto não recalcula direção nenhuma: ele lê
+os mesmos números que cada tile da imagem renderizou. Por construção, a imagem enviada à
+diretoria e o texto usado na conferência não podem discordar sobre a direção de um ativo.
+
+O comando carimba o horário de execução na imagem e no texto. Se o painel for gerado bem
+antes da redação, regerá-lo — direção de ativo muda, e o painel é a referência de
+coerência do texto. Para reproduzir um horário específico, `--asof 2026-08-14T07:35`;
+vale para a imagem e para o texto, mas **não** para a tabela do calendário, que sempre
+traz o estado corrente do BQL.
 
 **Anote o horário em que a coleta terminou. Ele é o horário de redação do dia** e
 acompanha o trabalho até a revisão.
 
 ### Passo 2 — Triagem (T0 + 5 min)
 
-Abrir uma conversa nova no Project. Anexar os PDFs e o `painel.txt`. Escrever:
+Abrir uma conversa nova no Project. Anexar os PDFs e o `painel_AAAAMMDD.txt`. Escrever:
 
 ```
 etapa 1
@@ -123,8 +147,8 @@ horário de envio pretendido.** Se a coleta atrasou e essa folga não existe mai
 revisor antes de mandar, para que ele priorize as correções obrigatórias e trate as
 sugestões como descartáveis.
 
-Enviar ao segundo analista: texto, PDFs das fontes, `painel.txt`, bloco de auditoria e
-**o horário de redação**.
+Enviar ao segundo analista: texto, PDFs das fontes, `painel_AAAAMMDD.txt`, bloco de
+auditoria e **o horário de redação**.
 
 ### Passo 6 — Revisão
 
@@ -184,3 +208,19 @@ alimentam os exemplos few-shot do guia de estilo. Trechos rejeitados vão para
   que os gestores de plantão usem sem divergir, e submeter o fluxo à governança de IA da
   instituição.
 - Repositório privado. Contém comentários institucionais enviados à diretoria.
+
+### A confirmar no primeiro plantão real
+
+A coluna `ATUAL` da tabela do calendário **não foi verificada às 7h40 para um release
+das 9h30**. A verificação só é possível dentro da janela do plantão, e as execuções de
+teste ocorreram fora dela — o que se observou foi a tabela às 13h, quando os releases da
+manhã já haviam saído de verdade.
+
+O que conferir: às 7h40, um release americano das 9h30 aparece na tabela com `ATUAL`
+vazio, ou já preenchido com o número do período anterior?
+
+**Se vier preenchido antes da divulgação, a regra de status deve ignorar `ATUAL` e
+decidir exclusivamente pela comparação de horário** — que é como
+`calendario.eventos_do_dia` já funciona hoje. A conferência serve para saber se a tabela
+enviada à diretoria precisa de ressalva, já que ela exibe `ATUAL` sem qualificar o
+status, ao contrário do bloco em texto.
