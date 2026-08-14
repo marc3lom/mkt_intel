@@ -60,6 +60,7 @@ class Config:
     grade: tuple[int, int]
     limiar_estabilidade: float
     limiar_estabilidade_taxa: float
+    titulos_colunas: list[str]
 
     @property
     def tickers(self) -> list[str]:
@@ -168,9 +169,17 @@ def carrega_config(path: Path = CONFIG_PADRAO) -> Config:
                 f"{linhas} linhas."
             )
 
+    titulos = painel.get("titulos_colunas", [])
+    if titulos and len(titulos) != colunas:
+        raise RuntimeError(
+            f"titulos_colunas tem {len(titulos)} entradas, mas a grade tem "
+            f"{colunas} colunas."
+        )
+
     return Config(
         ativos=ativos,
         grade=(linhas, colunas),
         limiar_estabilidade=painel.get("limiar_estabilidade", 0.25),
         limiar_estabilidade_taxa=painel.get("limiar_estabilidade_taxa", 0.01),
+        titulos_colunas=list(titulos),
     )

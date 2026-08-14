@@ -19,6 +19,9 @@ limiar_estabilidade_taxa = 0.01
 # Grade do painel, [linhas, colunas].
 grade = [5, 4]
 
+# Cabeçalho de cada coluna da imagem, na ordem das colunas. Um por coluna.
+titulos_colunas = ["Yields Soberanos", "Índices Ações", "Moedas", "Outros"]
+
 # Cada ativo declara a COLUNA da grade a que pertence, uma categoria por coluna:
 #
 #   1 Yields Soberanos | 2 Índices Ações | 3 Moedas | 4 Outros
@@ -165,6 +168,13 @@ coluna = 3
 
 # =========================== Coluna 4 — Outros ==============================
 [[painel.ativo]]
+ticker = "VIX Index"
+rotulo = "VIX"
+rotulo_grade = "Vix"
+tipo = "vol"
+coluna = 4
+
+[[painel.ativo]]
 ticker = "XAU Curncy"
 rotulo = "Ouro"
 rotulo_grade = "Ouro"
@@ -172,17 +182,17 @@ tipo = "commodity"
 coluna = 4
 
 [[painel.ativo]]
+ticker = "XBTUSD Curncy"
+rotulo = "Bitcoin"
+rotulo_grade = "Bitcoin"
+tipo = "cambio"
+coluna = 4
+
+[[painel.ativo]]
 ticker = "CO1 Comdty"
 rotulo = "Brent"
 rotulo_grade = "Brent"
 tipo = "commodity"
-coluna = 4
-
-[[painel.ativo]]
-ticker = "VIX Index"
-rotulo = "VIX"
-rotulo_grade = "Vix"
-tipo = "vol"
 coluna = 4
 
 # Índice de commodities da Bloomberg. As barras intradiárias começam às 02h00
@@ -193,11 +203,4 @@ ticker = "BCOM Index"
 rotulo = "BCOM (commodities)"
 rotulo_grade = "BCOM"
 tipo = "indice"
-coluna = 4
-
-[[painel.ativo]]
-ticker = "XBTUSD Curncy"
-rotulo = "Bitcoin"
-rotulo_grade = "Bitcoin"
-tipo = "cambio"
 coluna = 4

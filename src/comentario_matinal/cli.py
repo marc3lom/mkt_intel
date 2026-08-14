@@ -80,6 +80,7 @@ def main() -> int:
         grid=cfg.grade,
         allowed_root=saida,
         asof=asof,
+        column_headers=cfg.titulos_colunas or None,
     )
     plt.close(fig)
     print(f"Painel:     {caminho_painel}")

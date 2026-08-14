@@ -53,6 +53,12 @@ def test_grade_e_montada_por_coluna_e_lida_por_linha():
         assert da_coluna == esperado
 
 
+def test_ha_um_cabecalho_por_coluna_da_grade():
+    cfg = carrega_config()
+    _, colunas = cfg.grade
+    assert len(cfg.titulos_colunas) == colunas
+
+
 def test_grade_recusa_buraco_no_meio():
     """Coluna curta antes de uma cheia deslocaria todos os ativos seguintes."""
     from dataclasses import replace
