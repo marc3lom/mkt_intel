@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 from comentario_matinal.modelo import executa
@@ -54,6 +54,60 @@ def referencia_do_painel(painel: str) -> datetime | None:
         return None
     d, mes, ano, h, mi = (int(g) for g in m.groups())
     return datetime(ano, mes, d, h, mi, tzinfo=ZoneInfo("America/Sao_Paulo"))
+
+
+# Nome dos comentários arquivados: arquivo/AAAA/MM/AAAAMMDD.md.
+RE_ARQUIVADO = re.compile(r"^(\d{8})\.md$")
+
+# Distância máxima, em dias, entre o comentário arquivado e a data do plantão.
+# Sexta para segunda são três dias; feriado emendado chega a cinco. Além de uma
+# semana o texto deixa de ser "o do dia anterior" — e é sob esse rótulo que as
+# etapas 1 e 3 o recebem, comparando o quadro de hoje com o que ele descreve.
+JANELA_ANTERIOR = 7
+
+
+def comentario_anterior(raiz: Path, asof: datetime,
+                        janela: int = JANELA_ANTERIOR) -> tuple[Path, date] | None:
+    """Acha o comentário arquivado mais recente antes do dia do plantão.
+
+    As etapas 1 e 3 pedem o comentário do dia anterior — a triagem para julgar
+    ineditismo do tema, a revisão para apanhar contradição não sinalizada. Exigir
+    que alguém passasse ``--anterior`` todo dia significava, na prática, que o
+    insumo chegava como "(não fornecido)" e as duas checagens não aconteciam.
+
+    A busca é por data no nome do arquivo, não por data de modificação: o
+    arquivamento é manual e pode ocorrer dias depois, mas o nome é a data de
+    envio. Nada de futuro entra, para que reprocessar um plantão antigo não
+    receba um comentário escrito depois dele.
+    """
+    if not raiz.exists():
+        return None
+
+    hoje = f"{asof:%Y%m%d}"
+    candidatos = [
+        (m.group(1), caminho)
+        for caminho in raiz.glob("*/*/*.md")
+        if (m := RE_ARQUIVADO.match(caminho.name)) and m.group(1) < hoje
+    ]
+    if not candidatos:
+        return None
+
+    marca, caminho = max(candidatos)
+    data = date(int(marca[:4]), int(marca[4:6]), int(marca[6:]))
+    if (asof.date() - data).days > janela:
+        return None
+    return caminho, data
+
+
+def com_data(texto: str, data: date) -> str:
+    """Carimba a data de envio no corpo do comentário anterior.
+
+    O rótulo da entrada é "COMENTÁRIO DO DIA ANTERIOR" — é assim que os prompts
+    das etapas 1 e 3 o nomeiam, e mudá-lo quebraria o casamento. Mas numa
+    segunda-feira o texto é o de sexta, e a etapa precisa saber contra qual dia
+    está comparando antes de acusar contradição.
+    """
+    return f"(enviado em {data:%d/%m/%Y})\n\n{texto.strip()}"
 
 
 @dataclass(frozen=True)

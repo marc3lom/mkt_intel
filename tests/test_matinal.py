@@ -5,7 +5,7 @@ comando existe para impedir: dado não divulgado tratado como fato, direção de
 câmbio invertida, e desaparecimento silencioso do bloco de calendário.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 
 import pandas as pd
 import pytest
@@ -13,6 +13,7 @@ import pytest
 from comentario_matinal.calendario import Evento, eventos_do_dia
 from comentario_matinal.config import TZ_BR, carrega_config
 from comentario_matinal.dados import _com_variacao_confiavel, ancora_fechamento_anterior
+from comentario_matinal.etapas import Insumos
 from comentario_matinal.texto import _direcao, monta_texto
 
 ASOF = datetime(2026, 8, 14, 7, 40, tzinfo=TZ_BR)
@@ -266,6 +267,91 @@ def test_referencia_do_painel_vem_do_cabecalho():
     r = referencia_do_painel(painel)
     assert (r.day, r.month, r.hour, r.minute) == (14, 8, 7, 35)
     assert referencia_do_painel("sem cabeçalho") is None
+
+
+# --- comentário do dia anterior ---------------------------------------------
+
+
+def _arquivo_falso(raiz, *marcas):
+    for marca in marcas:
+        destino = raiz / marca[:4] / marca[4:6] / f"{marca}.md"
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_text(f"- comentário de {marca}\n", encoding="utf-8")
+    return raiz
+
+
+def test_anterior_pega_o_mais_recente_antes_do_plantao(tmp_path):
+    """Numa segunda-feira o "dia anterior" é a sexta."""
+    from comentario_matinal.etapas import comentario_anterior
+
+    raiz = _arquivo_falso(tmp_path, "20260810", "20260813", "20260814")
+    segunda = datetime(2026, 8, 17, 7, 40, tzinfo=TZ_BR)
+
+    caminho, data = comentario_anterior(raiz, segunda)
+    assert caminho.name == "20260814.md"
+    assert (data.day, data.month) == (14, 8)
+
+
+def test_anterior_nao_pega_o_do_proprio_dia_nem_do_futuro(tmp_path):
+    """Reprocessar um plantão antigo não pode receber texto escrito depois dele."""
+    from comentario_matinal.etapas import comentario_anterior
+
+    raiz = _arquivo_falso(tmp_path, "20260813", "20260814", "20260817")
+    caminho, _ = comentario_anterior(raiz, ASOF)   # 14/08
+    assert caminho.name == "20260813.md"
+
+
+def test_anterior_alem_da_janela_nao_e_usado(tmp_path):
+    """Um texto de três semanas atrás não é "o do dia anterior".
+
+    As etapas 1 e 3 o recebem sob esse rótulo e comparam o quadro de hoje com o
+    que ele descreve; passar um texto velho produziria contradição inventada.
+    """
+    from comentario_matinal.etapas import comentario_anterior
+
+    raiz = _arquivo_falso(tmp_path, "20260717")
+    assert comentario_anterior(raiz, ASOF) is None
+
+
+def test_anterior_ignora_nome_fora_da_convencao(tmp_path):
+    from comentario_matinal.etapas import comentario_anterior
+
+    raiz = _arquivo_falso(tmp_path, "20260813")
+    (raiz / "2026" / "08" / "rascunho.md").write_text("x", encoding="utf-8")
+    caminho, _ = comentario_anterior(raiz, ASOF)
+    assert caminho.name == "20260813.md"
+
+
+def test_anterior_sem_pasta_nao_estoura(tmp_path):
+    from comentario_matinal.etapas import comentario_anterior
+
+    assert comentario_anterior(tmp_path / "nao-existe", ASOF) is None
+
+
+def test_anterior_carimba_a_data_dentro_do_corpo(tmp_path):
+    """O rótulo da entrada é fixo — os prompts casam por ele. A data vai no corpo."""
+    from comentario_matinal.etapas import com_data, mensagem_triagem
+
+    raiz = _arquivo_falso(tmp_path, "20260813")
+    texto = com_data((raiz / "2026" / "08" / "20260813.md").read_text("utf-8"),
+                     date(2026, 8, 13))
+    assert texto.startswith("(enviado em 13/08/2026)")
+
+    ins = Insumos(guia="g", fontes="f", painel="p", calendario="c", asof=ASOF,
+                  anterior=texto)
+    mensagem = mensagem_triagem("prompt", ins, web=False)
+    assert "**[COMENTÁRIO DO DIA ANTERIOR]**" in mensagem
+    assert "(enviado em 13/08/2026)" in mensagem
+
+
+def test_sem_anterior_a_entrada_diz_que_nao_veio(tmp_path):
+    """"(não fornecido)" precisa aparecer: a etapa tem de saber que a checagem
+    de ineditismo ficou sem base, em vez de silenciar."""
+    from comentario_matinal.etapas import mensagem_triagem
+
+    ins = Insumos(guia="g", fontes="f", painel="p", calendario="c", asof=ASOF)
+    mensagem = mensagem_triagem("prompt", ins, web=False)
+    assert "**[COMENTÁRIO DO DIA ANTERIOR]**\n\n(não fornecido)" in mensagem
 
 
 # --- o bloco que vira o documento enviado -----------------------------------

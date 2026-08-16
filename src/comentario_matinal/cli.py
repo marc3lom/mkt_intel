@@ -32,6 +32,7 @@ from comentario_matinal.calendario import (  # noqa: E402
     tabela_markdown,
 )
 from comentario_matinal.config import (  # noqa: E402
+    ARQUIVO_PADRAO,
     CONFIG_PADRAO,
     FONTES_PADRAO,
     GUIA_DE_ESTILO,
@@ -60,7 +61,12 @@ def main() -> int:
     parser.add_argument("--fontes", type=Path, default=FONTES_PADRAO,
                         help=f"Pasta com os PDFs do dia. Padrão: {FONTES_PADRAO}")
     parser.add_argument("--anterior", type=Path, default=None,
-                        help="Comentário do dia anterior, em .md. Opcional.")
+                        help="Comentário do dia anterior, em .md. Sem isto, o "
+                             "mais recente de `arquivo/` é usado.")
+    parser.add_argument("--arquivo", type=Path, default=ARQUIVO_PADRAO,
+                        help=f"Pasta dos comentários enviados. Padrão: {ARQUIVO_PADRAO}")
+    parser.add_argument("--sem-anterior", action="store_true",
+                        help="Roda a etapa sem o comentário do dia anterior.")
     parser.add_argument("--modelo", type=str, default=None,
                         help="Fixa o modelo da etapa. Sem isto, vale a "
                              "configuração da CLI do Claude Code.")
@@ -200,6 +206,39 @@ def _le(caminho: Path) -> str | None:
     return caminho.read_text(encoding="utf-8") if caminho.exists() else None
 
 
+def _anterior(args, asof: datetime) -> str | None:
+    """Resolve o comentário do dia anterior: explícito, automático, ou nenhum.
+
+    A triagem julga ineditismo do tema contra ele, e a revisão procura
+    contradição não sinalizada. Só a redação não o recebe. Depender de alguém
+    lembrar de passar `--anterior` fazia as duas checagens não acontecerem no dia
+    corrido, que é justamente quando elas importam.
+    """
+    from comentario_matinal.etapas import com_data, comentario_anterior
+
+    if args.sem_anterior:
+        return None
+
+    if args.anterior:
+        texto = _le(args.anterior)
+        if texto is None:
+            print(f"Aviso: {args.anterior} não existe; a etapa roda sem o "
+                  "comentário do dia anterior.", file=sys.stderr)
+        return texto
+
+    achado = comentario_anterior(args.arquivo, asof)
+    if achado is None:
+        print(f"Aviso: nenhum comentário recente em {args.arquivo}. A etapa roda "
+              "sem o do dia anterior — a checagem de ineditismo e de contradição "
+              "fica sem base. Arquivar o comentário enviado resolve.",
+              file=sys.stderr)
+        return None
+
+    caminho, data = achado
+    print(f"Anterior:   {caminho.name} ({data:%d/%m/%Y})", file=sys.stderr)
+    return com_data(caminho.read_text(encoding="utf-8"), data)
+
+
 def _roda_etapa(args, saida: Path, marca: str) -> int:
     """Executa uma das três etapas de IA a partir do material já coletado."""
     from comentario_matinal.etapas import (
@@ -266,7 +305,9 @@ def _roda_etapa(args, saida: Path, marca: str) -> int:
         painel=painel_txt,
         calendario=calendario_md or "",
         asof=asof,
-        anterior=_le(args.anterior) if args.anterior else None,
+        # A redação não recebe o comentário anterior; procurá-lo aqui só geraria
+        # aviso enganoso na etapa que não o usa.
+        anterior=_anterior(args, asof) if etapa in ("triagem", "revisao") else None,
     )
     prompt = PROMPT_ETAPA[etapa].read_text(encoding="utf-8")
     destino = saida / f"{etapa}_{marca}.md"

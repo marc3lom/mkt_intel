@@ -21,6 +21,7 @@ CONFIG_PADRAO = RAIZ / "config" / "painel.toml"
 SAIDA_PADRAO = RAIZ / "saida"
 TEMPLATE_PADRAO = RAIZ / "templates" / "comentario.dotx"
 FONTES_PADRAO = RAIZ / "fontes"
+ARQUIVO_PADRAO = RAIZ / "arquivo"
 PROMPTS = RAIZ / "prompts"
 GUIA_DE_ESTILO = PROMPTS / "00_guia_de_estilo.md"
 PROMPT_ETAPA = {

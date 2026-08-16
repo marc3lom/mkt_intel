@@ -20,12 +20,12 @@ comentario_matinal/
 │   ├── 01_triagem.md           etapa 1 — seleção de temas
 │   ├── 02_redacao.md           etapa 2 — redação
 │   ├── 03_revisao.md           etapa 3 — revisão
-│   └── project_instructions.md texto a colar no Project do Claude
-├── exemplos/
-│   ├── aprovados/              comentários exemplares (few-shot)
+│   └── project_instructions.md o Project do Claude — caminho alternativo
+├── exemplos/                   material humano; nada em src/ lê estas pastas
+│   ├── aprovados/              casos a promover à seção 12 do guia
 │   └── rejeitados/             trechos rejeitados, com o motivo no cabeçalho
 ├── arquivo/
-│   └── AAAA/MM/AAAAMMDD.md     comentários enviados
+│   └── AAAA/MM/AAAAMMDD.md     comentários enviados — o nome é lido pelo comando
 ├── src/comentario_matinal/     o comando `matinal`
 │   ├── config.py               leitura do painel.toml
 │   ├── dados.py                a coleta de mercado — uma só, para todas as saídas
@@ -50,20 +50,23 @@ comentario_matinal/
 
 ## Configuração inicial (uma vez)
 
-1. Criar um Project no Claude chamado "Comentário Matinal — DEPIN/DIRIN".
-2. Colar `prompts/project_instructions.md` nas instruções do projeto.
-3. Anexar ao conhecimento do projeto os quatro arquivos de `prompts/`.
-4. Instalar as dependências: `uv sync`.
+O plantão inteiro roda deste repositório. Não é preciso criar Project algum: as três
+etapas de IA montam a mensagem com o guia de estilo e o prompt da etapa embutidos, a
+partir dos arquivos de `prompts/`. O Project continua existindo como caminho
+alternativo — ver "O Project do Claude", mais abaixo.
+
+1. Instalar as dependências: `uv sync`.
+2. Clonar o `daily` ao lado deste repositório, em `../daily`, em `main`.
+3. Ter o `claude` no PATH, autenticado. É o backend padrão das etapas de IA.
 
 O `uv sync` cria o `.venv` e instala tudo, inclusive o `blpapi`, que não vem do PyPI —
 o `pyproject.toml` já aponta para o índice da Bloomberg. Rodar sempre do Windows nativo,
 nunca do WSL: o `blpapi` conversa com o terminal por IPC local. A instalação não exige
 terminal aberto; a execução do comando, sim.
 
-**O repositório `daily` precisa estar clonado ao lado deste**, em `../daily`, **e em
-`main`**: a camada que desenha a grade do painel e as tabelas do calendário mora lá e é
-compartilhada, não copiada — ela tem outros consumidores naquele repositório. Sem o
-`../daily` o `uv sync` falha.
+O `../daily` é dependência de instalação, não de execução apenas: sem ele o `uv sync`
+falha. A camada que desenha a grade do painel e as tabelas do calendário mora lá e é
+compartilhada, não copiada — ela tem outros consumidores naquele repositório.
 
 O plantão lê `../daily` diretamente do disco, sem passar pelo GitHub. Um `git checkout`
 naquele diretório muda o código que o comando `matinal` executa na manhã seguinte, sem
@@ -84,9 +87,10 @@ entre em produção antes da hora. Para conferir onde cada uma está:
 git -C ../daily worktree list
 ```
 
-Sempre que uma convenção mudar, editar `prompts/00_guia_de_estilo.md`, comitar, e
-substituir o arquivo no conhecimento do projeto. Não editar convenções nos prompts de
-etapa — eles apenas referenciam o guia.
+Sempre que uma convenção mudar, editar `prompts/00_guia_de_estilo.md` e comitar. O
+comando lê o arquivo do disco a cada execução, então a mudança vale no plantão
+seguinte, sem mais nenhum passo. Quem usa o Project precisa substituir o arquivo lá
+também. Não editar convenções nos prompts de etapa — eles apenas referenciam o guia.
 
 ### As etapas de IA
 
@@ -104,6 +108,34 @@ nesse caso a etapa é instruída a registrar cada consulta no bloco de auditoria
 exige sinalização explícita, e o revisor precisa saber que houve.
 
 O modelo é o que estiver configurado na CLI do Claude Code; `--modelo` fixa por execução.
+
+### O Project do Claude
+
+O Project é caminho alternativo, para o dia em que o comando não está à mão — máquina
+sem o `claude` no PATH, terminal indisponível, etapa feita fora do posto. Os prompts
+são exatamente os mesmos; o que o comando evita é o trabalho de anexar os arquivos e
+o risco de anexar a versão errada.
+
+Para montá-lo: criar um Project chamado "Comentário Matinal — DEPIN/DIRIN", colar
+`prompts/project_instructions.md` nas instruções e anexar ao conhecimento os quatro
+arquivos de `prompts/`. Escrever `etapa 1`, `etapa 2` ou `etapa 3`, com o horário de
+redação e o material do dia anexo.
+
+`project_instructions.md` não repete convenção alguma: extensão, disciplina numérica,
+atribuição e janela temporal ficam no guia, e é de lá que o Project as lê. Manter uma
+cópia dessas regras nas instruções do Project produziria duas fontes, e a segunda
+envelheceria em silêncio na primeira revisão do guia.
+
+### Os exemplos
+
+`exemplos/aprovados/` e `exemplos/rejeitados/` são material de trabalho humano, **não
+insumo do comando**: nada em `src/` lê essas pastas. Elas guardam os casos brutos —
+comentários que a chefia destacou, trechos rejeitados com o motivo no cabeçalho — até
+que alguém os transforme em exemplo anotado na seção 12 do guia de estilo. É a seção
+12 que chega ao modelo, porque o guia inteiro vai injetado em toda etapa.
+
+Um comentário arquivado em `exemplos/` e nunca promovido ao guia não influencia saída
+nenhuma.
 
 ---
 
@@ -160,9 +192,11 @@ prompt da etapa, as fontes, o painel e o calendário, e grava `saida/triagem_AAA
 **O horário de redação não é informado à mão: vem do carimbo do painel**, que é o
 término da coleta. Passar `--asof` diverge disso e o comando avisa.
 
-Também é possível fazer a etapa no Project do Claude, anexando os PDFs e o
-`painel_AAAAMMDD.txt` e escrevendo `etapa 1` com o horário de redação. Os prompts são os
-mesmos; o comando apenas evita o trabalho de anexar.
+**O comentário do dia anterior também entra sozinho**, tomado do arquivado mais
+recente em `arquivo/AAAA/MM/`. É contra ele que a triagem julga ineditismo do tema. O
+comando informa no stderr qual data foi usada — numa segunda-feira é a de sexta — e
+avisa quando não achou nenhum dentro da última semana. `--anterior caminho.md` força
+outro arquivo; `--sem-anterior` roda sem.
 
 ### Passo 3 — Decisão editorial (T0 + 10 min)
 
@@ -215,8 +249,9 @@ código da seção 3, que é o insumo do passo 7.
 único ponto em que a saída do modelo entra direto no documento que vai à diretoria, e um
 arquivo malformado só apareceria no Word. Nesse caso, extrair o texto à mão da revisão.
 
-O revisor também pode fazer a etapa no Project, escrevendo `etapa 3` com o horário de
-redação e anexando tudo.
+A revisão também recebe o comentário do dia anterior automaticamente, pela mesma
+regra da triagem — é dele que sai a checagem de contradição não sinalizada entre um
+dia e o seguinte.
 
 O horário informado é o do autor, não o do revisor. Um comentário redigido às 7h35 e
 outro às 7h55 podem descrever quadros diferentes de forma legítima — releases europeus e
@@ -268,14 +303,21 @@ Salvar o texto final em `arquivo/AAAA/MM/AAAAMMDD.md` — Markdown, data ISO no 
 arquivo, apenas o corpo do comentário. Não incluir painel, calendário nem bloco de
 auditoria.
 
-O formato é Markdown por decisão deliberada: o arquivo precisa ser pesquisável por texto
-para alimentar os exemplos few-shot e permitir conferência de consistência entre dias.
-Comentários anteriores em `.docx`, sob a convenção antiga `AAAA/AAAAMM/`, permanecem como
-estão; não há migração retroativa.
+**O nome do arquivo é lido pelo comando**, não é só convenção de organização: é dele
+que sai o comentário do dia anterior da triagem e da revisão do plantão seguinte.
+Nome fora do padrão `AAAAMMDD.md` é ignorado em silêncio, e a checagem de ineditismo
+roda sem base. Pular o arquivamento tem o mesmo efeito.
 
-Comentários que a chefia destacar como exemplares vão para `exemplos/aprovados/` e
-alimentam os exemplos few-shot do guia de estilo. Trechos rejeitados vão para
-`exemplos/rejeitados/`, com o motivo da rejeição no cabeçalho do arquivo.
+O formato é Markdown por decisão deliberada: o arquivo precisa ser pesquisável por texto
+e legível pelo comando. Comentários anteriores em `.docx`, sob a convenção antiga
+`AAAA/AAAAMM/`, permanecem como estão; não há migração retroativa — e, por não casarem
+com o padrão, também não são encontrados como dia anterior.
+
+Comentários que a chefia destacar como exemplares vão para `exemplos/aprovados/`;
+trechos rejeitados vão para `exemplos/rejeitados/`, com o motivo no cabeçalho do
+arquivo. **Guardar ali não muda o comportamento do modelo**: as duas pastas são
+material de trabalho, e o que chega às etapas é a seção 12 do guia de estilo. Promover
+o caso a exemplo anotado no guia é passo manual, e é o único que tem efeito.
 
 ---
 
@@ -286,10 +328,11 @@ alimentam os exemplos few-shot do guia de estilo. Trechos rejeitados vão para
   redistribuição. O material não é redistribuído em nenhuma hipótese: apenas o conteúdo
   informa a redação do comentário, que é produto derivado e interno. Os PDFs não entram
   no repositório (ver `.gitignore`).
-- O Project do Claude está hoje em assinatura pessoal. Na migração para o ambiente
-  corporativo, solicitar projeto compartilhado com permissão de edição restrita, de modo
-  que os gestores de plantão usem sem divergir, e submeter o fluxo à governança de IA da
-  instituição.
+- O acesso ao modelo está hoje em assinatura pessoal, tanto na CLI quanto no Project.
+  Na migração para o ambiente corporativo, submeter o fluxo à governança de IA da
+  instituição e providenciar acesso institucional à CLI — que é o caminho do plantão.
+  Havendo Project, pedi-lo compartilhado com permissão de edição restrita, para que os
+  gestores usem sem divergir.
 - Repositório privado. Contém comentários institucionais enviados à diretoria.
 
 ### A confirmar no primeiro plantão real
