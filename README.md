@@ -151,6 +151,13 @@ Reunir as fontes do dia: wraps da Bloomberg, First Word, e-mails de sell-side, m
 do Financial Times ou do Wall Street Journal. **Salvar em PDF dentro de `fontes/`** — é
 de lá que as etapas de IA leem, e a pasta fica fora do repositório.
 
+**Só PDF é lido.** `.docx`, `.png`, `.msg` e afins ficam de fora: as etapas recebem
+texto, nunca anexo nem imagem, para que o insumo não mude com o backend. O comando
+lista no stderr todo arquivo que deixou de ler, com nome — um `.docx` na pasta não
+produz erro, e sem esse aviso a falta só apareceria como a ausência de um tema na
+triagem. Do Outlook, Arquivo → Imprimir → Microsoft Print to PDF; do navegador,
+Ctrl+P → Salvar em PDF.
+
 Gerar as três saídas do dia:
 
 ```

@@ -259,16 +259,23 @@ def _roda_etapa(args, saida: Path, marca: str) -> int:
 
     # Fontes: PDF vira texto, para que o insumo seja o mesmo em qualquer backend.
     caminho_fontes = saida / f"fontes_{marca}.txt"
-    n, vazios = converte(args.fontes, caminho_fontes)
+    conv = converte(args.fontes, caminho_fontes)
+    n = conv.aproveitados
     if n:
         print(f"Fontes:     {n} PDF(s) convertidos em {caminho_fontes}",
               file=sys.stderr)
     else:
         print(f"Aviso: nenhum PDF aproveitado em {args.fontes}. A etapa vai rodar "
               "sem fontes noticiosas.", file=sys.stderr)
-    if vazios:
-        print(f"Aviso: {len(vazios)} PDF(s) não renderam texto — provavelmente "
-              f"digitalização sem OCR: {', '.join(vazios)}", file=sys.stderr)
+    if conv.vazios:
+        print(f"Aviso: {len(conv.vazios)} PDF(s) não renderam texto — provavelmente "
+              f"digitalização sem OCR: {', '.join(conv.vazios)}", file=sys.stderr)
+    if conv.ignorados:
+        print(f"Aviso: {len(conv.ignorados)} arquivo(s) de {args.fontes} NÃO foram "
+              "lidos, porque só PDF é aproveitado como fonte — o conteúdo deles "
+              f"não chegou ao modelo: {', '.join(conv.ignorados)}. "
+              "Reimprimir em PDF (Outlook: Arquivo → Imprimir → Microsoft Print "
+              "to PDF; navegador: Ctrl+P → Salvar em PDF).", file=sys.stderr)
 
     painel_txt = _le(saida / f"painel_{marca}.txt")
     calendario_md = _le(saida / f"calendario_{marca}.md")

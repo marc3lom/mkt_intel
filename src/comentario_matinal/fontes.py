@@ -9,22 +9,45 @@ recebe — que é a condição para comparar saídas entre backends.
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 
 
-def converte(origem: Path, destino: Path) -> tuple[int, list[str]]:
+@dataclass(frozen=True)
+class Conversao:
+    """O que entrou, o que falhou e o que sequer foi olhado."""
+
+    aproveitados: int = 0
+    vazios: list[str] = field(default_factory=list)
+    ignorados: list[str] = field(default_factory=list)
+
+
+def converte(origem: Path, destino: Path) -> Conversao:
     """Extrai o texto de todos os PDFs de ``origem`` para um arquivo único.
 
-    Devolve a quantidade de PDFs aproveitados e a lista dos que não renderam
-    texto. PDF que não rende texto é quase sempre digitalização sem OCR — o
-    arquivo existe, o analista supõe que entrou, e o conteúdo não chegou ao
-    modelo. Por isso volta como lista, para virar aviso, e não silêncio.
+    Duas formas de um arquivo estar na pasta e não chegar ao modelo, e as duas
+    voltam nomeadas para virar aviso, não silêncio:
+
+    ``vazios`` — PDF que não rendeu texto, quase sempre digitalização sem OCR.
+    ``ignorados`` — o que não é PDF. O .docx que o analista salvou por hábito, o
+    print de tela, o e-mail exportado. O arquivo existe, o analista supõe que
+    entrou, e o conteúdo nunca foi lido. Sem aviso isso só apareceria como a
+    ausência de um tema na triagem — que é tarde e não se atribui à causa.
     """
     from pypdf import PdfReader
 
-    pdfs = sorted(origem.glob("*.pdf")) if origem.is_dir() else []
+    if not origem.is_dir():
+        return Conversao()
+
+    pdfs = sorted(p for p in origem.iterdir()
+                  if p.is_file() and p.suffix.lower() == ".pdf")
+    # Arquivo oculto não conta: .gitkeep e afins não são fonte que alguém
+    # esperava ver no comentário.
+    ignorados = sorted(p.name for p in origem.iterdir()
+                       if p.is_file() and p.suffix.lower() != ".pdf"
+                       and not p.name.startswith("."))
     if not pdfs:
-        return 0, []
+        return Conversao(ignorados=ignorados)
 
     blocos: list[str] = []
     vazios: list[str] = []
@@ -47,4 +70,4 @@ def converte(origem: Path, destino: Path) -> tuple[int, list[str]]:
 
     destino.parent.mkdir(parents=True, exist_ok=True)
     destino.write_text("\n\n---\n\n".join(blocos), encoding="utf-8")
-    return len(blocos), vazios
+    return Conversao(len(blocos), vazios, ignorados)

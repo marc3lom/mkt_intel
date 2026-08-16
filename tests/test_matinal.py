@@ -269,6 +269,43 @@ def test_referencia_do_painel_vem_do_cabecalho():
     assert referencia_do_painel("sem cabeçalho") is None
 
 
+# --- fontes do dia ----------------------------------------------------------
+
+
+def test_arquivo_que_nao_e_pdf_volta_nomeado(tmp_path):
+    """O .docx salvo por hábito não chega ao modelo. Sem aviso, isso só
+    apareceria como a ausência de um tema na triagem — tarde, e sem causa."""
+    from comentario_matinal.fontes import converte
+
+    origem = tmp_path / "fontes"
+    origem.mkdir()
+    for nome in ("wrap.docx", "print.png", "email.msg"):
+        (origem / nome).write_text("x", encoding="utf-8")
+
+    conv = converte(origem, tmp_path / "saida" / "fontes.txt")
+    assert conv.aproveitados == 0
+    assert conv.ignorados == ["email.msg", "print.png", "wrap.docx"]
+
+
+def test_arquivo_oculto_nao_vira_aviso(tmp_path):
+    """.gitkeep não é fonte que alguém esperava ver no comentário."""
+    from comentario_matinal.fontes import converte
+
+    origem = tmp_path / "fontes"
+    origem.mkdir()
+    (origem / ".gitkeep").write_text("", encoding="utf-8")
+    (origem / "subpasta").mkdir()
+
+    assert converte(origem, tmp_path / "saida" / "fontes.txt").ignorados == []
+
+
+def test_pasta_de_fontes_inexistente_nao_estoura(tmp_path):
+    from comentario_matinal.fontes import converte
+
+    conv = converte(tmp_path / "nao-existe", tmp_path / "saida" / "fontes.txt")
+    assert (conv.aproveitados, conv.vazios, conv.ignorados) == (0, [], [])
+
+
 # --- comentário do dia anterior ---------------------------------------------
 
 
