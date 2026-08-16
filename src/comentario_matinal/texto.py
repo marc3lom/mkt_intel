@@ -37,12 +37,20 @@ def monta_texto(
     asof: datetime,
     indisponiveis: list[str],
     calendario_vazio: bool,
+    dry_run: bool = False,
 ) -> str:
+    from comentario_matinal.janela import rotulo_fuso
+
     out: list[str] = []
     asof_ny = asof.astimezone(TZ_NY)
+    fuso = rotulo_fuso(asof)
 
-    out.append("PAINEL DIRECIONAL")
-    out.append(f"Referência: {asof:%d/%m/%Y %H:%M} de Brasília "
+    # O marcador vai no título, e nunca na linha "Referência:" — é ela que
+    # etapas.referencia_do_painel casa para achar o horário de redação, e é este
+    # texto inteiro que vai injetado na mensagem das três etapas. Assim o modelo
+    # também sabe que está num ensaio, sem código novo no caminho das etapas.
+    out.append("PAINEL DIRECIONAL — DRY RUN" if dry_run else "PAINEL DIRECIONAL")
+    out.append(f"Referência: {asof:%d/%m/%Y %H:%M} {fuso} "
                f"({asof_ny:%H:%M} de Nova York)")
     out.append("Direções apuradas contra o fechamento anterior, a partir dos mesmos "
                "dados do painel enviado. Sem níveis — uso exclusivo para checagem "
@@ -83,7 +91,7 @@ def monta_texto(
         out.append("  Sem releases acompanhados para a data.")
     else:
         out.append(f"Status apurado contra o horário de redação "
-                   f"({asof:%Hh%M} de Brasília).")
+                   f"({asof:%Hh%M} {fuso}).")
         for e in eventos:
             pais = f"{e.pais} — " if e.pais else ""
             out.append(f"  {pais}{e.evento} — previsto para {e.horario} — {e.status}")

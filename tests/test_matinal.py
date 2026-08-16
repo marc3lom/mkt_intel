@@ -269,6 +269,111 @@ def test_referencia_do_painel_vem_do_cabecalho():
     assert referencia_do_painel("sem cabeçalho") is None
 
 
+# --- janela do plantão ------------------------------------------------------
+
+
+@pytest.mark.parametrize("hora,minuto,dentro", [
+    (6, 59, False),
+    (7, 0, True),      # abertura entra
+    (7, 40, True),
+    (8, 59, True),
+    (9, 0, True),      # fechamento entra
+    (9, 1, False),
+    (14, 20, False),   # o horário dos testes de mesa
+    (0, 0, False),
+])
+def test_bordas_da_janela(hora, minuto, dentro):
+    from comentario_matinal.janela import na_janela
+
+    momento = datetime(2026, 8, 17, hora, minuto, tzinfo=TZ_BR)
+    assert na_janela(momento) is dentro
+
+
+def test_fuso_local_desta_maquina_e_o_de_brasilia():
+    """O relógio de hardware em UTC (RealTimeIsUniversal=1) não muda o fuso que o
+    sistema entrega: o Windows converte antes, e o Python pede ao sistema."""
+    from comentario_matinal.janela import agora, fuso_local
+
+    assert agora().utcoffset() == datetime.now(TZ_BR).utcoffset()
+    assert fuso_local() is not None
+
+
+def test_divergencia_e_none_quando_o_fuso_bate():
+    from comentario_matinal.janela import divergencia
+
+    assert divergencia() is None
+
+
+def test_rotulo_do_fuso_nomeia_brasilia_e_denuncia_o_resto():
+    """Carimbar "de Brasília" um horário que não é de Brasília faria a etapa
+    aplicar as regras temporais do guia contra a referência errada."""
+    from zoneinfo import ZoneInfo
+
+    from comentario_matinal.janela import rotulo_fuso
+
+    assert rotulo_fuso(datetime(2026, 8, 17, 7, 40, tzinfo=TZ_BR)) == "de Brasília"
+
+    lisboa = datetime(2026, 8, 17, 7, 40, tzinfo=ZoneInfo("Europe/Lisbon"))
+    assert rotulo_fuso(lisboa) == "do fuso local (UTC+01:00)"
+
+    toquio = datetime(2026, 8, 17, 7, 40, tzinfo=ZoneInfo("Asia/Tokyo"))
+    assert rotulo_fuso(toquio) == "do fuso local (UTC+09:00)"
+
+
+# --- dry run ----------------------------------------------------------------
+
+
+def _metricas(cfg):
+    return {a.ticker: {"chg_net": 0.05, "chg_pct": 1.0, "has_chart": True}
+            for a in cfg.ativos}
+
+
+def test_painel_fora_da_janela_sai_carimbado():
+    """O carimbo vai no título, nunca na linha 'Referência:' — é ela que
+    referencia_do_painel casa para achar o horário de redação."""
+    from comentario_matinal.etapas import referencia_do_painel
+
+    cfg = carrega_config()
+    tarde = datetime(2026, 8, 16, 14, 20, tzinfo=TZ_BR)
+    texto = monta_texto(cfg, _metricas(cfg), [], tarde, [],
+                        calendario_vazio=True, dry_run=True)
+
+    assert texto.splitlines()[0] == "PAINEL DIRECIONAL — DRY RUN"
+    assert "DRY RUN" not in texto.splitlines()[1]
+    r = referencia_do_painel(texto)
+    assert (r.hour, r.minute) == (14, 20), "o carimbo não pode quebrar a regex"
+
+
+def test_painel_dentro_da_janela_nao_carimba():
+    cfg = carrega_config()
+    texto = monta_texto(cfg, _metricas(cfg), [], ASOF, [],
+                        calendario_vazio=True, dry_run=False)
+    assert texto.splitlines()[0] == "PAINEL DIRECIONAL"
+    assert "DRY RUN" not in texto
+
+
+def test_marcador_de_ensaio_chega_a_mensagem_da_etapa():
+    """O painel em texto vai injetado inteiro na mensagem: as três etapas herdam
+    o marcador sem código novo no caminho delas, e podem registrá-lo na
+    auditoria em vez de tratar o ensaio como plantão."""
+    from comentario_matinal.etapas import mensagem_triagem
+
+    cfg = carrega_config()
+    tarde = datetime(2026, 8, 16, 14, 20, tzinfo=TZ_BR)
+    painel = monta_texto(cfg, _metricas(cfg), [], tarde, [],
+                         calendario_vazio=True, dry_run=True)
+    ins = Insumos(guia="g", fontes="f", painel=painel, calendario="c", asof=tarde)
+
+    assert "PAINEL DIRECIONAL — DRY RUN" in mensagem_triagem("prompt", ins, web=False)
+
+
+def test_painel_nomeia_o_fuso_do_carimbo():
+    cfg = carrega_config()
+    texto = monta_texto(cfg, _metricas(cfg), [], ASOF, [],
+                        calendario_vazio=True, dry_run=False)
+    assert "de Brasília (06:40 de Nova York)" in texto
+
+
 # --- fontes do dia ----------------------------------------------------------
 
 

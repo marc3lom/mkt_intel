@@ -1,6 +1,6 @@
 # GUIA DE ESTILO — COMENTÁRIO MATINAL (DEPIN/DIRIN)
 
-Versão 1.2 — 14/08/2026
+Versão 1.3 — 16/08/2026
 Documento de referência único. Alterações de convenção são feitas AQUI, nunca nos prompts.
 
 ---
@@ -8,7 +8,7 @@ Documento de referência único. Alterações de convenção são feitas AQUI, n
 ## 1. NATUREZA DO DOCUMENTO
 
 Comentário diário de abertura dos mercados globais, produzido pela Mesa de Investimentos
-entre 7h30 e 8h00 (horário de Brasília) e enviado por e-mail.
+entre 7h00 e 9h00 (horário de Brasília) e enviado por e-mail dentro dessa mesma janela.
 
 Público: diretoria colegiada do Banco Central do Brasil, alta chefia da instituição,
 chefes de gabinete de diretores, chefes de unidade e alta chefia do DEPIN.
@@ -121,6 +121,16 @@ O horário de redação é o do TÉRMINO DA COLETA, não o horário nominal do p
   elegíveis. O horário efetivo acompanha o texto até a revisão.
 - O painel deve ser gerado próximo ao término da coleta. Painel gerado com folga
   significativa descreve outro instante do mercado.
+
+A janela do plantão vai das 7h00 às 9h00. Ela é larga porque acomoda plantões que
+começam cedo e plantões que começam tarde, não porque o horário seja indiferente: o
+quadro de mercado às 7h00 e às 9h00 é outro, e é o horário de redação — não a janela —
+que decide a elegibilidade de cada fonte.
+
+Atenção à ponta tardia. Às 9h00 de Brasília são 8h00 de Nova York, e o grosso dos
+indicadores americanos sai às 8h30 de Nova York, ou 9h30 de Brasília. A margem entre o
+fim da janela e esse bloco é de trinta minutos: redigindo perto das 9h, conferir com
+cuidado redobrado o status de cada indicador americano do dia antes de mencioná-lo.
 
 ### 5.2 Elegibilidade temporal dos temas
 

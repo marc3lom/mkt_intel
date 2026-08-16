@@ -39,10 +39,16 @@ from comentario_matinal.config import (  # noqa: E402
     PROMPT_ETAPA,
     SAIDA_PADRAO,
     TEMPLATE_PADRAO,
-    TZ_BR,
     carrega_config,
 )
 from comentario_matinal.dados import coleta_intraday, coleta_referencia  # noqa: E402
+from comentario_matinal.janela import (  # noqa: E402
+    agora,
+    divergencia,
+    faixa,
+    fuso_local,
+    na_janela,
+)
 from comentario_matinal.texto import monta_texto  # noqa: E402
 
 
@@ -76,7 +82,8 @@ def main() -> int:
                              "auditoria da etapa.")
     parser.add_argument("--asof", type=str, default=None,
                         help="Horário de referência ISO, ex. 2026-08-14T07:35. "
-                             "Padrão: agora, em horário de Brasília.")
+                             "Padrão: agora, no fuso da máquina. Não afeta a "
+                             "decisão de dry run, que olha o relógio real.")
     parser.add_argument("--saida", type=Path, default=SAIDA_PADRAO,
                         help=f"Diretório das saídas. Padrão: {SAIDA_PADRAO}")
     parser.add_argument("--config", type=Path, default=CONFIG_PADRAO)
@@ -90,8 +97,20 @@ def main() -> int:
     parser.add_argument("--template", type=Path, default=TEMPLATE_PADRAO)
     args = parser.parse_args()
 
-    asof = (datetime.fromisoformat(args.asof).replace(tzinfo=TZ_BR)
-            if args.asof else datetime.now(TZ_BR))
+    asof = (datetime.fromisoformat(args.asof).replace(tzinfo=fuso_local())
+            if args.asof else agora())
+
+    # A janela é julgada pelo relógio real, nunca pelo --asof. Reproduzir um
+    # horário antigo é ensaio por definição, e passar `--asof 07:35` às 07h50 —
+    # que é o uso real do flag — continua sendo plantão.
+    dry_run = not na_janela(agora())
+    if dry_run:
+        print(f"\n*** DRY RUN — fora da janela de {faixa()} ***\n"
+              "Execução de ensaio. Não enviar o resultado à diretoria.\n",
+              file=sys.stderr)
+    aviso_fuso = divergencia()
+    if aviso_fuso:
+        print(aviso_fuso, file=sys.stderr)
 
     cfg = carrega_config(args.config)
     saida = args.saida.expanduser().resolve()
@@ -179,6 +198,7 @@ def main() -> int:
     texto = monta_texto(
         cfg=cfg, metricas=metricas, eventos=eventos, asof=asof,
         indisponiveis=indisponiveis, calendario_vazio=calendario_vazio,
+        dry_run=dry_run,
     )
     caminho_texto = saida / f"painel_{marca}.txt"
     caminho_texto.write_text(texto, encoding="utf-8")
@@ -294,7 +314,7 @@ def _roda_etapa(args, saida: Path, marca: str) -> int:
 
     do_painel = referencia_do_painel(painel_txt)
     if args.asof:
-        asof = datetime.fromisoformat(args.asof).replace(tzinfo=TZ_BR)
+        asof = datetime.fromisoformat(args.asof).replace(tzinfo=fuso_local())
         if do_painel and abs((asof - do_painel).total_seconds()) > 300:
             print(f"Aviso: --asof ({asof:%d/%m %Hh%M}) diverge da referência do "
                   f"painel ({do_painel:%d/%m %Hh%M}). O painel é o material que a "
@@ -302,7 +322,7 @@ def _roda_etapa(args, saida: Path, marca: str) -> int:
     elif do_painel:
         asof = do_painel
     else:
-        asof = datetime.now(TZ_BR)
+        asof = agora()
         print("Aviso: não consegui ler a referência do painel; usando o relógio.",
               file=sys.stderr)
 

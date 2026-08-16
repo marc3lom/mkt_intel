@@ -18,7 +18,7 @@
 ---
 
 Este projeto produz o Comentário Matinal da Mesa de Investimentos do DEPIN/DIRIN do
-Banco Central do Brasil. O comentário é redigido diariamente entre 7h30 e 8h00 de
+Banco Central do Brasil. O comentário é redigido diariamente entre 7h00 e 9h00 de
 Brasília por um gestor da divisão e revisado por um segundo analista antes do envio
 por e-mail à diretoria colegiada e à alta chefia da instituição.
 

@@ -3,10 +3,13 @@
 Prompts, guia de estilo e utilitários do Comentário Matinal da Mesa de Investimentos
 (DEPIN/DIRIN — Banco Central do Brasil).
 
-O comentário é produzido diariamente pela manhã, com envio pretendido até 8h00 de
-Brasília. A autoria roda entre os gestores da divisão; o processo não deve variar com o
-autor nem com o horário em que o plantão começa. Este repositório existe para garantir
-isso.
+O comentário é produzido e enviado diariamente entre 7h00 e 9h00, no fuso da máquina do
+plantão — nesta mesa, Brasília. A autoria roda entre os gestores da divisão; o processo
+não deve variar com o autor nem com o horário em que o plantão começa. Este repositório
+existe para garantir isso.
+
+Fora dessa janela o comando entende que a execução é ensaio e carimba as saídas
+(ver "Dry run").
 
 ---
 
@@ -30,6 +33,7 @@ comentario_matinal/
 │   ├── config.py               leitura do painel.toml
 │   ├── dados.py                a coleta de mercado — uma só, para todas as saídas
 │   ├── calendario.py           calendário econômico e status de divulgação
+│   ├── janela.py               a janela 7h–9h, o fuso local e o dry run
 │   ├── texto.py                bloco direcional
 │   ├── fontes.py               PDFs das fontes → texto
 │   ├── modelo.py               a chamada ao modelo, atrás de uma função única
@@ -109,6 +113,33 @@ exige sinalização explícita, e o revisor precisa saber que houve.
 
 O modelo é o que estiver configurado na CLI do Claude Code; `--modelo` fixa por execução.
 
+### A janela e o dry run
+
+O plantão vai das **7h00 às 9h00**, inclusive nas duas pontas, medidas no fuso da
+máquina. Fora dela toda execução é ensaio: o comando abre com um banner no stderr e
+carimba o painel em texto com `PAINEL DIRECIONAL — DRY RUN`.
+
+O carimbo vai no título, e não na linha `Referência:` — é ela que o comando lê para
+achar o horário de redação. Como o painel em texto vai injetado inteiro na mensagem das
+três etapas, o marcador chega também ao modelo: a triagem e a revisão sabem que estão
+num ensaio e podem registrar isso na auditoria.
+
+**Nada é bloqueado.** Ensaiar fora da janela é o uso legítimo — testar a montagem do
+documento à tarde, reprocessar um dia antigo, conferir uma mudança de template. O
+carimbo existe para que o arquivo de ensaio não seja confundido depois com um de
+plantão.
+
+A decisão sai sempre do **relógio real**, nunca do `--asof`. Reproduzir um horário
+antigo é ensaio por definição; e passar `--asof 07:35` às 7h50, que é o uso real do
+flag, continua sendo plantão.
+
+O fuso é lido a cada execução, do sistema operacional. Nesta máquina o relógio de
+hardware guarda UTC (`RealTimeIsUniversal=1`, padrão de dual boot com Linux), e isso não
+interfere: o sistema entrega hora local já convertida. Rodando de um fuso que não seja o
+de Brasília, o comando avisa — a janela continua fazendo sentido como hora do analista,
+mas as regras temporais do guia pressupõem a relação Brasília↔Nova York, e os horários
+do calendário chegam do terminal no fuso dele.
+
 ### O Project do Claude
 
 O Project é caminho alternativo, para o dia em que o comando não está à mão — máquina
@@ -142,8 +173,9 @@ nenhuma.
 ## Runbook do plantão
 
 O roteiro é contado em tempo relativo a partir do término da coleta (T0), não em horário
-de relógio. O plantão pode começar às 7h30 ou às 7h50; a sequência e a folga são as
-mesmas. Ciclo completo em torno de vinte e cinco minutos.
+de relógio. O plantão pode começar às 7h00 ou às 8h30; a sequência e a folga são as
+mesmas. Ciclo completo em torno de vinte e cinco minutos — o que exige começar a coleta
+até 8h30 para caber na janela.
 
 ### Passo 1 — Coleta (T0)
 
@@ -234,9 +266,9 @@ mapeamento marcador → fonte, ressalvas.
 ### Passo 5 — Passagem ao revisor
 
 **Regra de folga: a passagem ocorre com pelo menos dez minutos de antecedência sobre o
-horário de envio pretendido.** Se a coleta atrasou e essa folga não existe mais, avisar o
-revisor antes de mandar, para que ele priorize as correções obrigatórias e trate as
-sugestões como descartáveis.
+horário de envio pretendido — no limite, 8h50.** Se a coleta atrasou e essa folga não
+existe mais, avisar o revisor antes de mandar, para que ele priorize as correções
+obrigatórias e trate as sugestões como descartáveis.
 
 Enviar ao segundo analista: texto, PDFs das fontes, `painel_AAAAMMDD.txt`, bloco de
 auditoria e **o horário de redação**.
@@ -295,14 +327,19 @@ mesma passagem em que o analista confere o documento.
 
 ### Referência de fusos
 
-| Brasília | Nova York | Observação                                              |
-|----------|-----------|---------------------------------------------------------|
-| 07h00    | 06h00     | Releases europeus e britânicos já divulgados             |
-| 08h00    | 07h00     | Limite usual de envio                                    |
-| 09h30    | 08h30     | Maioria dos releases americanos — sempre após a redação   |
+| Brasília | Nova York | Observação                                                |
+|----------|-----------|-----------------------------------------------------------|
+| 07h00    | 06h00     | Abertura da janela. Releases europeus e britânicos já saíram |
+| 09h00    | 08h00     | Fecho da janela. Mercado americano à vista ainda fechado   |
+| 09h30    | 08h30     | Maioria dos releases americanos — sempre após a redação    |
 
 Horários de Nova York consideram o horário de verão americano. Fora dele, subtrair uma
 hora adicional da conversão.
+
+**Trinta minutos separam o fim da janela do bloco americano das 8h30 de Nova York.**
+Redigindo perto das 9h, conferir com cuidado redobrado o status de cada indicador
+americano do dia — o bloco de calendário em texto traz `AINDA NÃO DIVULGADO` por
+comparação de horário, e é nele que se confia, nunca no campo `ATUAL` da imagem.
 
 ### Após o envio
 

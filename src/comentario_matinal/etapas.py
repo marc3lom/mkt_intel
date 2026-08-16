@@ -123,8 +123,12 @@ class Insumos:
 
     @property
     def horario(self) -> str:
-        ny = self.asof.astimezone(__import__("zoneinfo").ZoneInfo("America/New_York"))
-        return (f"{self.asof:%d/%m/%Y}, {self.asof:%Hh%M} de Brasília "
+        from zoneinfo import ZoneInfo
+
+        from comentario_matinal.janela import rotulo_fuso
+
+        ny = self.asof.astimezone(ZoneInfo("America/New_York"))
+        return (f"{self.asof:%d/%m/%Y}, {self.asof:%Hh%M} {rotulo_fuso(self.asof)} "
                 f"(equivalente a {ny:%Hh%M} de Nova York)")
 
 
