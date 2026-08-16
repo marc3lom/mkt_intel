@@ -309,9 +309,10 @@ Nome fora do padrão `AAAAMMDD.md` é ignorado em silêncio, e a checagem de ine
 roda sem base. Pular o arquivamento tem o mesmo efeito.
 
 O formato é Markdown por decisão deliberada: o arquivo precisa ser pesquisável por texto
-e legível pelo comando. Comentários anteriores em `.docx`, sob a convenção antiga
-`AAAA/AAAAMM/`, permanecem como estão; não há migração retroativa — e, por não casarem
-com o padrão, também não são encontrados como dia anterior.
+e legível pelo comando. `arquivo/` guarda apenas o que o processo produz, a partir da
+primeira rodada em produção. Os comentários antigos em `.docx`, sob a convenção
+`AAAA/AAAAMM/`, foram retirados: serviam de contexto e não casavam com o padrão que o
+comando lê.
 
 Comentários que a chefia destacar como exemplares vão para `exemplos/aprovados/`;
 trechos rejeitados vão para `exemplos/rejeitados/`, com o motivo no cabeçalho do
