@@ -238,6 +238,28 @@ def test_notebook_cobre_todo_subcomando_do_terminal():
     )
 
 
+def test_as_saidas_das_etapas_saem_renderizadas():
+    """Triagem, redação e revisão são documentos Markdown; `print` os despeja crus.
+
+    Na primeira rodada de verdade a tabela de temas candidatos saiu como uma
+    parede de pipes, ilegível. A correção pegou a triagem e a revisão e esqueceu
+    a redação — que é o meio da sequência, e o único texto das três que o autor
+    lê inteiro antes de decidir se aceita.
+
+    O bloco direcional fica de fora de propósito: é texto de largura fixa, e o
+    Markdown desmancharia o alinhamento das colunas.
+    """
+    sem_renderizar = [
+        n for n, fonte in _celulas_de_codigo()
+        if "roda_etapa(" in fonte and "Markdown(" not in fonte
+    ]
+    assert not sem_renderizar, (
+        f"As células {sem_renderizar} rodam uma etapa e mostram a saída sem "
+        "renderizar. O que as três etapas devolvem é Markdown — tabela, títulos, "
+        "citação —, e `print` entrega isso como texto cru."
+    )
+
+
 def _notebook_no_indice():
     """O notebook como o git o guardaria, e não como ele está em disco.
 
