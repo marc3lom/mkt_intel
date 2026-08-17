@@ -150,19 +150,21 @@ tipo = "cambio"
 coluna = 3
 
 # Estes dois são o oposto: o par é USD/XXX, e quando sobe é a moeda asiática que
-# ENFRAQUECE. O rótulo precisa dizer o par, sob pena de o texto direcional
-# afirmar o contrário do dado.
+# ENFRAQUECE. O `rotulo` — que alimenta o texto direcional — precisa dizer o par,
+# sob pena de o bloco afirmar o contrário do dado: "JPY: alta" num dia de iene em
+# queda. O `rotulo_grade` pode ser curto porque o tile traz o nível ao lado, e
+# 159,20 só se lê como USD/JPY; a convenção de mesa é essa.
 [[painel.ativo]]
 ticker = "USDJPY Curncy"
 rotulo = "USD/JPY"
-rotulo_grade = "USD/JPY"
+rotulo_grade = "JPY"
 tipo = "cambio"
 coluna = 3
 
 [[painel.ativo]]
 ticker = "USDCNH Curncy"
 rotulo = "USD/CNH"
-rotulo_grade = "USD/CNH"
+rotulo_grade = "CNH"
 tipo = "cambio"
 coluna = 3
 
@@ -201,6 +203,6 @@ coluna = 4
 [[painel.ativo]]
 ticker = "BCOM Index"
 rotulo = "BCOM (commodities)"
-rotulo_grade = "BCOM"
+rotulo_grade = "Bcom"
 tipo = "indice"
 coluna = 4

@@ -81,15 +81,20 @@ def test_config_traduz_tipos_para_a_camada_de_render():
 
 
 def test_rotulo_de_par_de_cambio_e_inequivoco():
-    """USD/JPY sobe quando o iene enfraquece; o rótulo tem de dizer o par.
+    """USD/JPY sobe quando o iene enfraquece; o rótulo do TEXTO tem de dizer o par.
 
     Um rótulo "JPY" faria o bloco direcional afirmar "JPY: alta" num dia de iene
-    em queda — a direção oposta à do dado.
+    em queda — a direção oposta à do dado. Na grade o rótulo curto é aceitável e
+    é a convenção de mesa: o tile traz o nível ao lado, e 159,20 só se lê como
+    USD/JPY. Os dois campos são separados justamente para isso, e este teste
+    existe para que encurtar o da grade não arraste o do texto junto.
     """
     cfg = carrega_config()
-    rotulos = {a.ticker: a.rotulo for a in cfg.ativos}
-    assert rotulos["USDJPY Curncy"] == "USD/JPY"
-    assert rotulos["USDCNH Curncy"] == "USD/CNH"
+    por_ticker = {a.ticker: a for a in cfg.ativos}
+    assert por_ticker["USDJPY Curncy"].rotulo == "USD/JPY"
+    assert por_ticker["USDCNH Curncy"].rotulo == "USD/CNH"
+    assert por_ticker["USDJPY Curncy"].rotulo_grade == "JPY"
+    assert por_ticker["USDCNH Curncy"].rotulo_grade == "CNH"
 
 
 # --- direção ----------------------------------------------------------------
