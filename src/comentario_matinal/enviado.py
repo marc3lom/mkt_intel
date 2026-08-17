@@ -126,6 +126,28 @@ def relatorio(div: list[Divergencia]) -> list[str]:
     return linhas
 
 
+def relatorio_da_conferencia(div: list[Divergencia], marca: str) -> list[str]:
+    """O relatório inteiro do `confere`, pronto para mostrar, com um dono só.
+
+    As duas fachadas diziam isto com as mesmas palavras, cada uma com a sua
+    cópia: o cabeçalho, os trechos e a frase sobre repetir a alteração no `.md`.
+    Frase que existe duas vezes envelhece uma vez só, e aqui ela é justamente a
+    que explica por que a divergência importa amanhã.
+
+    O que continua sendo de cada fachada é para onde as linhas vão — stdout e
+    stderr no terminal, a saída da célula no notebook — e o código de saída, que
+    é vocabulário de terminal e não existe no notebook.
+    """
+    if not div:
+        return [f"Conferido:  o .docx e o .md dizem a mesma coisa ({marca})."]
+    return [
+        f"O .docx e o .md divergem em {len(div)} marcador(es).\n",
+        *relatorio(div),
+        "Se a alteração foi intencional, repetir no .md antes de enviar: é ele "
+        "que a triagem de amanhã lê como comentário do dia anterior.",
+    ]
+
+
 def arquiva(saida: Path, raiz: Path, marca: str, forcar: bool = False) -> list[Path]:
     """Copia o comentário do dia para ``arquivo/AAAA/MM/``.
 

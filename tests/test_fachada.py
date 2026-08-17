@@ -260,6 +260,39 @@ def test_avisos_da_etapa_chegam_antes_da_chamada_ao_modelo(
         )
 
 
+@pytest.mark.parametrize("com_divergencia", [False, True])
+def test_o_relatorio_da_conferencia_continua_saindo_com_as_mesmas_palavras(
+        mesa, monkeypatch, capsys, com_divergencia):
+    """O texto passou a ter um dono só, e estas são as linhas que o autor lê.
+
+    As quatro frases existiam duas vezes — aqui e numa célula do notebook —, e
+    agora saem de `enviado.relatorio_da_conferencia`. O que continua sendo de
+    terminal é o destino de cada linha (stdout quando não há o que corrigir,
+    stderr quando há) e o código de saída.
+    """
+    from comentario_matinal.enviado import Divergencia
+
+    div = ([Divergencia(1, "o texto que está no md", "o texto que está no docx")]
+           if com_divergencia else [])
+    monkeypatch.setattr("comentario_matinal.plantao.confere", lambda ctx: div)
+    monkeypatch.setattr("sys.argv", mesa.argv("conferir"))
+
+    assert main() == (1 if com_divergencia else 0)
+
+    saida = capsys.readouterr()
+    if not com_divergencia:
+        assert (f"Conferido:  o .docx e o .md dizem a mesma coisa ({MARCA})."
+                in saida.out.splitlines())
+        return
+
+    linhas = saida.err.splitlines()
+    assert "O .docx e o .md divergem em 1 marcador(es)." in linhas
+    assert "  M1" in linhas
+    assert ("Se a alteração foi intencional, repetir no .md antes de enviar: é "
+            "ele que a triagem de amanhã lê como comentário do dia anterior."
+            in linhas)
+
+
 # O núcleo diz o que falta e para aí; a frase que ensina a suprir é de cada
 # fachada, porque "rodar `uv run matinal`" é conselho errado numa célula de
 # notebook. Estes prendem as frases do terminal, que não podem mudar.

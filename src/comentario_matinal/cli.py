@@ -288,11 +288,10 @@ def _coleta(args, ctx: Contexto, voz: _Voz) -> int:
     for aviso in bloco.avisos:
         _erra(aviso)
 
+    # A recusa por falta da tabela do calendário é do núcleo: sem ela o template
+    # fica com um dos dois lugares de imagem vazio, e isso vale nas duas fachadas.
+    # A linha que o autor lê aqui continua a mesma — o "Erro: " sai do handler.
     if args.comentario:
-        if calendario is not None and calendario.caminho_png is None:
-            _erra("Erro: sem a tabela do calendário não há como montar o "
-                  "documento.")
-            return 1
         return _documento(args, ctx)
 
     return 0
@@ -350,18 +349,22 @@ def _etapa(args, ctx: Contexto, voz: _Voz) -> int:
 
 
 def _conferir(ctx: Contexto) -> int:
-    from comentario_matinal.enviado import relatorio
+    """O relatório vem pronto do núcleo; daqui saem só o destino e o código.
+
+    O texto era escrito aqui e repetido no notebook, palavra por palavra. Agora
+    ele tem um dono só — `enviado.relatorio_da_conferencia` —, e o que continua
+    sendo de terminal é a divisão entre stdout e stderr e o código de saída.
+    """
+    from comentario_matinal.enviado import relatorio_da_conferencia
 
     div = plantao.confere(ctx)
+    linhas = relatorio_da_conferencia(div, ctx.marca)
     if not div:
-        print(f"Conferido:  o .docx e o .md dizem a mesma coisa ({ctx.marca}).")
+        print("\n".join(linhas))
         return 0
 
-    _erra(f"O .docx e o .md divergem em {len(div)} marcador(es).\n")
-    for linha in relatorio(div):
+    for linha in linhas:
         _erra(linha)
-    _erra("Se a alteração foi intencional, repetir no .md antes de enviar: é "
-          "ele que a triagem de amanhã lê como comentário do dia anterior.")
     return 1
 
 

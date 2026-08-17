@@ -599,6 +599,12 @@ def monta_documento(ctx: Contexto, comentario: Path,
     As imagens são as da data, não as de agora: o comentário foi escrito contra
     o painel gravado, e recoletar aqui produziria um documento cujo texto e cuja
     imagem descrevem manhãs diferentes.
+
+    A falta da tabela do calendário recusa a montagem aqui, e não em cada
+    fachada: é regra de negócio — o template tem dois lugares de imagem, e um
+    deles ficaria vazio no documento que vai à diretoria. Recusar no núcleo
+    também impede que o `add_picture` estoure com `FileNotFoundError`, que não é
+    `ErroDePlantao` e escaparia do notebook como traceback cru.
     """
     from comentario_matinal.documento import monta
 
@@ -607,13 +613,18 @@ def monta_documento(ctx: Contexto, comentario: Path,
     if not template.exists():
         raise FaltaInsumo(f"template não encontrado em {template}.")
 
+    calendario = ctx.saida / f"calendario_{ctx.marca}.png"
+    if not calendario.exists():
+        raise FaltaInsumo("sem a tabela do calendário não há como montar o "
+                          "documento.")
+
     destino = ctx.saida / f"comentario_{ctx.marca}.docx"
     try:
         monta(
             template=template,
             markdown=comentario,
             painel=ctx.saida / f"painel_{ctx.marca}.png",
-            calendario=ctx.saida / f"calendario_{ctx.marca}.png",
+            calendario=calendario,
             destino=destino,
         )
     except RuntimeError as e:

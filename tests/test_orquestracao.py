@@ -229,3 +229,32 @@ def test_sem_calendario_pula_a_consulta_e_nao_gera_a_tabela(bloomberg_falsa, cha
         "--sem-calendario existe para terminal sem licença BQL; tocar a "
         "consulta mesmo assim é o próprio bug que o flag existe para evitar."
     )
+
+
+def test_sem_a_tabela_do_calendario_a_montagem_e_recusada(bloomberg_falsa,
+                                                          monkeypatch, tmp_path,
+                                                          capsys):
+    """A recusa é do núcleo, e a linha do terminal continua a mesma.
+
+    O template tem dois lugares de imagem, e sem a tabela do calendário um deles
+    sairia vazio no documento que vai à diretoria. A checagem morava no `cli.py`,
+    onde não alcançava o notebook — e nem este caminho, em que
+    `--sem-calendario` deixa o `.png` sem gerar e a montagem estourava lá dentro
+    com `FileNotFoundError`, que não é `ErroDePlantao`.
+    """
+    from comentario_matinal.cli import main
+
+    comentario = tmp_path / "comentario.md"
+    comentario.write_text("- Um marcador.\n", encoding="utf-8")
+    monkeypatch.setattr(
+        "sys.argv",
+        ["matinal", "--asof", "2026-08-17T07:40", "--saida", str(tmp_path),
+         "--sem-calendario", "--comentario", str(comentario)],
+    )
+    assert main() == 1
+
+    esperado = "Erro: sem a tabela do calendário não há como montar o documento."
+    assert esperado in capsys.readouterr().err.splitlines(), (
+        f"a linha de recusa do terminal mudou; esperada: {esperado!r}"
+    )
+    assert not (tmp_path / f"comentario_{MARCA}.docx").exists()
