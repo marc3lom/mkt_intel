@@ -176,8 +176,19 @@ Nenhuma das duas implementa o plantão. As duas são fachadas sobre
 `src/comentario_matinal/plantao.py` e chamam as mesmas funções, então não podem
 divergir no que fazem. O que poderia divergir é a **sequência** — ela existe duas
 vezes, no argparse e nas células —, e é isso que `tests/test_notebook.py` prende:
-passo novo no núcleo ou subcomando novo no terminal derruba o teste até que o notebook
-seja atualizado junto.
+passo novo no núcleo, subcomando novo no terminal ou célula fora da ordem de
+`plantao.PASSOS` derrubam o teste até que o notebook seja atualizado junto.
+
+**Parâmetro novo num passo também.** Ou uma célula o exercita, ou ele entra na lista de
+exceções do teste com o motivo escrito ao lado. Não ter contrapartida no notebook é
+decisão legítima — `--asof`, `--anterior` e `--modelo` são conserto, ensaio e
+investigação, e moram no terminal —, mas precisa ser decisão, e não esquecimento.
+
+Numa máquina sem licença BQL, `uv run matinal --sem-calendario` pula a consulta do
+calendário; no notebook o equivalente é o `SEM_CALENDARIO = True` da célula do
+calendário. Nos dois casos o bloco direcional sai sem a agenda, dizendo isso no próprio
+texto, e a montagem do documento é recusada — o template tem dois lugares de imagem, e
+um deles ficaria vazio no que vai à diretoria.
 
 O núcleo também não escreve instrução de terminal. Ele diz o que falta — "falta a
 triagem de 20260817." — e nomeia a falta como dado; a frase que ensina a supri-la é de

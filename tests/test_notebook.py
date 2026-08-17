@@ -5,9 +5,12 @@ reimplementa nada. O que sobra de duplicação é a SEQUÊNCIA — a ordem dos p
 existe no argparse e nas células —, e é ela que estes testes prendem.
 """
 
+import inspect
 from pathlib import Path
 
-NOTEBOOK = Path(__file__).parent.parent / "notebooks" / "plantao.ipynb"
+RAIZ = Path(__file__).parent.parent
+NOTEBOOK = RAIZ / "notebooks" / "plantao.ipynb"
+CLI = RAIZ / "src" / "comentario_matinal" / "cli.py"
 
 # O fechamento do plantão fica fora do notebook de propósito: apaga fontes/ e
 # saida/, grava o arquivo que a triagem de amanhã lê, e notebook é onde se
@@ -37,6 +40,30 @@ EQUIVALENTE = {
     # `enviado` fica fora de propósito: é o único passo destrutivo.
 }
 
+# Os parâmetros dos passos que o notebook deliberadamente não exercita, cada um
+# com o motivo. Todos existem no terminal como flag; o que os une é serem
+# conserto, ensaio ou investigação — coisa de quem já sabe o processo —, e não
+# passo do plantão. O notebook ensina o plantão, e o terminal é onde se sai dele.
+PARAMETROS_FORA_DO_NOTEBOOK = {
+    "saida": "as saídas do dia vão para a pasta padrão do repositório; apontar "
+             "outra é reprocessar um dia antigo sem misturá-lo com o de hoje",
+    "fontes": "os PDFs da manhã ficam em `fontes/`, na raiz — a célula do Passo 1 "
+              "diz isso, e apontar outra pasta é caso de teste",
+    "arquivo": "o comentário do dia anterior sai de `arquivo/`, que é onde o "
+               "`uv run matinal enviado` o grava; não há o que escolher aqui",
+    "config": "a lista de ativos do painel é canônica e única — `config/painel.toml`",
+    "template": "o documento sai do template da mesa; outro template é ensaio de "
+                "formatação, e nele o interesse é o .docx, não o plantão",
+    "asof": "reproduzir um horário antigo é ensaio por definição, e ensaio se faz "
+            "no terminal; aqui o horário vem do relógio e, nas etapas, do carimbo "
+            "do painel, que é o que a etapa de fato analisa",
+    "anterior": "o comentário do dia anterior entra sozinho, do arquivado mais "
+                "recente; forçar outro, ou nenhum, é conserto de exceção",
+    "modelo": "vale o modelo configurado na CLI do Claude Code. Fixá-lo por "
+              "execução é investigação de backend, e trocá-lo no meio do plantão "
+              "faria as três etapas rodarem em modelos diferentes",
+}
+
 
 def _notebook():
     import nbformat
@@ -44,8 +71,33 @@ def _notebook():
     return nbformat.read(NOTEBOOK, as_version=4)
 
 
+def _celulas_de_codigo() -> list[tuple[int, str]]:
+    """As células de código, numeradas como o notebook as mostra na tela.
+
+    A contagem é 1-based e inclui as de markdown, porque é assim que se aponta
+    uma célula para alguém — e é o número que a mensagem de falha precisa dar.
+    """
+    return [(i, c.source) for i, c in enumerate(_notebook().cells, 1)
+            if c.cell_type == "code"]
+
+
 def _codigo() -> str:
-    return "\n".join(c.source for c in _notebook().cells if c.cell_type == "code")
+    return "\n".join(fonte for _, fonte in _celulas_de_codigo())
+
+
+def _parametros_dos_passos(plantao):
+    """Os parâmetros opcionais de cada passo público, com o passo a que pertencem.
+
+    Opcional aqui é o que uma fachada escolhe passar ou não: os posicionais
+    obrigatórios são o material que o passo anterior produziu, e neles não há
+    decisão alguma a tomar.
+    """
+    for passo in plantao.PASSOS:
+        if passo in FORA_DO_NOTEBOOK:
+            continue
+        for nome, p in inspect.signature(getattr(plantao, passo)).parameters.items():
+            if p.kind is p.KEYWORD_ONLY or p.default is not inspect.Parameter.empty:
+                yield passo, nome
 
 
 def _nome_da_constante(plantao, valor: str) -> str:
@@ -72,6 +124,92 @@ def test_notebook_cobre_todo_passo_do_nucleo():
         "célula nova: sem isso as duas formas de rodar o plantão divergem, que é "
         "o que este teste existe para impedir."
     )
+
+
+def test_o_notebook_segue_a_ordem_dos_passos_do_nucleo():
+    """O que o README promete: é a SEQUÊNCIA que este arquivo prende.
+
+    Procurar cada passo no código concatenado só provava presença — trocar duas
+    células de lugar mantinha tudo verde. E a ordem é o que distingue um runbook
+    de uma lista de funções: quem lê o notebook de cima para baixo está lendo o
+    processo, e um passo fora de lugar ensina o processo errado.
+    """
+    from comentario_matinal import plantao
+
+    celulas = _celulas_de_codigo()
+    # Passo ausente é assunto do teste de cobertura. Aqui ele é pulado, e não
+    # contado como fora de ordem: uma falta só precisa de um vermelho.
+    presentes = [
+        (passo, celula)
+        for passo, celula in (
+            (p, next((n for n, fonte in celulas if f"plantao.{p}" in fonte), None))
+            for p in plantao.PASSOS if p not in FORA_DO_NOTEBOOK
+        )
+        if celula is not None
+    ]
+
+    fora = [
+        f"`{depois}` (célula {n_depois}) aparece antes de `{antes}` (célula {n_antes})"
+        for (antes, n_antes), (depois, n_depois) in zip(presentes, presentes[1:])
+        if n_antes > n_depois
+    ]
+    assert not fora, (
+        "As células saíram da ordem do runbook: " + "; ".join(fora) + ". A ordem "
+        "dos passos é `plantao.PASSOS`, e cada célula consome o que a anterior "
+        "gravou em `saida/` — trocá-las de lugar ensina o processo errado a quem "
+        "aprende o plantão por aqui."
+    )
+
+
+def test_o_notebook_decide_sobre_todo_parametro_dos_passos():
+    """Parâmetro novo obriga a decidir se o notebook o exercita, e como.
+
+    `roda_etapa` sozinha tem cinco, e o notebook usava dois; os demais existem no
+    terminal como flag e não têm contrapartida aqui. Não ter é decisão legítima —
+    o que não pode é ser omissão. Sem este teste, um parâmetro acrescentado amanhã
+    ficaria invisível numa das duas fachadas sem nada ficar vermelho, que é o
+    mesmo buraco que `EQUIVALENTE` fechou para os subcomandos.
+
+    A busca é pelo nome seguido de `=`, que é como um argumento nomeado aparece
+    numa célula. É grosseira de propósito: prender a chamada exata obrigaria a
+    mexer no teste a cada edição do notebook, e o que ele afere é a decisão.
+    """
+    from comentario_matinal import plantao
+
+    codigo = _codigo()
+    faltando = sorted(
+        f"{passo}({nome})"
+        for passo, nome in _parametros_dos_passos(plantao)
+        if nome not in PARAMETROS_FORA_DO_NOTEBOOK and f"{nome}=" not in codigo
+    )
+    assert not faltando, (
+        f"O notebook não exercita {faltando}, e nada diz que isso é de propósito. "
+        "Ou uma célula passa o parâmetro, ou ele entra em "
+        "PARAMETROS_FORA_DO_NOTEBOOK com o motivo escrito ao lado — como os flags "
+        "de conserto e de ensaio, que só existem no terminal."
+    )
+
+
+def test_o_relatorio_da_conferencia_tem_um_dono_so():
+    """O texto do `confere` não pode voltar a existir em duas cópias.
+
+    Ele existia palavra por palavra no `cli.py` e numa célula. A frase que explica
+    por que a divergência importa amanhã — é o `.md` que a triagem lê — é
+    justamente a que uma das cópias esqueceria de atualizar, e ninguém notaria:
+    as duas fachadas continuariam verdes, dizendo coisas diferentes.
+    """
+    frase = "Se a alteração foi intencional"
+    for onde, fonte in (("o notebook", _codigo()),
+                        ("o cli.py", CLI.read_text(encoding="utf-8"))):
+        assert frase not in fonte, (
+            f"{onde} voltou a escrever o relatório da conferência. Ele sai de "
+            "`enviado.relatorio_da_conferencia`; a fachada escolhe só onde "
+            "mostrar cada linha."
+        )
+        assert "relatorio_da_conferencia" in fonte, (
+            f"{onde} deixou de usar `enviado.relatorio_da_conferencia`, que é o "
+            "que impede as duas fachadas de divergirem no texto."
+        )
 
 
 def test_o_mapa_de_equivalencia_cobre_todo_subcomando():
