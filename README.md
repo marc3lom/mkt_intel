@@ -380,18 +380,23 @@ o caso a exemplo anotado no guia é passo manual, e é o único que tem efeito.
   gestores usem sem divergir.
 - Repositório privado. Contém comentários institucionais enviados à diretoria.
 
-### A confirmar no primeiro plantão real
+### A coluna `ATUAL` — questão resolvida
 
-A coluna `ATUAL` da tabela do calendário **não foi verificada às 7h40 para um release
-das 9h30**. A verificação só é possível dentro da janela do plantão, e as execuções de
-teste ocorreram fora dela — o que se observou foi a tabela às 13h, quando os releases da
-manhã já haviam saído de verdade.
+**Antes da divulgação, `ATUAL` vem vazio.** Não carrega o número do período anterior,
+que era a hipótese temida. Observado no terminal em 16/08/2026.
 
-O que conferir: às 7h40, um release americano das 9h30 aparece na tabela com `ATUAL`
-vazio, ou já preenchido com o número do período anterior?
+Consequência prática: **a tabela enviada à diretoria não precisa de ressalva.** Célula
+vazia se lê como "ainda não saiu", sem depender de o leitor conhecer a convenção.
 
-**Se vier preenchido antes da divulgação, a regra de status deve ignorar `ATUAL` e
-decidir exclusivamente pela comparação de horário** — que é como
-`calendario.eventos_do_dia` já funciona hoje. A conferência serve para saber se a tabela
-enviada à diretoria precisa de ressalva, já que ela exibe `ATUAL` sem qualificar o
-status, ao contrário do bloco em texto.
+A regra do código não muda por isso. `calendario.eventos_do_dia` continua decidindo o
+status **exclusivamente pela comparação de horário**, e o teste que fixa isso
+(`test_status_vem_do_horario_e_nao_do_valor_preenchido`) monta de propósito um
+calendário com `ATUAL` preenchido para evento futuro. Ele guarda a decisão de desenho,
+não o comportamento observado do BQL: se um dia a fonte mudar, o status não muda junto.
+
+Fica um caso a observar, agora que `ATUAL` é informativo: se ele aparecer **preenchido
+antes** do horário previsto, é sinal de release antecipado ou de horário desatualizado
+na agenda — e aí a comparação de horário erraria para o lado perigoso, marcando como
+não divulgado algo que já saiu. É o inverso do risco original, e menos grave (o texto
+deixaria de citar um dado disponível, em vez de citar um indisponível), mas vale saber
+que existe.
