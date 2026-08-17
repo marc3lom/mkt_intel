@@ -141,10 +141,47 @@ def test_a_janela_citada_na_prosa_bate_com_o_codigo():
     )
 
 
+def _pastas_conhecidas() -> set[str]:
+    """As pastas que a documentação pode citar sem que o teste as chame de invento.
+
+    O disco não é o invariante. `saida/` e `fontes/` estão no `.gitignore` e só
+    passam a existir depois da primeira coleta — um clone recém-feito não as
+    tem. E é exatamente quem acabou de clonar, seguindo `02-instalacao.md` e
+    rodando a suíte para conferir a instalação, quem um teste vermelho aqui
+    mais confundiria: intermitente por construção, porque o próprio passo de
+    instalação manda rodar `uv run matinal` de ensaio, e é esse comando que
+    cria `saida/`. Vermelho antes dele, verde depois.
+
+    O que vale é o que `config.py` declara como pasta padrão — essas existem
+    por contrato, tenham sido criadas ou não — somado ao que de fato está na
+    raiz, para as pastas que não vêm de constante alguma (`docs/`, `src/`,
+    `tests/`...).
+    """
+    from comentario_matinal.config import (
+        ARQUIVO_PADRAO,
+        CONFIG_PADRAO,
+        FONTES_PADRAO,
+        PROMPTS,
+        SAIDA_PADRAO,
+        TEMPLATE_PADRAO,
+    )
+
+    declaradas = {
+        SAIDA_PADRAO.name,
+        FONTES_PADRAO.name,
+        ARQUIVO_PADRAO.name,
+        PROMPTS.name,
+        CONFIG_PADRAO.parent.name,
+        TEMPLATE_PADRAO.parent.name,
+    }
+    do_disco = {p.name for p in RAIZ.iterdir() if p.is_dir()}
+    return declaradas | do_disco
+
+
 def test_toda_pasta_citada_existe():
     """Documentação que nomeia pasta inexistente manda o leitor ao lugar errado,
     e ele não tem como saber que o errado é o texto."""
-    reais = {p.name for p in RAIZ.iterdir() if p.is_dir()}
+    reais = _pastas_conhecidas()
     citadas = set(RE_CAMINHO.findall(_texto(DOCUMENTOS)))
     inventadas = sorted(c for c in citadas
                         if c not in reais and c not in CAMINHOS_QUE_SAO_MOLDE)
