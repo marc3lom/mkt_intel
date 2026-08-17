@@ -21,7 +21,7 @@ from comentario_matinal.janela import fuso_local
 # Onde os coletores estão ligados. ``from … import`` liga o nome no módulo que
 # importa, então é lá que o monkeypatch precisa agir — não no módulo de origem.
 # A Tarefa 2 muda esta linha, e só ela.
-MODULO = "comentario_matinal.cli"
+MODULO = "comentario_matinal.plantao"
 
 MARCA = "20260817"
 

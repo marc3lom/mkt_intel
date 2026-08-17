@@ -14,11 +14,18 @@ números. Entre a triagem e a redação a decisão é humana — a redação rec
 temas escolhidos pelo autor.
 """
 
+# Este módulo é fachada: o plantão está em `plantao.py`, e aqui ficam só as três
+# coisas que são de terminal — ler a linha de comando, escrever nas duas saídas
+# padrão e traduzir erro em código de saída. Regra de negócio nova entra lá,
+# nunca aqui, senão o notebook passa a divergir do comando.
+#
+# O texto acima é a descrição que o argparse imprime no --help; o que não for
+# para o usuário do comando ler fica neste comentário, e não no docstring.
+
 from __future__ import annotations
 
 import argparse
 import sys
-from datetime import datetime
 from pathlib import Path
 
 import matplotlib
@@ -26,41 +33,36 @@ import matplotlib
 # Backend sem tela: isto roda em linha de comando, não em notebook.
 matplotlib.use("Agg")
 
-import matplotlib.pyplot as plt  # noqa: E402
-
-from comentario_matinal.calendario import (  # noqa: E402
-    coleta_calendario,
-    eventos_do_dia,
-    tabela_markdown,
-)
+from comentario_matinal import plantao  # noqa: E402
 from comentario_matinal.config import (  # noqa: E402
     ARQUIVO_PADRAO,
     CONFIG_PADRAO,
     FONTES_PADRAO,
-    GUIA_DE_ESTILO,
-    MERCADO_FECHADO,
-    PROMPT_ETAPA,
     SAIDA_PADRAO,
     TEMPLATE_PADRAO,
-    carrega_config,
 )
-from comentario_matinal.dados import coleta_intraday, coleta_referencia  # noqa: E402
-from comentario_matinal.janela import (  # noqa: E402
-    agora,
-    divergencia,
-    faixa,
-    fuso_local,
-    na_janela,
+from comentario_matinal.plantao import (  # noqa: E402
+    Contexto,
+    ErroDePlantao,
+    ErroNoModelo,
+    MontagemFalhou,
+    RevisaoIlegivel,
+    SemTemas,
 )
-from comentario_matinal.texto import monta_texto  # noqa: E402
+
+# Os subcomandos que o plantão expõe, na ordem do runbook.
+SUBCOMANDOS = ("triagem", "redacao", "revisao", "conferir", "enviado")
+
+
+def _erra(mensagem: str) -> None:
+    print(mensagem, file=sys.stderr)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("comando", nargs="?", default=None,
-                        choices=["triagem", "redacao", "revisao", "conferir",
-                                 "enviado"],
+                        choices=SUBCOMANDOS,
                         help="Etapa a executar. `conferir` compara o .docx com "
                              "o .md, sem arquivar nem limpar — para rodar entre "
                              "o Word e o e-mail. `enviado` fecha o plantão: "
@@ -110,448 +112,175 @@ def main() -> int:
     parser.add_argument("--template", type=Path, default=TEMPLATE_PADRAO)
     args = parser.parse_args()
 
-    asof = (datetime.fromisoformat(args.asof).replace(tzinfo=fuso_local())
-            if args.asof else agora())
+    try:
+        return _despacha(args)
+    except SemTemas as e:
+        # A falta é do núcleo; a instrução de como suprir é de quem foi chamado
+        # pela linha de comando. No notebook a mesma falta ensina outra coisa.
+        #
+        # O arquivo inexistente só é acusado aqui, e não na hora de ler: as
+        # checagens que o núcleo faz antes — bloco direcional, calendário,
+        # horário de redação — vêm primeiro, e os avisos delas se perderiam se a
+        # fachada abortasse antes de chamá-lo.
+        if args.temas_arquivo and not args.temas_arquivo.exists():
+            return _falha(e, f"Erro: {args.temas_arquivo} não existe.")
+        return _falha(e, "Erro: a redação precisa dos temas escolhidos pelo autor. "
+                         "Passar --temas \"dominante | tema 2 | tema 3\" ou "
+                         "--temas-arquivo. A decisão editorial entre a triagem e a "
+                         "redação é humana.")
+    except ErroNoModelo as e:
+        return _falha(e, f"Erro na etapa {args.comando}: {e}")
+    except RevisaoIlegivel as e:
+        return _falha(e, f"\nErro: {e}\nA revisão completa está em {e.destino}.")
+    except MontagemFalhou as e:
+        return _falha(e, f"Erro ao montar o documento: {e}")
+    except ErroDePlantao as e:
+        return _falha(e, f"Erro: {e}")
 
-    # A janela é julgada pelo relógio real, nunca pelo --asof. Reproduzir um
-    # horário antigo é ensaio por definição, e passar `--asof 07:35` às 07h50 —
-    # que é o uso real do flag — continua sendo plantão.
-    dry_run = not na_janela(agora())
-    if dry_run:
-        print(f"\n*** DRY RUN — fora da janela de {faixa()} ***\n"
-              "Execução de ensaio. Não enviar o resultado à diretoria.\n",
-              file=sys.stderr)
-    aviso_fuso = divergencia()
-    if aviso_fuso:
-        print(aviso_fuso, file=sys.stderr)
 
-    cfg = carrega_config(args.config)
-    saida = args.saida.expanduser().resolve()
-    saida.mkdir(parents=True, exist_ok=True)
-    marca = f"{asof:%Y%m%d}"
+def _falha(e: ErroDePlantao, mensagem: str) -> int:
+    """Mostra o que o passo já tinha a dizer antes de dizer por que parou."""
+    for aviso in e.avisos:
+        _erra(aviso)
+    _erra(mensagem)
+    return 1
 
-    caminho_painel = saida / f"painel_{marca}.png"
-    caminho_tabela = saida / f"calendario_{marca}.png"
+
+def _despacha(args) -> int:
+    ctx = plantao.contexto(asof=args.asof, saida=args.saida, fontes=args.fontes,
+                           arquivo=args.arquivo, config=args.config)
+    for aviso in ctx.avisos:
+        _erra(aviso)
 
     if args.comando == "conferir":
-        return _confere(saida, marca)
+        return _conferir(ctx)
 
     if args.comando == "enviado":
-        return _fecha_plantao(args, saida, marca, dry_run)
+        return _enviado(args, ctx)
 
     # As etapas de IA consomem o material já gerado pela coleta; nenhuma delas
     # toca no Bloomberg.
     if args.comando:
-        return _roda_etapa(args, saida, marca)
+        return _etapa(args, ctx)
+
+    return _coleta(args, ctx)
+
+
+def _coleta(args, ctx: Contexto) -> int:
+    """Painel, calendário e bloco direcional — e o documento, se houver texto."""
+    caminho_painel = ctx.saida / f"painel_{ctx.marca}.png"
+    caminho_tabela = ctx.saida / f"calendario_{ctx.marca}.png"
 
     # O comentário é escrito depois do painel. Recoletar aqui produziria um
     # documento com o mercado de agora e um texto redigido contra o de antes —
     # exatamente a divergência que este comando existe para impedir. Havendo as
     # imagens do dia, a montagem as reaproveita e não toca no Bloomberg.
     if args.comentario and caminho_painel.exists() and caminho_tabela.exists():
-        return _monta_documento(args, saida, marca, caminho_painel, caminho_tabela)
+        return _documento(args, ctx)
 
-    # --- Mercado: uma coleta, três consumidores -----------------------------
-    print(f"Coletando referência de {len(cfg.ativos)} ativos...", file=sys.stderr)
-    ref, indisponiveis = coleta_referencia(cfg.ativos)
-    if ref.empty:
-        print("Erro: a consulta de referência não devolveu dado algum. "
-              "Terminal Bloomberg ativo?", file=sys.stderr)
-        return 1
+    mercado = plantao.coleta_mercado(ctx, progresso=_erra)
 
-    print("Coletando barras intradiárias...", file=sys.stderr)
-    intraday = coleta_intraday(cfg.ativos, asof, ref)
+    painel = plantao.desenha_painel(ctx, mercado)
+    print(f"Painel:     {painel.caminho}")
 
-    # --- Saída 1: o painel em imagem ---------------------------------------
-    from comentario_matinal.render.painel import monta_painel
-
-    # A grade é desenhada na ordem de leitura por linha; o painel.toml lista por
-    # coluna. As métricas voltam indexadas por ticker, então o texto não é afetado.
-    fig, metricas = monta_painel(
-        cfg.para_itens_da_grade(cfg.ordem_da_grade()), ref, intraday,
-        save_path=caminho_painel,
-        grid=cfg.grade,
-        allowed_root=saida,
-        asof=asof,
-        cabecalhos=cfg.titulos_colunas or None,
-        selo_fechado=MERCADO_FECHADO,
-    )
-    plt.close(fig)
-    print(f"Painel:     {caminho_painel}")
-
-    # --- Saída 2: a tabela do calendário econômico -------------------------
-    eco = bancos = None
+    calendario = None
     if not args.sem_calendario:
-        print("Consultando calendário econômico (BQL)...", file=sys.stderr)
-        eco, bancos = coleta_calendario()
+        calendario = plantao.prepara_calendario(ctx, progresso=_erra)
+        for aviso in calendario.avisos:
+            _erra(aviso)
+        if calendario.caminho_png:
+            print(f"Calendário: {calendario.caminho_png}")
+        print(f"Calendário: {calendario.caminho_md}")
 
-        from comentario_matinal.render.tabelas import (
-            ESPEC_BC,
-            ESPEC_ECO,
-            monta_tabelas,
-        )
-
-        fig_tab = monta_tabelas(
-            [(eco, ESPEC_ECO), (bancos, ESPEC_BC)],
-            save_path=caminho_tabela,
-            allowed_root=saida,
-        )
-        if fig_tab is None:
-            caminho_tabela = None
-            print("Aviso: sem dados para renderizar a tabela do calendário.",
-                  file=sys.stderr)
-        else:
-            plt.close(fig_tab)
-            print(f"Calendário: {caminho_tabela}")
-
-        # As etapas de IA leem o calendário como texto, nunca como imagem: pedir
-        # a um modelo que leia número em gráfico é a origem dos dois erros que
-        # este processo existe para impedir.
-        caminho_cal_md = saida / f"calendario_{marca}.md"
-        caminho_cal_md.write_text(tabela_markdown(eco, bancos), encoding="utf-8")
-        print(f"Calendário: {caminho_cal_md}")
-
-    # --- Saída 3: o bloco direcional em texto ------------------------------
-    calendario_vazio = args.sem_calendario or eco is None or eco.empty
-    eventos = [] if calendario_vazio else eventos_do_dia(eco, asof)
-
-    texto = monta_texto(
-        cfg=cfg, metricas=metricas, eventos=eventos, asof=asof,
-        indisponiveis=indisponiveis, calendario_vazio=calendario_vazio,
-        dry_run=dry_run,
-    )
-    caminho_texto = saida / f"painel_{marca}.txt"
-    caminho_texto.write_text(texto, encoding="utf-8")
-    print(f"Texto:      {caminho_texto}")
+    bloco = plantao.monta_bloco(ctx, mercado, painel, calendario)
+    print(f"Texto:      {bloco.caminho}")
 
     print()
-    print(texto)
+    print(bloco.texto)
 
-    if indisponiveis:
-        print(f"\nAviso: {len(indisponiveis)} ativo(s) do painel sem dado de "
-              f"referência — {', '.join(indisponiveis)}", file=sys.stderr)
+    for aviso in bloco.avisos:
+        _erra(aviso)
 
-    # --- Saída 4: o documento final, quando há comentário revisado ---------
     if args.comentario:
-        if not caminho_tabela:
-            print("Erro: sem a tabela do calendário não há como montar o "
-                  "documento.", file=sys.stderr)
+        if calendario is not None and calendario.caminho_png is None:
+            _erra("Erro: sem a tabela do calendário não há como montar o "
+                  "documento.")
             return 1
-        return _monta_documento(args, saida, marca, caminho_painel, caminho_tabela)
+        return _documento(args, ctx)
 
     return 0
 
 
-def _le(caminho: Path) -> str | None:
-    return caminho.read_text(encoding="utf-8") if caminho.exists() else None
+def _documento(args, ctx: Contexto) -> int:
+    destino = plantao.monta_documento(ctx, args.comentario, template=args.template)
+    print(f"Documento:  {destino}")
+    _erra("Abrir no Word para inserir o gráfico do dia, se houver, conferir o "
+          "texto e exportar o PDF.")
+    return 0
 
 
-def _anterior(args, asof: datetime) -> str | None:
-    """Resolve o comentário do dia anterior: explícito, automático, ou nenhum.
+def _etapa(args, ctx: Contexto) -> int:
+    """Traduz os flags da etapa e mostra o que ela produziu."""
+    temas = args.temas
+    if args.temas_arquivo:
+        # Arquivo ausente vira ausência de temas: quem acusa é o `SemTemas` do
+        # núcleo, depois das checagens dele.
+        temas = (args.temas_arquivo.read_text(encoding="utf-8")
+                 if args.temas_arquivo.exists() else None)
+    elif temas:
+        temas = "\n".join(f"- {t.strip()}" for t in temas.split("|") if t.strip())
 
-    A triagem julga ineditismo do tema contra ele, e a revisão procura
-    contradição não sinalizada. Só a redação não o recebe. Depender de alguém
-    lembrar de passar `--anterior` fazia as duas checagens não acontecerem no dia
-    corrido, que é justamente quando elas importam.
-    """
-    from comentario_matinal.etapas import com_data, comentario_anterior
-
+    anterior = plantao.AUTOMATICO
     if args.sem_anterior:
-        return None
+        anterior = None
+    elif args.anterior:
+        anterior = (args.anterior.read_text(encoding="utf-8")
+                    if args.anterior.exists() else None)
+        if anterior is None:
+            _erra(f"Aviso: {args.anterior} não existe; a etapa roda sem o "
+                  "comentário do dia anterior.")
 
-    if args.anterior:
-        texto = _le(args.anterior)
-        if texto is None:
-            print(f"Aviso: {args.anterior} não existe; a etapa roda sem o "
-                  "comentário do dia anterior.", file=sys.stderr)
-        return texto
+    etapa = plantao.roda_etapa(ctx, args.comando, temas=temas, anterior=anterior,
+                               web=args.web, modelo=args.modelo)
 
-    achado = comentario_anterior(args.arquivo, asof)
-    if achado is None:
-        print(f"Aviso: nenhum comentário recente em {args.arquivo}. A etapa roda "
-              "sem o do dia anterior — a checagem de ineditismo e de contradição "
-              "fica sem base. Arquivar o comentário enviado resolve.",
-              file=sys.stderr)
-        return None
+    for aviso in etapa.avisos:
+        _erra(aviso)
+    print(f"{etapa.nome.capitalize():<11} {etapa.caminho}")
 
-    caminho, data = achado
-    print(f"Anterior:   {caminho.name} ({data:%d/%m/%Y})", file=sys.stderr)
-    return com_data(caminho.read_text(encoding="utf-8"), data)
+    if etapa.comentario:
+        print(f"Comentário: {etapa.comentario}")
+        _erra(f"\nMontar o documento: uv run matinal --comentario {etapa.comentario}")
+    elif etapa.nome == "triagem":
+        _erra("\nEscolher os temas e seguir para a redação:\n"
+              "  uv run matinal redacao --temas \"dominante | tema 2 | tema 3\"")
+
+    return 0
 
 
-def _confere(saida: Path, marca: str) -> int:
-    """Compara o documento com o Markdown, sem arquivar nem limpar.
+def _conferir(ctx: Contexto) -> int:
+    from comentario_matinal.enviado import relatorio
 
-    Existe para rodar entre o Word e o e-mail, que é a única janela em que a
-    divergência ainda tem conserto. O `enviado` faz a mesma checagem, mas roda
-    depois do envio: ali ela só serve para não contaminar a triagem de amanhã,
-    não para salvar o comentário de hoje.
-    """
-    from comentario_matinal.enviado import divergencias, relatorio
-
-    md = saida / f"comentario_{marca}.md"
-    docx = saida / f"comentario_{marca}.docx"
-
-    for caminho in (md, docx):
-        if not caminho.exists():
-            print(f"Erro: {caminho} não existe. A conferência compara os dois "
-                  "arquivos da data; sem ambos não há o que comparar.",
-                  file=sys.stderr)
-            return 1
-
-    div = divergencias(docx, md)
+    div = plantao.confere(ctx)
     if not div:
-        print(f"Conferido:  o .docx e o .md dizem a mesma coisa ({marca}).")
+        print(f"Conferido:  o .docx e o .md dizem a mesma coisa ({ctx.marca}).")
         return 0
 
-    print(f"O .docx e o .md divergem em {len(div)} marcador(es).\n",
-          file=sys.stderr)
+    _erra(f"O .docx e o .md divergem em {len(div)} marcador(es).\n")
     for linha in relatorio(div):
-        print(linha, file=sys.stderr)
-    print("Se a alteração foi intencional, repetir no .md antes de enviar: é "
-          "ele que a triagem de amanhã lê como comentário do dia anterior.",
-          file=sys.stderr)
+        _erra(linha)
+    _erra("Se a alteração foi intencional, repetir no .md antes de enviar: é "
+          "ele que a triagem de amanhã lê como comentário do dia anterior.")
     return 1
 
 
-def _fecha_plantao(args, saida: Path, marca: str, dry_run: bool) -> int:
-    """Arquiva o comentário enviado e limpa o dia.
+def _enviado(args, ctx: Contexto) -> int:
+    fechamento = plantao.fecha_plantao(ctx, forcar=args.forcar)
 
-    Única etapa que bloqueia fora da janela. As outras produzem artefato, que sai
-    carimbado como ensaio; esta AFIRMA que o comentário foi enviado à diretoria,
-    e o que ela arquiva vira o "comentário do dia anterior" da manhã seguinte.
-    Registrar um ensaio ali contamina a triagem seguinte em silêncio.
-    """
-    from comentario_matinal.enviado import (
-        DestinoOcupado,
-        arquiva,
-        divergencias,
-        limpa,
-        relatorio,
-    )
-
-    if dry_run and not args.forcar:
-        print(f"Erro: fora da janela de {faixa()} — esta execução é ensaio, e "
-              "`enviado` registra o comentário como enviado à diretoria. O que "
-              "for arquivado vira o \"comentário do dia anterior\" de amanhã.\n"
-              "Se o envio ocorreu mesmo e o plantão atrasou, repetir com "
-              "--forcar.", file=sys.stderr)
-        return 1
-
-    md = saida / f"comentario_{marca}.md"
-    docx = saida / f"comentario_{marca}.docx"
-
-    if docx.exists() and md.exists():
-        div = divergencias(docx, md)
-        if div and not args.forcar:
-            print(f"Erro: o .docx e o .md divergem em {len(div)} marcador(es). "
-                  "O .md é o que fica arquivado e o que a triagem de amanhã lê "
-                  "como comentário do dia anterior.\n", file=sys.stderr)
-            for linha in relatorio(div):
-                print(linha, file=sys.stderr)
-            print("Nada foi arquivado. Corrigir o .md para refletir o que foi "
-                  "enviado, ou --forcar para arquivar o .md como está.",
-                  file=sys.stderr)
-            return 1
-    elif not docx.exists():
-        print("Aviso: não há .docx da data; arquivando sem conferir o texto "
-              "contra o documento enviado.", file=sys.stderr)
-
-    try:
-        escritos = arquiva(saida, args.arquivo, marca, forcar=args.forcar)
-    except FileNotFoundError as e:
-        print(f"Erro: {e}", file=sys.stderr)
-        return 1
-    except DestinoOcupado as e:
-        print(f"Erro: {e}.\nNada foi arquivado e nada foi apagado. Conferir se "
-              "a data está certa; --forcar sobrescreve.", file=sys.stderr)
-        return 1
-
-    for caminho in escritos:
+    for caminho in fechamento.arquivados:
         print(f"Arquivado:  {caminho}")
-
-    # Só aqui, e só depois de o arquivamento ter dado certo.
-    n = limpa([args.fontes, saida])
-    print(f"Limpeza:    {n} arquivo(s) removidos de {args.fontes.name}/ e "
-          f"{saida.name}/")
+    print(f"Limpeza:    {fechamento.removidos} arquivo(s) removidos de "
+          f"{ctx.fontes.name}/ e {ctx.saida.name}/")
     print("\nPlantão encerrado. O repositório está pronto para amanhã.")
-    return 0
-
-
-def _roda_etapa(args, saida: Path, marca: str) -> int:
-    """Executa uma das três etapas de IA a partir do material já coletado."""
-    from comentario_matinal.etapas import (
-        FormatoInesperado,
-        Insumos,
-        comentario_revisado,
-        mensagem_redacao,
-        mensagem_revisao,
-        mensagem_triagem,
-        partes_da_redacao,
-        roda,
-        secao_ou_tudo,
-    )
-    from comentario_matinal.fontes import converte
-    from comentario_matinal.modelo import ErroDoModelo
-
-    etapa = args.comando
-
-    # Fontes: PDF vira texto, para que o insumo seja o mesmo em qualquer backend.
-    caminho_fontes = saida / f"fontes_{marca}.txt"
-    conv = converte(args.fontes, caminho_fontes)
-    n = conv.aproveitados
-    if n:
-        print(f"Fontes:     {n} PDF(s) convertidos em {caminho_fontes}",
-              file=sys.stderr)
-    else:
-        print(f"Aviso: nenhum PDF aproveitado em {args.fontes}. A etapa vai rodar "
-              "sem fontes noticiosas.", file=sys.stderr)
-    if conv.vazios:
-        print(f"Aviso: {len(conv.vazios)} PDF(s) não renderam texto — provavelmente "
-              f"digitalização sem OCR: {', '.join(conv.vazios)}", file=sys.stderr)
-    if conv.ignorados:
-        print(f"Aviso: {len(conv.ignorados)} arquivo(s) de {args.fontes} NÃO foram "
-              "lidos, porque só PDF é aproveitado como fonte — o conteúdo deles "
-              f"não chegou ao modelo: {', '.join(conv.ignorados)}. "
-              "Reimprimir em PDF (Outlook: Arquivo → Imprimir → Microsoft Print "
-              "to PDF; navegador: Ctrl+P → Salvar em PDF).", file=sys.stderr)
-
-    painel_txt = _le(saida / f"painel_{marca}.txt")
-    calendario_md = _le(saida / f"calendario_{marca}.md")
-    if painel_txt is None:
-        print(f"Erro: falta o bloco direcional de {marca}. Rodar `uv run matinal` "
-              "antes das etapas.", file=sys.stderr)
-        return 1
-    if calendario_md is None:
-        print(f"Aviso: falta o calendário em texto de {marca}; a etapa roda sem "
-              "ele.", file=sys.stderr)
-
-    # O horário de redação é o do término da coleta, que é o carimbo do painel.
-    # O relógio da máquina faria a etapa analisar material das 7h35 afirmando ser
-    # meio-dia.
-    from comentario_matinal.etapas import referencia_do_painel
-
-    do_painel = referencia_do_painel(painel_txt)
-    if args.asof:
-        asof = datetime.fromisoformat(args.asof).replace(tzinfo=fuso_local())
-        if do_painel and abs((asof - do_painel).total_seconds()) > 300:
-            print(f"Aviso: --asof ({asof:%d/%m %Hh%M}) diverge da referência do "
-                  f"painel ({do_painel:%d/%m %Hh%M}). O painel é o material que a "
-                  "etapa analisa; conferir se é mesmo o do dia.", file=sys.stderr)
-    elif do_painel:
-        asof = do_painel
-    else:
-        asof = agora()
-        print("Aviso: não consegui ler a referência do painel; usando o relógio.",
-              file=sys.stderr)
-
-    ins = Insumos(
-        guia=GUIA_DE_ESTILO.read_text(encoding="utf-8"),
-        fontes=caminho_fontes.read_text(encoding="utf-8") if n else "",
-        painel=painel_txt,
-        calendario=calendario_md or "",
-        asof=asof,
-        # A redação não recebe o comentário anterior; procurá-lo aqui só geraria
-        # aviso enganoso na etapa que não o usa.
-        anterior=_anterior(args, asof) if etapa in ("triagem", "revisao") else None,
-    )
-    prompt = PROMPT_ETAPA[etapa].read_text(encoding="utf-8")
-    destino = saida / f"{etapa}_{marca}.md"
-
-    if etapa == "triagem":
-        mensagem = mensagem_triagem(prompt, ins, args.web)
-
-    elif etapa == "redacao":
-        temas = args.temas
-        if args.temas_arquivo:
-            if not args.temas_arquivo.exists():
-                print(f"Erro: {args.temas_arquivo} não existe.", file=sys.stderr)
-                return 1
-            temas = args.temas_arquivo.read_text(encoding="utf-8")
-        elif temas:
-            temas = "\n".join(f"- {t.strip()}" for t in temas.split("|") if t.strip())
-        if not temas:
-            print("Erro: a redação precisa dos temas escolhidos pelo autor. "
-                  "Passar --temas \"dominante | tema 2 | tema 3\" ou "
-                  "--temas-arquivo. A decisão editorial entre a triagem e a "
-                  "redação é humana.", file=sys.stderr)
-            return 1
-
-        anterior = _le(saida / f"triagem_{marca}.md")
-        if anterior is None:
-            print(f"Erro: falta a triagem de {marca}. Rodar `uv run matinal "
-                  "triagem` antes.", file=sys.stderr)
-            return 1
-        alertas = secao_ou_tudo(anterior, "C) ALERTAS", "alertas")
-        mensagem = mensagem_redacao(prompt, ins, temas, alertas, args.web)
-
-    else:  # revisao
-        anterior = _le(saida / f"redacao_{marca}.md")
-        if anterior is None:
-            print(f"Erro: falta a redação de {marca}. Rodar `uv run matinal "
-                  "redacao` antes.", file=sys.stderr)
-            return 1
-        texto, auditoria = partes_da_redacao(anterior)
-        mensagem = mensagem_revisao(prompt, ins, texto, auditoria, args.web)
-
-    try:
-        resposta = roda(mensagem, etapa, destino, web=args.web, modelo=args.modelo)
-    except ErroDoModelo as e:
-        print(f"Erro na etapa {etapa}: {e}", file=sys.stderr)
-        return 1
-
-    print(f"{etapa.capitalize():<11} {destino}")
-
-    if etapa == "revisao":
-        # Único ponto em que a saída do modelo entra direto no documento enviado
-        # à diretoria. Formato inesperado interrompe em vez de gravar.
-        try:
-            md = comentario_revisado(resposta)
-        except FormatoInesperado as e:
-            print(f"\nErro: {e}", file=sys.stderr)
-            print(f"A revisão completa está em {destino}.", file=sys.stderr)
-            return 1
-        caminho_md = saida / f"comentario_{marca}.md"
-        caminho_md.write_text(md, encoding="utf-8")
-        print(f"Comentário: {caminho_md}")
-        print(f"\nMontar o documento: uv run matinal --comentario {caminho_md}",
-              file=sys.stderr)
-    elif etapa == "triagem":
-        print("\nEscolher os temas e seguir para a redação:\n"
-              "  uv run matinal redacao --temas \"dominante | tema 2 | tema 3\"",
-              file=sys.stderr)
-
-    return 0
-
-
-def _monta_documento(args, saida: Path, marca: str,
-                     painel: Path, calendario: Path) -> int:
-    """Monta o .docx final a partir do template, com as imagens do dia."""
-    from comentario_matinal.documento import monta
-
-    if not args.comentario.exists():
-        print(f"Erro: {args.comentario} não existe.", file=sys.stderr)
-        return 1
-    if not args.template.exists():
-        print(f"Erro: template não encontrado em {args.template}.", file=sys.stderr)
-        return 1
-
-    destino = saida / f"comentario_{marca}.docx"
-    try:
-        monta(
-            template=args.template,
-            markdown=args.comentario,
-            painel=painel,
-            calendario=calendario,
-            destino=destino,
-        )
-    except RuntimeError as e:
-        print(f"Erro ao montar o documento: {e}", file=sys.stderr)
-        return 1
-
-    print(f"Documento:  {destino}")
-    print("Abrir no Word para inserir o gráfico do dia, se houver, conferir o "
-          "texto e exportar o PDF.", file=sys.stderr)
     return 0
 
 
