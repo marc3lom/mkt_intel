@@ -5,6 +5,8 @@
     uv run matinal redacao --temas "…"  etapa 2 — o texto
     uv run matinal revisao              etapa 3 — checagem e texto revisado
     uv run matinal --comentario x.md    o .docx a partir do template
+    uv run matinal conferir             .docx contra .md, antes do e-mail
+    uv run matinal enviado              arquiva o enviado e limpa o dia
 
 A coleta de mercado é única e serve a todas as saídas: a imagem colada no e-mail
 e o texto usado para checar o comentário descrevem, por construção, os mesmos
@@ -56,8 +58,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("comando", nargs="?", default=None,
-                        choices=["triagem", "redacao", "revisao", "enviado"],
-                        help="Etapa a executar. `enviado` fecha o plantão: "
+                        choices=["triagem", "redacao", "revisao", "conferir",
+                                 "enviado"],
+                        help="Etapa a executar. `conferir` compara o .docx com "
+                             "o .md, sem arquivar nem limpar — para rodar entre "
+                             "o Word e o e-mail. `enviado` fecha o plantão: "
                              "arquiva o comentário e limpa fontes/ e saida/. "
                              "Sem argumento, coleta o mercado e gera painel, "
                              "calendário e texto.")
@@ -126,6 +131,9 @@ def main() -> int:
 
     caminho_painel = saida / f"painel_{marca}.png"
     caminho_tabela = saida / f"calendario_{marca}.png"
+
+    if args.comando == "conferir":
+        return _confere(saida, marca)
 
     if args.comando == "enviado":
         return _fecha_plantao(args, saida, marca, dry_run)
@@ -269,6 +277,41 @@ def _anterior(args, asof: datetime) -> str | None:
     return com_data(caminho.read_text(encoding="utf-8"), data)
 
 
+def _confere(saida: Path, marca: str) -> int:
+    """Compara o documento com o Markdown, sem arquivar nem limpar.
+
+    Existe para rodar entre o Word e o e-mail, que é a única janela em que a
+    divergência ainda tem conserto. O `enviado` faz a mesma checagem, mas roda
+    depois do envio: ali ela só serve para não contaminar a triagem de amanhã,
+    não para salvar o comentário de hoje.
+    """
+    from comentario_matinal.enviado import divergencias, relatorio
+
+    md = saida / f"comentario_{marca}.md"
+    docx = saida / f"comentario_{marca}.docx"
+
+    for caminho in (md, docx):
+        if not caminho.exists():
+            print(f"Erro: {caminho} não existe. A conferência compara os dois "
+                  "arquivos da data; sem ambos não há o que comparar.",
+                  file=sys.stderr)
+            return 1
+
+    div = divergencias(docx, md)
+    if not div:
+        print(f"Conferido:  o .docx e o .md dizem a mesma coisa ({marca}).")
+        return 0
+
+    print(f"O .docx e o .md divergem em {len(div)} marcador(es).\n",
+          file=sys.stderr)
+    for linha in relatorio(div):
+        print(linha, file=sys.stderr)
+    print("Se a alteração foi intencional, repetir no .md antes de enviar: é "
+          "ele que a triagem de amanhã lê como comentário do dia anterior.",
+          file=sys.stderr)
+    return 1
+
+
 def _fecha_plantao(args, saida: Path, marca: str, dry_run: bool) -> int:
     """Arquiva o comentário enviado e limpa o dia.
 
@@ -277,7 +320,13 @@ def _fecha_plantao(args, saida: Path, marca: str, dry_run: bool) -> int:
     e o que ela arquiva vira o "comentário do dia anterior" da manhã seguinte.
     Registrar um ensaio ali contamina a triagem seguinte em silêncio.
     """
-    from comentario_matinal.enviado import DestinoOcupado, arquiva, divergencias, limpa
+    from comentario_matinal.enviado import (
+        DestinoOcupado,
+        arquiva,
+        divergencias,
+        limpa,
+        relatorio,
+    )
 
     if dry_run and not args.forcar:
         print(f"Erro: fora da janela de {faixa()} — esta execução é ensaio, e "
@@ -296,11 +345,8 @@ def _fecha_plantao(args, saida: Path, marca: str, dry_run: bool) -> int:
             print(f"Erro: o .docx e o .md divergem em {len(div)} marcador(es). "
                   "O .md é o que fica arquivado e o que a triagem de amanhã lê "
                   "como comentário do dia anterior.\n", file=sys.stderr)
-            for d in div:
-                print(f"  M{d.indice}  .md   : {d.no_md[:100] or '(ausente)'}",
-                      file=sys.stderr)
-                print(f"      .docx : {d.no_docx[:100] or '(ausente)'}\n",
-                      file=sys.stderr)
+            for linha in relatorio(div):
+                print(linha, file=sys.stderr)
             print("Nada foi arquivado. Corrigir o .md para refletir o que foi "
                   "enviado, ou --forcar para arquivar o .md como está.",
                   file=sys.stderr)

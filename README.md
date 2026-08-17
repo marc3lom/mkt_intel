@@ -326,7 +326,27 @@ Abrir o `.docx` no Word para inserir o gráfico do dia, quando houver, conferir 
 exportar o PDF. **O PDF não é gerado pelo comando**: a exportação é feita do Word, na
 mesma passagem em que o analista confere o documento.
 
-### Passo 8 — Após o envio
+### Passo 8 — Conferência, antes do e-mail
+
+```
+uv run matinal conferir
+```
+
+Compara marcador a marcador o `.docx` com o `.md` e mostra os trechos que diferem, com
+as palavras em volta para situar. Não arquiva, não limpa, não toca em nada: só lê os
+dois arquivos e responde. Sai com código 1 quando há divergência.
+
+Toda correção feita no Word aparece aqui. As intencionais devem ser repetidas no `.md`,
+que é o que fica versionado. As não intencionais — palavra comida por um clique fora do
+lugar, trecho perdido numa substituição — são justamente o que este passo existe para
+apanhar, e **este é o último momento em que ainda têm conserto**.
+
+Vale a pena mesmo quando o texto parece igual ao que saiu da revisão. Na primeira rodada
+em produção, quatro palavras haviam sumido do documento durante a edição manual, entre
+elas o `swap` de "mercados de swap", e o e-mail saiu com a frase quebrada. A conferência
+rodou depois do envio, quando já não adiantava.
+
+### Passo 9 — Após o envio
 
 ```
 uv run matinal enviado
@@ -336,11 +356,12 @@ Arquiva `arquivo/AAAA/MM/AAAAMMDD.md` e `arquivo/AAAA/MM/comentario_AAAAMMDD.doc
 esvazia `fontes/` e `saida/`. **Rodar só depois de o e-mail ter saído** — o comando
 afirma que o comentário foi enviado.
 
-Antes de arquivar, ele **compara os marcadores do `.docx` com os do `.md`**. Se você
-corrigiu o texto no Word, os dois divergem, e o comando para mostrando a diferença sem
-arquivar nada. É o `.md` que fica versionado e que a triagem de amanhã lê como
-comentário do dia anterior: registrar ali um texto que não foi o enviado não erra hoje,
-erra amanhã, como contradição inventada.
+Antes de arquivar, ele **repete a comparação do Passo 8** e para sem arquivar nada se os
+dois divergirem. Aqui a checagem já não salva o comentário de hoje — o e-mail saiu. Ela
+protege o insumo de amanhã: é o `.md` que fica versionado e que a triagem lê como
+comentário do dia anterior, e registrar ali um texto que não foi o enviado não erra hoje,
+erra amanhã, como contradição inventada. Por isso o Passo 8 existe separado: mesma
+comparação, no único momento em que ela ainda tem conserto.
 
 Três recusas, todas contornáveis com `--forcar`, que é rombudo e passa pelas três de
 uma vez:

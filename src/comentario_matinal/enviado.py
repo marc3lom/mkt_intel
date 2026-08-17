@@ -16,6 +16,7 @@ import re
 import shutil
 import sys
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from pathlib import Path
 
 from comentario_matinal.documento import trechos_de
@@ -23,6 +24,10 @@ from comentario_matinal.documento import trechos_de
 # O template aplica este estilo aos parágrafos do comentário. É por ele que os
 # marcadores se distinguem do título e do fecho, que o template também traz.
 ESTILO_MARCADOR = "List Paragraph"
+
+# Palavras de contexto de cada lado do trecho divergente. Cinco bastam para
+# situar o leitor na frase sem transcrever o parágrafo.
+CONTEXTO = 5
 
 
 class DestinoOcupado(RuntimeError):
@@ -80,6 +85,45 @@ def divergencias(docx: Path, md: Path) -> list[Divergencia]:
         if a != b:
             achados.append(Divergencia(i + 1, a, b))
     return achados
+
+
+def _janela(palavras: list[str], i1: int, i2: int, contexto: int) -> str:
+    """As palavras de ``i1`` a ``i2``, com contexto e reticências onde cortou."""
+    ini, fim = max(0, i1 - contexto), min(len(palavras), i2 + contexto)
+    trecho = " ".join(palavras[ini:fim])
+    if ini > 0:
+        trecho = "… " + trecho
+    if fim < len(palavras):
+        trecho = trecho + " …"
+    return trecho
+
+
+def recortes(d: Divergencia, contexto: int = CONTEXTO) -> list[tuple[str, str]]:
+    """Os trechos que de fato diferem, um par por região, com contexto.
+
+    Mostrar o começo do marcador não serve: a diferença costuma estar no meio ou
+    no fim de um parágrafo de cem palavras, e as duas linhas saem idênticas na
+    tela. Cada região divergente vira um par, para que duas alterações distantes
+    não se fundam num recorte que engole o parágrafo inteiro.
+    """
+    a, b = d.no_md.split(), d.no_docx.split()
+    return [
+        (_janela(a, i1, i2, contexto), _janela(b, j1, j2, contexto))
+        for tag, i1, i2, j1, j2 in SequenceMatcher(None, a, b).get_opcodes()
+        if tag != "equal"
+    ]
+
+
+def relatorio(div: list[Divergencia]) -> list[str]:
+    """As linhas do aviso, uma região divergente por par de linhas."""
+    linhas: list[str] = []
+    for d in div:
+        linhas.append(f"  M{d.indice}")
+        for no_md, no_docx in recortes(d):
+            linhas.append(f"    .md   : {no_md or '(ausente)'}")
+            linhas.append(f"    .docx : {no_docx or '(ausente)'}")
+        linhas.append("")
+    return linhas
 
 
 def arquiva(saida: Path, raiz: Path, marca: str, forcar: bool = False) -> list[Path]:

@@ -403,6 +403,69 @@ def test_espaco_e_quebra_nao_contam_como_divergencia(tmp_path):
     assert divergencias(docx, md) == []
 
 
+def test_recorte_mostra_a_palavra_que_sumiu():
+    from comentario_matinal.enviado import Divergencia, recortes
+
+    d = Divergencia(1, "a maioria dos mercados de swap embute altas",
+                       "a maioria dos mercados de embute altas")
+
+    (no_md, no_docx), = recortes(d, contexto=2)
+    assert "swap" in no_md
+    assert "swap" not in no_docx
+    assert "maioria" not in no_md, "contexto de 2 palavras não deve alcançar"
+
+
+def test_recorte_alcanca_diferenca_no_fim_do_marcador():
+    """O defeito da primeira rodada em produção: o aviso cortava o marcador nos
+    primeiros caracteres, e uma diferença lá no fim saía invisível — as duas
+    linhas apareciam idênticas na tela."""
+    from comentario_matinal.enviado import Divergencia, recortes
+
+    comum = " ".join(f"palavra{i}" for i in range(120))
+    d = Divergencia(1, f"{comum} encobertos", f"{comum} rastreados")
+
+    (no_md, no_docx), = recortes(d)
+    assert "encobertos" in no_md
+    assert "rastreados" in no_docx
+    assert "palavra0" not in no_md, "o recorte deve ir à diferença, não ao início"
+
+
+def test_recorte_junta_diferencas_proximas_e_separa_as_distantes():
+    from comentario_matinal.enviado import Divergencia, recortes
+
+    meio = " ".join(f"palavra{i}" for i in range(60))
+    d = Divergencia(1, f"alfa {meio} beta", f"gama {meio} delta")
+
+    assert len(recortes(d)) == 2
+
+
+def test_recorte_de_marcador_ausente_nao_estoura():
+    from comentario_matinal.enviado import Divergencia, recortes
+
+    d = Divergencia(3, "O dólar cede.", "")
+
+    (no_md, no_docx), = recortes(d)
+    assert "dólar" in no_md
+    assert no_docx == ""
+
+
+def test_relatorio_aponta_o_marcador_e_o_trecho():
+    from comentario_matinal.enviado import Divergencia, relatorio
+
+    d = Divergencia(4, "no fim de semana, que custou", "no fim semana, que custou")
+
+    linhas = "\n".join(relatorio([d]))
+    assert "M4" in linhas
+    assert "de semana" in linhas
+
+
+def test_relatorio_diz_ausente_quando_o_marcador_sumiu():
+    from comentario_matinal.enviado import Divergencia, relatorio
+
+    linhas = "\n".join(relatorio([Divergencia(5, "Permanecem sob vigília.", "")]))
+    assert "(ausente)" in linhas
+
+
 def test_arquiva_nos_dois_destinos(tmp_path):
     from comentario_matinal.enviado import arquiva
 
