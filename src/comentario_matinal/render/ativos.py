@@ -25,7 +25,6 @@ CALENDARIOS_DE_MERCADO: dict[str, str] = {
     "ES1 Index": "CME_Equity",     # S&P 500 future (CME)
     "GDBR10 Index": "EUREX_Bond",  # Bund / German govt 10y (Eurex bond)
     "VG1 Index": "EUREX",          # EuroStoxx 50 future (Eurex)
-    "GTJPY10Y Govt": "JPX",        # JGB 10y (Japan)
     "NK1 Index": "JPX",            # Nikkei 225 future (Osaka / JPX)
     "GJGB10 Index": "JPX",         # JGB 10y yield index (Japan)
     "GUKG10 Index": "LSE",         # Gilt 10y (UK)
@@ -33,19 +32,4 @@ CALENDARIOS_DE_MERCADO: dict[str, str] = {
     "GCNY10YR Index": "XSHG",      # China govt 10y (mainland China calendar)
     "IFB1 Index": "XSHG",          # CSI 300 future (CFFEX ~ mainland China)
     "VIX Index": "CFE",            # VIX (CBOE)
-}
-
-# Tickers que precisam de uma referência para chamadas bdib
-BDIB_REF_MAPPING: dict[str, str] = {
-    "USGG10YR Index": "ES1 Index",
-    "GDBR10 Index": "ES1 Index",
-    "GCNY10YR Index": "ES1 Index",
-    "NK1 Index": "ES1 Index",
-    "CO1 Comdty": "ES1 Index",
-    "VG1 Index": "ES1 Index",
-    "IFB1 Index": "ES1 Index",
-    "DXY Curncy": "EUR Curncy",
-    "CNH Curncy": "EUR Curncy",
-    "XBTUSD BGN Curncy": "EUR Curncy",
-    "VIX Index": "ES1 Index",
 }

@@ -1,6 +1,5 @@
 """Renderização do painel de monitoramento — sparklines + grade 4x4."""
 
-import logging
 from datetime import datetime
 from pathlib import Path
 
@@ -21,8 +20,6 @@ from comentario_matinal.render.estilo import (
 from comentario_matinal.render.feriados import e_feriado_de_mercado
 from comentario_matinal.render.gravacao import grava_figura
 from comentario_matinal.render.ativos import ItemDaGrade
-
-logger = logging.getLogger("comentario_matinal")
 
 
 # ---------------------------------------------------------------------------
@@ -168,19 +165,39 @@ def monta_painel(
             f"cabecalhos tem {len(cabecalhos)} entradas, "
             f"mas a grade tem {ncols} colunas."
         )
+    # ``allowed_root`` só é dispensável enquanto nada é gravado: ``grava_figura``
+    # o exige. Cobrar aqui, antes de desenhar, troca um ``TypeError`` obscuro de
+    # ``Path(None)`` no fim da função por uma mensagem que nomeia o que faltou.
+    if save_path is not None and allowed_root is None:
+        raise ValueError(
+            "save_path foi informado sem allowed_root: gravar exige a raiz "
+            "permitida de saída."
+        )
 
     metrics: dict[str, dict] = {}
+    # ``asof`` pode vir vazio (chamador que não tem instante de referência); aí
+    # o dia é mesmo o de hoje. Resolver uma vez só garante que todos os tiles
+    # olhem o mesmo dia, mesmo numa execução que atravesse a meia-noite.
+    dia_de_referencia = (asof or datetime.now()).date()
     color_title = CORES["title"]
     color_green = CORES["positive"]
     color_red = CORES["negative"]
 
-    fig = plt.figure(figsize=figsize, facecolor="white")
-
     # O selo vem por parâmetro, não de uma raiz de projeto: esta camada
-    # desenha, não sabe onde o repositório começa.
+    # desenha, não sabe onde o repositório começa. Carregado antes da figura
+    # para que a recusa abaixo não deixe uma figura aberta para trás.
     market_closed_img = None
-    if selo_fechado is not None and selo_fechado.exists():
+    if selo_fechado is not None:
+        # Selo informado que não existe é erro de configuração, não ausência de
+        # selo: o painel sairia com os tiles fechados sem carimbo algum, e nada
+        # na execução acusaria. Quem não quer carimbo passa None.
+        if not selo_fechado.exists():
+            raise FileNotFoundError(
+                f"Selo de mercado fechado não encontrado: {selo_fechado}"
+            )
         market_closed_img = plt.imread(str(selo_fechado))
+
+    fig = plt.figure(figsize=figsize, facecolor="white")
 
     for idx, item in enumerate(itens):
         ticker = item.ticker
@@ -192,18 +209,11 @@ def monta_painel(
         # Dados de referência
         px_last = 0.0
         chg_net, chg_pct = 0.0, 0.0
-        has_display_override = False
         if ticker in referencia.index:
             row_data = referencia.loc[ticker]
             px_last = row_data.get("px_last", 0)
             chg_net = row_data.get("chg_net_1d", 0)
             chg_pct = row_data.get("chg_pct_1d", 0)
-
-            # Tickers de yield guardam overrides de exibição à parte
-            if "px_last_display" in row_data.index and pd.notna(row_data["px_last_display"]):
-                px_last = row_data["px_last_display"]
-                chg_net = row_data.get("chg_net_display", chg_net)
-                has_display_override = True
 
         # Série de preço
         price_series = intraday.get(ticker, pd.Series())
@@ -213,18 +223,21 @@ def monta_painel(
         # algumas barras avulsas chegam (ex.: USGG10YR continua marcando por
         # conta do pregão overnight de Londres/Ásia num feriado da SIFMA). Só
         # desenha o sparkline em dias que não são feriado.
-        holiday = e_feriado_de_mercado(ticker)
+        #
+        # O dia consultado é o de ``asof``, não o do relógio da máquina: o
+        # rodapé já é carimbado com ``asof``, e uma reexecução sobre outro dia
+        # sairia com os feriados de hoje sobre a imagem daquele dia.
+        holiday = e_feriado_de_mercado(ticker, dia_de_referencia)
         has_chart = (
             not holiday
             and not price_series.empty
             and len(price_series) >= 2
         )
 
-        # Num dia com gráfico, deriva a variação da série intradiária (a menos
-        # que a referência já traga um override baseado em yield mais
-        # preciso). Num feriado, mantém a variação oficial de 1 dia da
-        # referência.
-        if has_chart and not has_display_override:
+        # Num dia com gráfico, deriva a variação da série intradiária, que já
+        # vem ancorada no fechamento anterior. Num feriado, mantém a variação
+        # oficial de 1 dia da referência.
+        if has_chart:
             first_price = price_series.iloc[0]
             last_price = price_series.iloc[-1]
             chg_net = last_price - first_price

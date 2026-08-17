@@ -137,6 +137,14 @@ def monta_tabela(
     ``save_path`` é informado, e só dentro de ``allowed_root``, que
     ``grava_figura`` exige sempre que um PNG é de fato gravado.
     """
+    # ``allowed_root`` só é dispensável enquanto nada é gravado. Cobrar aqui
+    # troca um ``TypeError`` obscuro de ``Path(None)`` lá dentro de
+    # ``grava_figura`` por uma mensagem que nomeia o argumento que faltou.
+    if save_path is not None and allowed_root is None:
+        raise ValueError(
+            "save_path foi informado sem allowed_root: gravar exige a raiz "
+            "permitida de saída."
+        )
     if df.empty:
         logger.warning("DataFrame vazio, não é possível renderizar %s", spec.title)
         return None
@@ -246,6 +254,13 @@ def monta_tabelas(
     ``save_path`` é informado, e só dentro de ``allowed_root``, que
     ``grava_figura`` exige sempre que um PNG é de fato gravado.
     """
+    # Mesma cobrança de ``monta_tabela``: sem a raiz permitida, gravar falharia
+    # com ``TypeError`` de ``Path(None)`` só no fim, depois de desenhar tudo.
+    if save_path is not None and allowed_root is None:
+        raise ValueError(
+            "save_path foi informado sem allowed_root: gravar exige a raiz "
+            "permitida de saída."
+        )
     non_empty = [(df, spec) for df, spec in tables if not df.empty]
     if not non_empty:
         logger.warning("Todos os DataFrames vazios, não é possível renderizar a tabela combinada")
