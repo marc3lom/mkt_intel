@@ -294,6 +294,7 @@ class Contexto:
     arquivo: Path
     marca: str          # AAAAMMDD
     dry_run: bool
+    avisos: list[str]   # divergência de fuso, hoje impressa e esquecida
 
 
 @dataclass(frozen=True)

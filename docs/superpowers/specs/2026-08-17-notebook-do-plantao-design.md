@@ -49,6 +49,7 @@ class Contexto:
     arquivo: Path       # onde os comentários enviados moram
     marca: str          # AAAAMMDD
     dry_run: bool
+    avisos: list[str]   # divergência de fuso, hoje impressa e esquecida
 
 def contexto(asof: datetime | str | None = None,
              saida: Path = SAIDA_PADRAO,
