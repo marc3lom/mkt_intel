@@ -1,13 +1,66 @@
 # Configuração inicial (uma vez)
 
+Uma vez por máquina, antes do primeiro plantão. Leva alguns minutos e não exige o
+terminal Bloomberg aberto — a instalação não fala com ele; a execução do comando, sim.
+
+Faça isto na véspera, não às 7h de um dia em que você está de plantão.
+
+## Antes de clonar
+
+**O repositório é privado.** Ele guarda comentários institucionais já enviados à
+diretoria, e o acesso não é público. Peça acesso a quem administra o repositório na
+divisão — sem ele o `git clone` responde que o repositório não existe, que é como o
+GitHub nega leitura a quem não tem permissão.
+
+Você vai precisar também de uma credencial do GitHub na máquina: o GitHub CLI
+(`gh auth login`) resolve os dois lados de uma vez, ou uma chave SSH cadastrada na sua
+conta, se você já usa uma.
+
+## O que precisa estar na máquina
+
+Quatro coisas, e o plantão para sem qualquer uma delas.
+
+**1. Windows nativo.** Não WSL. O `blpapi` conversa com o terminal Bloomberg por IPC
+local, e do WSL ele não alcança. Vale para a execução; a instalação você faz de onde
+quiser, mas não há razão para instalar duas vezes.
+
+**2. O `uv`.** É o gerenciador de ambiente e é como tudo neste repositório roda — daí
+todo comando começar por `uv run`. Instalar pelo PowerShell:
+
+```
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Fechar e reabrir o terminal depois, para que o PATH seja relido. Conferir com
+`uv --version`.
+
+**3. O `claude`, autenticado.** É o backend das três etapas de IA — os passos 2, 4 e 6
+do runbook. Sem ele no PATH, o plantão para na triagem.
+
+Instalar a CLI do Claude Code e rodar `claude` uma vez, no terminal, para autenticar.
+A autenticação fica gravada na máquina e não se repete a cada plantão. Conferir com
+`claude --version`, e conferir que ele responde: `claude -p "responda ok"`.
+
+O acesso ao modelo está hoje em assinatura pessoal — ver as notas do
+[`README.md`](../../README.md) da raiz sobre a migração para o ambiente corporativo.
+
+**4. O Word.** O Passo 7 monta um `.docx` a partir de `templates/comentario.dotx`, e é
+no Word que você insere o gráfico do dia, confere o documento e **exporta o PDF** que
+vai anexado ao e-mail. O comando não gera o PDF, e não há caminho sem esse passo manual.
+
+## A instalação
+
 O plantão inteiro roda deste repositório. Não é preciso criar Project algum: as três
 etapas de IA montam a mensagem com o guia de estilo e o prompt da etapa embutidos, a
 partir dos arquivos de `prompts/`. O Project continua existindo como caminho
 alternativo — ver [O Project do Claude](#o-project-do-claude), mais abaixo.
 
+Clonar o repositório e, de dentro dele:
+
 1. Instalar as dependências: `uv sync`.
 2. Ter o `claude` no PATH, autenticado. É o backend padrão das etapas de IA.
 3. Instalar o filtro de notebook: `uv run nbstripout --install`.
+4. Criar a pasta das fontes: `mkdir fontes` (ver abaixo por que ela não vem no clone).
 
 O passo 3 vale por clone, e é o que impede que um notebook executado leve para o
 commit os dados de mercado e o texto do comentário — possivelmente antes de ele ter
@@ -19,6 +72,46 @@ O `uv sync` cria o `.venv` e instala tudo, inclusive o `blpapi`, que não vem do
 o `pyproject.toml` já aponta para o índice da Bloomberg. Rodar sempre do Windows nativo,
 nunca do WSL: o `blpapi` conversa com o terminal por IPC local. A instalação não exige
 terminal aberto; a execução do comando, sim.
+
+### As pastas que não vêm no clone
+
+`fontes/` e `saida/` estão no `.gitignore` e **não existem depois de clonar**. É de
+propósito: uma guarda os PDFs da Bloomberg, que não entram no repositório, e a outra
+guarda as saídas do dia, que são refeitas toda manhã.
+
+Isso importa porque o Passo 1 manda salvar os PDFs do dia **dentro de `fontes/`**, e a
+pasta não está lá. Criá-la à mão, na raiz do repositório — não dentro de `notebooks/`,
+que é o engano fácil de quem roda pelo notebook: os caminhos padrão são ancorados na
+raiz, e uma `fontes/` no lugar errado faz a etapa avisar que não aproveitou PDF algum,
+sem dizer por quê. A `saida/` o próprio comando cria.
+
+## O ensaio que fecha a instalação
+
+Instalado não é o mesmo que funcionando. Rodar o plantão inteiro uma vez, **fora da
+janela de 7h–9h** — de tarde, na véspera. Fora da janela toda execução é ensaio: o
+comando produz todos os artefatos e carimba o painel com `PAINEL DIRECIONAL — DRY RUN`.
+Nada é enviado, e nada é bloqueado.
+
+Com o terminal Bloomberg aberto e logado, e um PDF qualquer em `fontes/`:
+
+```
+uv run matinal
+uv run matinal triagem
+```
+
+O primeiro exercita a instalação inteira do lado da Bloomberg — `blpapi`, licença,
+IPC — e deve gravar quatro arquivos em `saida/`. O segundo exercita o `claude`, que é
+a outra metade que pode faltar. Se os dois passaram, sua máquina está pronta.
+
+Ensaiar até o fim — redação, revisão, montagem do `.docx` — é melhor ainda, e é a única
+forma de descobrir que o Word não abre o documento numa manhã que não seja a sua
+primeira. O único passo que **não** se ensaia é o `uv run matinal enviado`: ele afirma
+que o e-mail foi enviado, e arquiva.
+
+Deu erro? [Quando dá errado](05-quando-da-errado.md) lista o sintoma exato de cada
+falha desta lista.
+
+## Manter o guia de estilo
 
 Sempre que uma convenção mudar, editar `prompts/00_guia_de_estilo.md` e comitar. O
 comando lê o arquivo do disco a cada execução, então a mudança vale no plantão

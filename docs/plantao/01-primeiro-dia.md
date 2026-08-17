@@ -12,6 +12,11 @@ Um e-mail, todo dia útil, com três peças:
 - o **painel direcional** — a grade de ativos, como imagem;
 - o **calendário do dia** — divulgações e decisões de bancos centrais, como imagem.
 
+As três vão **no corpo da mensagem**, e o mesmo documento vai **anexado em PDF**. O
+anexo não é redundância: é dele que a chefia do DEPIN encaminha o comentário ao grupo
+da diretoria no WhatsApp, e ninguém mais na divisão tem acesso a esse grupo. O
+[runbook](03-runbook.md#o-envio) explica a montagem do e-mail em detalhe.
+
 O leitor é a diretoria do Banco Central. O comentário é descritivo e impessoal: ele
 relata o que os mercados fizeram e o que as fontes atribuíram a esse movimento, sem
 posição institucional e sem previsão. As convenções todas estão em
@@ -61,26 +66,15 @@ direcional, roda por lá.
 
 Nenhuma das duas implementa o plantão. As duas são fachadas sobre
 `src/comentario_matinal/plantao.py` e chamam as mesmas funções, então não podem
-divergir no que fazem. O que poderia divergir é a **sequência** — ela existe duas
-vezes, no argparse e nas células —, e é isso que `tests/test_notebook.py` prende:
-passo novo no núcleo, subcomando novo no terminal ou célula fora da ordem de
-`plantao.PASSOS` derrubam o teste até que o notebook seja atualizado junto.
-
-**Parâmetro novo num passo também.** Ou uma célula o exercita, ou ele entra na lista de
-exceções do teste com o motivo escrito ao lado. Não ter contrapartida no notebook é
-decisão legítima — `--asof`, `--anterior` e `--modelo` são conserto, ensaio e
-investigação, e moram no terminal —, mas precisa ser decisão, e não esquecimento.
+divergir no que fazem. A escolha entre elas é de conforto, não de resultado — e a
+sincronia das duas não depende de ninguém lembrar: um teste da suíte a prende, e o
+[`README.md`](../../README.md) da raiz explica como.
 
 Numa máquina sem licença BQL, `uv run matinal --sem-calendario` pula a consulta do
 calendário; no notebook o equivalente é o `SEM_CALENDARIO = True` da célula do
 calendário. Nos dois casos o bloco direcional sai sem a agenda, dizendo isso no próprio
 texto, e a montagem do documento é recusada — o template tem dois lugares de imagem, e
 um deles ficaria vazio no que vai à diretoria.
-
-O núcleo também não escreve instrução de terminal. Ele diz o que falta — "falta a
-triagem de 20260817." — e nomeia a falta como dado; a frase que ensina a supri-la é de
-cada fachada, porque "rodar `uv run matinal triagem`" é conselho certo no terminal e
-errado numa célula, onde não há linha de comando na tela que o autor está olhando.
 
 **O Passo 9 só existe no terminal.** `uv run matinal enviado` arquiva o comentário e
 esvazia `fontes/` e `saida/`; o que ele arquiva vira o "comentário do dia anterior" de

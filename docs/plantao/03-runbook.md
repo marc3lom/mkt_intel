@@ -1,6 +1,8 @@
 # Runbook do plantão
 
-Os nove passos, contados no terminal. O quanto cada um demora e por que o roteiro é
+Os nove passos, contados no terminal, mais [o envio](#o-envio) — que não tem número
+porque nenhuma linha de código participa dele, e que fica entre o Passo 8 e o Passo 9.
+O quanto cada um demora e por que o roteiro é
 contado em tempo relativo estão em [O primeiro dia](01-primeiro-dia.md#quanto-tempo-leva);
 o que muda ao rodar por `notebooks/plantao.ipynb` está em
 [As duas formas de rodar](01-primeiro-dia.md#as-duas-formas-de-rodar).
@@ -17,6 +19,11 @@ lista no stderr todo arquivo que deixou de ler, com nome — um `.docx` na pasta
 produz erro, e sem esse aviso a falta só apareceria como a ausência de um tema na
 triagem. Do Outlook, Arquivo → Imprimir → Microsoft Print to PDF; do navegador,
 Ctrl+P → Salvar em PDF.
+
+Os PDFs da Bloomberg trazem marcação de uso exclusivo nominal e vedação à
+redistribuição. O material não é redistribuído em nenhuma hipótese: apenas o conteúdo
+informa a redação do comentário, que é produto derivado e interno. Os PDFs não entram
+no repositório (ver `.gitignore`), e a `fontes/` é esvaziada no Passo 9.
 
 Gerar as três saídas do dia:
 
@@ -200,6 +207,58 @@ rodou depois do envio, quando já não adiantava.
 Separar a divergência intencional do acidente é decisão sua:
 [O que é seu decidir](04-decisoes.md#a-divergência-do-conferir).
 
+## O envio
+
+Este passo não tem número, e a razão é boba mas vale saber: os nove números são os
+passos que o comando executa, e são os mesmos no notebook, célula a célula. O envio é
+inteiramente seu — nenhuma linha de código participa dele. Ele acontece entre o Passo 8
+e o Passo 9.
+
+**O corpo do e-mail é o texto do `.docx` final, com as tabelas.** Não é um recado de
+encaminhamento apontando para um anexo. Quem abre a mensagem vê o comentário: os
+marcadores, o painel e a tabela do calendário, na própria mensagem. Copiar do `.docx`
+já pronto — é para isso que ele foi montado com as duas imagens no lugar.
+
+**O anexo é esse mesmo `.docx` exportado em PDF**, do Word, na mesma passagem em que
+você conferiu o documento no Passo 7.
+
+### Por que o anexo não é redundante
+
+Esta é a parte que precisa ser entendida, e não só cumprida.
+
+Olhando a mensagem pronta, a conclusão razoável é que o anexo sobra: o corpo já carrega
+o texto e as duas tabelas, e quem lê o e-mail não precisa abrir arquivo nenhum. A
+conclusão é razoável e está errada.
+
+**O PDF existe para que a chefia do DEPIN o encaminhe por WhatsApp ao grupo da
+diretoria.** Ninguém na divisão tem acesso a esse grupo — só a chefia — e o
+encaminhamento é feito à mão, a partir do anexo do e-mail que ela recebe. Sem o PDF
+anexado, não há o que encaminhar.
+
+E a falha é **silenciosa**. Um e-mail sem anexo não gera erro, não volta, e não parece
+incompleto para quem o lê no Outlook. A diretoria simplesmente não recebe o comentário
+naquele dia, e ninguém na divisão está no grupo para notar. É por isso que o anexo é
+regra e não conveniência.
+
+### O que ainda falta nesta página
+
+> **A PREENCHER — duas coisas que este manual não sabe.**
+>
+> **Os destinatários.** A lista exata de para quem o e-mail vai — e quem entra em cópia
+> — não está registrada em lugar algum deste repositório. Até que esteja, pergunte a
+> quem fez o plantão anterior, ou copie a lista do e-mail do dia anterior.
+>
+> **A convenção de assunto.** Idem. Observação **não confirmada**, e registrada aqui
+> como pista, não como regra: a errata enviada em 17/08 levava um prefixo `[ERRATA]`
+> sobre o que se lê como "Comentário Matinal – Mesa de Investimentos (DEPIN/DIRIN)".
+> Se essa é a forma do assunto de um dia normal, é inferência de um único caso — e de
+> um caso atípico. Confirmar antes de tratar como padrão.
+>
+> Quem descobrir as duas, escreva aqui. É a única parte do processo que ainda depende
+> de perguntar a alguém.
+
+Enviado o e-mail — e só então — seguir para o Passo 9.
+
 ## Passo 9 — Após o envio
 
 ```
@@ -259,15 +318,3 @@ hora adicional da conversão.
 Redigindo perto das 9h, conferir com cuidado redobrado o status de cada indicador
 americano do dia — o bloco de calendário em texto traz `AINDA NÃO DIVULGADO` por
 comparação de horário, e é nele que se confia, nunca no campo `ATUAL` da imagem.
-
-O formato é Markdown por decisão deliberada: o arquivo precisa ser pesquisável por texto
-e legível pelo comando. `arquivo/` guarda apenas o que o processo produz, a partir da
-primeira rodada em produção. Os comentários antigos em `.docx`, sob a convenção
-`AAAA/AAAAMM/`, foram retirados: serviam de contexto e não casavam com o padrão que o
-comando lê.
-
-Comentários que a chefia destacar como exemplares vão para `exemplos/aprovados/`;
-trechos rejeitados vão para `exemplos/rejeitados/`, com o motivo no cabeçalho do
-arquivo. **Guardar ali não muda o comportamento do modelo**: as duas pastas são
-material de trabalho, e o que chega às etapas é a seção 12 do guia de estilo. Promover
-o caso a exemplo anotado no guia é passo manual, e é o único que tem efeito.

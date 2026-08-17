@@ -96,12 +96,10 @@ Se a mudança foi sua e intencional, repeti-la no `.md` — é o `.md` que fica 
 e que a triagem de amanhã lê. Se você não reconhece a mudança, ela é acidente, e este é
 o último momento em que tem conserto.
 
-Em 17/08, na primeira rodada em produção, quatro palavras haviam sumido do documento
-durante a edição manual no Word. Entre elas o `swap` de "mercados de swap", que deixou
-a frase em "mercados de". O e-mail saiu quebrado porque a conferência rodou **depois**
-do envio — o Passo 8 é onde ela cabe, e é por isso que ele existe separado do Passo 9.
-
-Como separar o intencional do acidente está em
+Não pule por parecer improvável: em 17/08 foram quatro palavras, e o e-mail saiu
+quebrado. O caso está contado no
+[Passo 8](03-runbook.md#passo-8--conferência-antes-do-e-mail), e como separar o
+intencional do acidente, em
 [O que é seu decidir](04-decisoes.md#a-divergência-do-conferir).
 
 ## Banner de DRY RUN
@@ -109,9 +107,9 @@ Como separar o intencional do acidente está em
 A execução está fora da janela de 7h–9h. O comando abre com o banner no stderr e
 carimba o painel em texto com `PAINEL DIRECIONAL — DRY RUN`.
 
-**Nada é bloqueado, e nada está errado.** Ensaiar fora da janela é uso legítimo. O
-carimbo existe para que o arquivo de ensaio não seja confundido depois com um de
-plantão, e para que a triagem e a revisão saibam que estão num ensaio.
+**Nada é bloqueado, e nada está errado.** Ensaiar fora da janela é uso legítimo, e o
+carimbo existe para dizer o que aquele arquivo é — ver
+[A janela e o dry run](01-primeiro-dia.md#a-janela-e-o-dry-run).
 
 O que **não** se faz num dry run é enviar o e-mail e rodar o `enviado`. Se o banner
 apareceu num plantão de verdade, o relógio da máquina está errado — a decisão sai do

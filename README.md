@@ -67,6 +67,34 @@ comentario_matinal/
 └── uv.lock                     versões exatas — versionado de propósito
 ```
 
+O formato de `arquivo/` é Markdown por decisão deliberada: o arquivo precisa ser
+pesquisável por texto e legível pelo comando. `arquivo/` guarda apenas o que o processo
+produz, a partir da primeira rodada em produção. Os comentários antigos em `.docx`, sob
+a convenção `AAAA/AAAAMM/`, foram retirados: serviam de contexto e não casavam com o
+padrão que o comando lê.
+
+---
+
+## As duas fachadas, e o que as prende
+
+O plantão roda de duas formas — `uv run matinal`, no terminal, e
+`notebooks/plantao.ipynb`. Nenhuma das duas o implementa: as duas são fachadas sobre
+`src/comentario_matinal/plantao.py` e chamam as mesmas funções, então não podem
+divergir no que fazem. O que poderia divergir é a **sequência** — ela existe duas
+vezes, no argparse e nas células —, e é isso que `tests/test_notebook.py` prende:
+passo novo no núcleo, subcomando novo no terminal ou célula fora da ordem de
+`plantao.PASSOS` derrubam o teste até que o notebook seja atualizado junto.
+
+**Parâmetro novo num passo também.** Ou uma célula o exercita, ou ele entra na lista de
+exceções do teste com o motivo escrito ao lado. Não ter contrapartida no notebook é
+decisão legítima — `--asof`, `--anterior` e `--modelo` são conserto, ensaio e
+investigação, e moram no terminal —, mas precisa ser decisão, e não esquecimento.
+
+O núcleo também não escreve instrução de terminal. Ele diz o que falta — "falta a
+triagem de 20260817." — e nomeia a falta como dado; a frase que ensina a supri-la é de
+cada fachada, porque "rodar `uv run matinal triagem`" é conselho certo no terminal e
+errado numa célula, onde não há linha de comando na tela que o autor está olhando.
+
 ---
 
 ## Instalação
@@ -101,10 +129,10 @@ nenhuma.
 ## Notas
 
 - O bloco de auditoria nunca vai no e-mail.
-- Os PDFs da Bloomberg trazem marcação de uso exclusivo nominal e vedação à
-  redistribuição. O material não é redistribuído em nenhuma hipótese: apenas o conteúdo
-  informa a redação do comentário, que é produto derivado e interno. Os PDFs não entram
-  no repositório (ver `.gitignore`).
+- Os PDFs das fontes não entram no repositório (ver `.gitignore`). A regra de uso da
+  Bloomberg que sustenta isso está no
+  [Passo 1](docs/plantao/03-runbook.md#passo-1--coleta-t0), com quem manuseia os
+  arquivos.
 - O acesso ao modelo está hoje em assinatura pessoal, tanto na CLI quanto no Project.
   Na migração para o ambiente corporativo, submeter o fluxo à governança de IA da
   instituição e providenciar acesso institucional à CLI — que é o caminho do plantão.
