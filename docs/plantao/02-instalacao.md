@@ -148,6 +148,19 @@ comando lê o arquivo do disco a cada execução, então a mudança vale no plan
 seguinte, sem mais nenhum passo. Quem usa o Project precisa substituir o arquivo lá
 também. Não editar convenções nos prompts de etapa — eles apenas referenciam o guia.
 
+## O Wiki (passo único de quem publica o manual)
+
+Só quem publica o manual precisa disto — não é parte da instalação de quem só roda o
+plantão. `uv run publica-wiki` copia `docs/plantao/` para o Wiki do GitHub, mas o
+GitHub só cria o repositório `comentario_matinal.wiki.git` **depois que a primeira
+página nasce pela interface web**. Antes disso, `git clone` (e portanto o publicador)
+responde que o repositório não existe — verificado em 17/08.
+
+Para destravar: abrir a aba **Wiki** do repositório no GitHub, clicar em **Create the
+first page**, salvar qualquer conteúdo. A partir daí `comentario_matinal.wiki.git`
+existe, e `uv run publica-wiki` funciona — é ele que sobrescreve essa primeira página
+com o manual de verdade.
+
 ## O Project do Claude
 
 O Project é caminho alternativo, para o dia em que o comando não está à mão — máquina
