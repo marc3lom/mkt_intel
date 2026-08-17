@@ -156,6 +156,8 @@ suíte de sempre. O resto é prosa, e prosa é responsabilidade de quem escreve.
 import re
 from pathlib import Path
 
+import pytest
+
 RAIZ = Path(__file__).parent.parent
 MANUAL = RAIZ / "docs" / "plantao"
 DOCUMENTOS = sorted(MANUAL.glob("*.md")) + [RAIZ / "README.md"]
@@ -188,6 +190,19 @@ CAMINHOS_QUE_SAO_MOLDE = {
     "AAAA": "molde de data em `arquivo/AAAA/MM/AAAAMMDD.md`",
 }
 
+# As bandeiras que o manual deliberadamente não ensina, com o motivo. Todas
+# apontam para outro lugar as pastas que o plantão usa por padrão, e mexer nelas
+# é ensaio ou teste — não é o plantão.
+BANDEIRAS_FORA_DO_MANUAL = {
+    "--saida": "as saídas do dia vão para `saida/`; apontar outra é reprocessar",
+    "--fontes": "os PDFs da manhã ficam em `fontes/`, na raiz",
+    "--arquivo": "o comentário do dia anterior sai de `arquivo/`, onde o "
+                 "`enviado` o grava",
+    "--config": "a lista de ativos do painel é única — `config/painel.toml`",
+    "--template": "o documento sai do template da mesa; outro é ensaio de "
+                  "formatação",
+}
+
 
 def _texto(caminhos) -> str:
     return "\n".join(c.read_text(encoding="utf-8") for c in caminhos)
@@ -217,14 +232,32 @@ def test_todo_comando_documentado_existe():
     )
 
 
-def test_todo_passo_do_nucleo_aparece_no_manual():
-    from comentario_matinal import plantao
+def test_o_manual_decide_sobre_toda_bandeira_do_comando(monkeypatch, capsys):
+    """Bandeira nova obriga a decidir se o manual a ensina, ou por que não.
 
-    texto = _texto(sorted(MANUAL.glob("*.md")))
-    faltando = sorted(p for p in plantao.PASSOS if p not in texto)
+    O teste de subcomandos não alcança bandeira, e é por bandeira que passa uma
+    parte do processo — `--temas-numeros` é como a decisão editorial entra no
+    fluxo. Em 17/08 ela foi acrescentada e o runbook seguiu mandando escrever os
+    temas à mão por uma hora, com o problema conhecido. Este teste é o que teria
+    acusado.
+
+    A lista sai do `--help`, e não da introspecção do argparse: é o que o autor
+    de fato lê quando procura o que existe.
+    """
+    from comentario_matinal import cli
+
+    monkeypatch.setattr("sys.argv", ["matinal", "--help"])
+    with pytest.raises(SystemExit):
+        cli.main()
+
+    bandeiras = set(re.findall(r"--[a-z][a-z-]+", capsys.readouterr().out))
+    texto = _texto(DOCUMENTOS)
+    faltando = sorted(b for b in bandeiras - {"--help"}
+                      if b not in BANDEIRAS_FORA_DO_MANUAL and b not in texto)
     assert not faltando, (
-        f"O manual não menciona {faltando}. Passo novo no núcleo é passo novo no "
-        "processo, e quem lê o manual precisa saber que ele existe."
+        f"As bandeiras {faltando} existem e o manual não as menciona. Se alguma "
+        "não for para o plantonista, ela entra em BANDEIRAS_FORA_DO_MANUAL com o "
+        "motivo escrito ao lado."
     )
 
 
@@ -290,7 +323,7 @@ Um a um, restaurando entre eles. Nenhum vale nada sem isto: seis testes que nunc
 
 1. Acrescentar `"exportar"` a `cli.SUBCOMANDOS` → o primeiro fica vermelho nomeando-o.
 2. Escrever `uv run matinal publicar` numa página do manual → o segundo fica vermelho.
-3. Acrescentar `"passo_novo"` a `plantao.PASSOS` → o terceiro fica vermelho.
+3. Acrescentar uma bandeira `--nova` ao `argparse` → o terceiro fica vermelho nomeando-a.
 4. Trocar `janela.ABERTURA` para `time(6, 0)` → o quarto fica vermelho, listando **todas** as menções em prosa, no README, no manual e no guia.
 5. Escrever `` `saidas/` `` numa página → o quinto fica vermelho.
 6. Apagar a linha do link no README → o sexto fica vermelho.
