@@ -56,10 +56,14 @@ vai anexado ao e-mail. O comando não gera o PDF, e não há caminho sem esse pa
 
 ## Clonar o repositório
 
-**O repositório é privado.** Ele guarda comentários institucionais já enviados à
-diretoria, e o acesso não é público. Sem permissão, o `git clone` responde que o
-repositório não existe — é assim que o GitHub nega leitura a quem não tem acesso, e não
-significa que você errou o endereço.
+**O repositório é privado**, e segue assim por ora. Ele guarda comentários
+institucionais já enviados à diretoria, e o acesso não é público. Sem permissão, o
+`git clone` responde que o repositório não existe — é assim que o GitHub nega leitura a
+quem não tem acesso, e não significa que você errou o endereço.
+
+**Para obter acesso, peça ao dono do repositório** — o `marc3lom` do endereço abaixo. Ele
+concede **acesso de colaborador** a quem na divisão quiser, e é esse acesso que torna o
+clone possível. Não há processo além de pedir.
 
 ```
 gh repo clone marc3lom/comentario_matinal
@@ -68,10 +72,10 @@ gh repo clone marc3lom/comentario_matinal
 Sem o GitHub CLI, o equivalente é
 `git clone https://github.com/marc3lom/comentario_matinal.git`.
 
-> **A PREENCHER — como se obtém o acesso.** A quem pedir, e por qual via (chave SSH,
-> `gh auth login`, conta institucional, algum processo da instituição), não está
-> registrado neste repositório e não foi inventado aqui. Até que esteja, pergunte a
-> quem administra o repositório na divisão. Quem descobrir, escreva aqui.
+**Este endereço é provisório.** O destino é um espelho no GitHub corporativo da
+instituição, e a URL muda quando ele existir. Se o comando acima falhar por endereço
+inválido num dia futuro, a explicação mais provável é essa, e não um erro seu — procure
+o endereço novo antes de tratar o caso como problema de acesso.
 
 Os comandos abaixo rodam **de dentro da pasta clonada**.
 

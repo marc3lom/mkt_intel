@@ -250,22 +250,37 @@ incompleto para quem o lê no Outlook. A diretoria simplesmente não recebe o co
 naquele dia, e ninguém na divisão está no grupo para notar. É por isso que o anexo é
 regra e não conveniência.
 
+### Os destinatários não são seus para editar
+
+**A lista de distribuição é mantida pela TI do DEPIN**, não por quem escreve o
+comentário.
+
+Isso responde à pergunta que você de fato vai ter, que não é "quais são os endereços" —
+eles já vêm — e sim **"fulano ficou de fora, o que eu faço"**. Incluir alguém, tirar
+alguém, corrigir um endereço errado: o pedido vai ao mestre de TI do DEPIN, e não à
+janela de destinatários do Outlook.
+
+Consertar a lista à mão parece o caminho curto, e é o caminho que a estraga. Cada
+plantonista corrige um pouco à sua maneira, ninguém registra o que corrigiu, e em
+algumas semanas quem recebe o comentário depende de quem estava de plantão. A deriva é
+**invisível**: o e-mail sai normalmente todas as manhãs, e ninguém que ficou de fora
+escreve para avisar que não recebeu.
+
 ### O que ainda falta nesta página
 
-> **A PREENCHER — duas coisas que este manual não sabe.**
+> **A PREENCHER — duas coisas que este manual ainda não sabe.**
 >
-> **Os destinatários.** A lista exata de para quem o e-mail vai — e quem entra em cópia
-> — não está registrada em lugar algum deste repositório. Até que esteja, pergunte a
-> quem fez o plantão anterior, ou copie a lista do e-mail do dia anterior.
+> **O alias exato dos destinatários.** Quem mantém a lista já se sabe — é a TI do DEPIN,
+> logo acima —, mas o endereço ou grupo para o qual o comentário é enviado não está
+> registrado neste repositório. Até que esteja, copie a lista do e-mail do dia anterior.
 >
-> **A convenção de assunto.** Idem. Observação **não confirmada**, e registrada aqui
-> como pista, não como regra: a errata enviada em 17/08 levava um prefixo `[ERRATA]`
-> sobre o que se lê como "Comentário Matinal – Mesa de Investimentos (DEPIN/DIRIN)".
-> Se essa é a forma do assunto de um dia normal, é inferência de um único caso — e de
-> um caso atípico. Confirmar antes de tratar como padrão.
+> **A convenção de assunto.** Observação **não confirmada**, e registrada aqui como
+> pista, não como regra: a errata enviada em 17/08 levava um prefixo `[ERRATA]` sobre o
+> que se lê como "Comentário Matinal – Mesa de Investimentos (DEPIN/DIRIN)". Se essa é a
+> forma do assunto de um dia normal, é inferência de um único caso — e de um caso
+> atípico. Confirmar antes de tratar como padrão.
 >
-> Quem descobrir as duas, escreva aqui. É a única parte do processo que ainda depende
-> de perguntar a alguém.
+> Quem descobrir as duas, escreva aqui.
 
 Enviado o e-mail — e só então — seguir para o Passo 9.
 
