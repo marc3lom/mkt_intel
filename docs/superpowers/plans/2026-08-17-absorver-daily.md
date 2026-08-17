@@ -164,7 +164,7 @@ Expected: PASS
 
 - [ ] **Step 6: Provar que o teste pega mudança**
 
-Alterar temporariamente `../daily-dev/src/daily/monitor.py` linha 308, trocando `"OBS: Gráficos intraday."` por `"OBS: xxx."`, e rodar de novo contra o `../daily` — ou, mais simples, alterar `ASOF` no teste para `datetime(2026, 8, 17, 7, 55)`.
+Alterar `ASOF` no teste para `datetime(2026, 8, 17, 7, 55)`. O painel carimba o horário, então um minuto a mais muda a imagem.
 
 Run: `uv run pytest tests/test_referencia.py -q`
 Expected: FAIL, com caminho para o PNG de diferença.
@@ -263,7 +263,9 @@ e substituir as linhas 178-181 por:
         market_closed_img = plt.imread(str(market_closed_path))
 ```
 
-Em `src/comentario_matinal/render/output.py`, o `save_figure` usava `OUTPUT_DIR` como padrão de `allowed_root`. Tornar o parâmetro obrigatório — todos os chamadores daqui já passam um.
+Em `src/comentario_matinal/render/output.py`, o `save_figure` usava `OUTPUT_DIR` como padrão de `allowed_root` (linha 33 — é o único uso em código). Tornar o parâmetro obrigatório: todos os chamadores daqui já passam um.
+
+Três docstrings afirmam esse padrão e passam a mentir no mesmo commit que o remove. Corrigir as três, dizendo que a raiz permitida é obrigatória: `monitor.py:156`, `tables.py:145` e `tables.py:254`. Corrigir também o cabeçalho de `output.py`, que abre com "Saving is allowed ONLY inside OUTPUT_DIR".
 
 - [ ] **Step 4: Reapontar os quatro consumidores**
 
