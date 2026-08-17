@@ -263,6 +263,67 @@ def test_comentario_e_o_que_vem_antes_da_auditoria():
     assert texto_do_comentario(doc) == "- Primeiro marcador\n\n- Segundo marcador"
 
 
+REDACAO_REAL = """- Primeiro marcador do comentário.
+
+- Segundo marcador do comentário.
+
+---
+
+**BLOCO DE AUDITORIA** (não integra o e-mail)
+
+**Contagem de palavras**: total 450.
+
+**Ressalvas**
+- uma ressalva que começa com marcador, dentro da auditoria
+"""
+
+
+def test_comentario_e_auditoria_com_titulo_em_negrito():
+    """O caso que a estreia expôs.
+
+    O prompt pede "### 2) BLOCO DE AUDITORIA"; o modelo entregou o título em
+    negrito. O varredor só reconhecia títulos `#`, então nem o fim do comentário
+    nem a auditoria eram localizados, e o documento inteiro ia nos dois campos.
+    Amarrar o encadeamento à obediência de formato é o que se está desfazendo.
+    """
+    from comentario_matinal.etapas import partes_da_redacao
+
+    comentario, auditoria = partes_da_redacao(REDACAO_REAL)
+    assert comentario == ("- Primeiro marcador do comentário.\n\n"
+                          "- Segundo marcador do comentário.")
+    assert auditoria.startswith("**BLOCO DE AUDITORIA**")
+    assert "Contagem de palavras" in auditoria
+    # A ressalva em marcador está DEPOIS do corte: não volta para o comentário.
+    assert "uma ressalva que começa com marcador" in auditoria
+    assert "ressalva" not in comentario
+
+
+@pytest.mark.parametrize("separador", [
+    "## 2) BLOCO DE AUDITORIA",
+    "### BLOCO DE AUDITORIA",
+    "---",
+    "___",
+    "**BLOCO DE AUDITORIA**",
+])
+def test_o_corte_funciona_com_qualquer_marcacao_de_fim(separador):
+    """Título, regra horizontal ou negrito — o comentário termina em todos."""
+    from comentario_matinal.etapas import partes_da_redacao
+
+    doc = f"- Um marcador.\n\n- Outro marcador.\n\n{separador}\n\nauditoria aqui\n"
+    comentario, auditoria = partes_da_redacao(doc)
+    assert comentario == "- Um marcador.\n\n- Outro marcador."
+    assert "auditoria aqui" in auditoria
+
+
+def test_preambulo_antes_dos_marcadores_nao_entra_no_comentario():
+    """A triagem abriu com uma ressalva de janela; a redação pode fazer o mesmo."""
+    from comentario_matinal.etapas import partes_da_redacao
+
+    doc = "**RESSALVA:** janela atípica.\n\n- Um marcador.\n\n**AUDITORIA**\n\nx\n"
+    comentario, _ = partes_da_redacao(doc)
+    assert comentario == "- Um marcador."
+
+
 def test_referencia_do_painel_vem_do_cabecalho():
     """O horário de redação é o do término da coleta, carimbado no painel."""
     from comentario_matinal.etapas import referencia_do_painel
@@ -587,6 +648,47 @@ def test_texto_avisa_quando_o_calendario_nao_foi_apurado():
     texto = monta_texto(cfg, metricas, [], ASOF, [], calendario_vazio=True)
     assert "CONSULTA INDISPONÍVEL" in texto
     assert "DIVULGADO" not in texto.split("CALENDÁRIO ECONÔMICO DO DIA")[1].split("Nota:")[0]
+
+
+def test_ativo_com_mercado_fechado_e_marcado_no_texto():
+    """O caso que a estreia expôs, e que duas passagens do modelo não pegaram.
+
+    A imagem carimba MARKET CLOSED; o texto dizia só "VIX: baixa", e o comentário
+    saiu afirmando que "na sessão corrente a volatilidade implícita cede" — sendo
+    que aquela variação era da sexta-feira. A revisão declarou o VIX coerente,
+    porque a informação nunca chegou a ela.
+
+    O painel grava `has_chart` nas métricas; o texto passa a lê-lo, de modo que
+    imagem e texto façam a MESMA afirmação sobre estar aberto ou fechado.
+    """
+    cfg = carrega_config()
+    alvo = cfg.ativos[0]
+    metricas = {
+        a.ticker: {"chg_net": 0.05, "chg_pct": 1.0,
+                   "has_chart": a.ticker != alvo.ticker}
+        for a in cfg.ativos
+    }
+    texto = monta_texto(cfg, metricas, [], ASOF, [], calendario_vazio=True)
+
+    assert f"  {alvo.rotulo}: alta — MERCADO FECHADO" in texto
+    # Quem está aberto não ganha o carimbo: exatamente uma LINHA DE ATIVO o traz.
+    abertos = [a for a in cfg.ativos if a.ticker != alvo.ticker]
+    assert f"  {abertos[0].rotulo}: alta\n" in texto
+    marcadas = [l for l in texto.splitlines()
+                if l.startswith("  ") and "MERCADO FECHADO" in l]
+    assert len(marcadas) == 1
+    # E a nota explicando o marcador acompanha, senão o modelo o ignora.
+    assert "variação da sessão anterior" in texto
+
+
+def test_indisponivel_prevalece_sobre_mercado_fechado():
+    """Sem dado não há direção a qualificar; dizer as duas coisas confunde."""
+    cfg = carrega_config()
+    alvo = cfg.ativos[0]
+    metricas = {a.ticker: {"chg_net": 0.05, "chg_pct": 1.0, "has_chart": False}
+                for a in cfg.ativos}
+    texto = monta_texto(cfg, metricas, [], ASOF, [alvo.ticker], calendario_vazio=True)
+    assert f"  {alvo.rotulo}: indisponível\n" in texto
 
 
 def test_texto_lista_todo_ativo_do_config_uma_vez():

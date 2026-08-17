@@ -55,31 +55,45 @@ def monta_texto(
     out.append("Direções apuradas contra o fechamento anterior, a partir dos mesmos "
                "dados do painel enviado. Sem níveis — uso exclusivo para checagem "
                "de coerência.")
+    out.append("Ativo marcado como MERCADO FECHADO não negociou nesta sessão: a "
+               "direção indicada é a da sessão anterior, e NÃO pode ser descrita "
+               "como movimento corrente.")
     out.append("")
 
     taxas = [a for a in cfg.ativos if a.e_taxa]
     precos = [a for a in cfg.ativos if not a.e_taxa]
 
-    out.append("Taxas (direção da taxa):")
-    for ativo in taxas:
+    def linha(ativo, valor: str, limiar: float) -> str:
+        """Uma linha do bloco, com o status de mercado que a imagem já carimba.
+
+        Sem o carimbo, o texto afirmava direção corrente sobre a variação da
+        sessão anterior, e nem a redação nem a revisão tinham como perceber:
+        a imagem dizia MARKET CLOSED, o texto dizia apenas "VIX: baixa", e o
+        comentário saiu com "na sessão corrente a volatilidade implícita cede".
+        `has_chart` é o mesmo campo que decide o carimbo na imagem, de modo que
+        as duas saídas façam a mesma afirmação sobre estar aberto ou fechado.
+        """
         m = metricas.get(ativo.ticker)
         if m is None or ativo.ticker in indisponiveis:
-            direcao = "indisponível"
-        else:
-            # Para taxa, a variação líquida já está em pontos percentuais da
-            # própria taxa; o limiar é expresso na mesma unidade (0.01 = 1 bp).
-            direcao = _direcao(float(m["chg_net"]), cfg.limiar_estabilidade_taxa)
-        out.append(f"  {ativo.rotulo}: {direcao}")
+            # Sem dado não há direção a qualificar; as duas ressalvas juntas
+            # confundiriam mais do que informam.
+            return f"  {ativo.rotulo}: indisponível"
+        direcao = _direcao(float(m[valor]), limiar)
+        if m.get("has_chart", True):
+            return f"  {ativo.rotulo}: {direcao}"
+        return (f"  {ativo.rotulo}: {direcao} — MERCADO FECHADO, "
+                "variação da sessão anterior")
+
+    out.append("Taxas (direção da taxa):")
+    for ativo in taxas:
+        # Para taxa, a variação líquida já está em pontos percentuais da própria
+        # taxa; o limiar é expresso na mesma unidade (0.01 = 1 bp).
+        out.append(linha(ativo, "chg_net", cfg.limiar_estabilidade_taxa))
 
     out.append("")
     out.append("Preços:")
     for ativo in precos:
-        m = metricas.get(ativo.ticker)
-        if m is None or ativo.ticker in indisponiveis:
-            direcao = "indisponível"
-        else:
-            direcao = _direcao(float(m["chg_pct"]), cfg.limiar_estabilidade)
-        out.append(f"  {ativo.rotulo}: {direcao}")
+        out.append(linha(ativo, "chg_pct", cfg.limiar_estabilidade))
 
     out.append("")
     out.append("CALENDÁRIO ECONÔMICO DO DIA")

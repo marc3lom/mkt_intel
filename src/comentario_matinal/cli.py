@@ -268,9 +268,9 @@ def _roda_etapa(args, saida: Path, marca: str) -> int:
         mensagem_redacao,
         mensagem_revisao,
         mensagem_triagem,
+        partes_da_redacao,
         roda,
         secao_ou_tudo,
-        texto_do_comentario,
     )
     from comentario_matinal.fontes import converte
     from comentario_matinal.modelo import ErroDoModelo
@@ -372,8 +372,7 @@ def _roda_etapa(args, saida: Path, marca: str) -> int:
             print(f"Erro: falta a redação de {marca}. Rodar `uv run matinal "
                   "redacao` antes.", file=sys.stderr)
             return 1
-        texto = texto_do_comentario(anterior)
-        auditoria = secao_ou_tudo(anterior, "2) BLOCO DE AUDITORIA", "auditoria")
+        texto, auditoria = partes_da_redacao(anterior)
         mensagem = mensagem_revisao(prompt, ins, texto, auditoria, args.web)
 
     try:

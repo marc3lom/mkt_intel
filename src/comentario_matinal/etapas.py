@@ -190,26 +190,49 @@ def secao_ou_tudo(texto: str, rotulo: str, *chaves: str) -> str:
     return texto
 
 
-def texto_do_comentario(redacao: str) -> str:
-    """Extrai o comentário da saída da redação.
+# O que encerra o bloco de marcadores: título de qualquer nível, regra
+# horizontal, ou linha que abre em negrito. As três aparecem na prática — o
+# prompt pede "### 2) BLOCO DE AUDITORIA", e a primeira execução real devolveu
+# "**BLOCO DE AUDITORIA**", em negrito, com um "---" antes.
+RE_REGRA = re.compile(r"^\s*(?:-{3,}|_{3,}|\*{3,})\s*$")
+RE_FIM_DO_COMENTARIO = re.compile(r"^\s*(?:#{1,6}\s|\*\*|-{3,}\s*$|_{3,}\s*$)")
 
-    O prompt da etapa 2 pede os marcadores "sem cabeçalho", e o modelo obedece:
-    a saída começa direto no primeiro marcador, sem o título "1) COMENTÁRIO".
-    Procurar esse título falharia sempre. O que existe de fato é o título do
-    bloco de auditoria, então o comentário é o que vem antes dele.
+
+def partes_da_redacao(redacao: str) -> tuple[str, str]:
+    """Separa a saída da redação em comentário e bloco de auditoria.
+
+    A divisão é POSICIONAL, não por título: o comentário é o bloco de marcadores
+    do topo, e a auditoria é tudo o que vem depois dele. O prompt especifica os
+    dois títulos, mas amarrar o encadeamento à obediência de formato foi o que
+    quebrou na primeira execução real — o modelo escreveu o título da auditoria
+    em negrito em vez de "###", e nem o comentário nem a auditoria foram
+    localizados, jogando o documento inteiro nos dois campos.
+
+    O que o prompt garante de fato, e é o que se usa aqui, é a ORDEM: marcadores
+    primeiro, auditoria depois. Um preâmbulo antes do primeiro marcador — uma
+    ressalva de janela, por exemplo — fica fora dos dois.
     """
-    corpo = secao(redacao, "1) comentário", "1) comentario")
-    if corpo:
-        return corpo
-
     linhas = redacao.splitlines()
-    for i, _, titulo in titulos(redacao):
-        if "auditoria" in titulo.lower():
-            return "\n".join(linhas[:i]).strip()
+    inicio = next((i for i, l in enumerate(linhas)
+                   if l.lstrip().startswith("- ")), None)
+    if inicio is None:
+        print("Aviso: a saída da redação não traz marcador algum. Mandando o "
+              "documento inteiro para a revisão.", file=sys.stderr)
+        return redacao.strip(), redacao.strip()
 
-    print("Aviso: não localizei onde o comentário termina na saída da redação. "
-          "Mandando o documento inteiro para a revisão.", file=sys.stderr)
-    return redacao.strip()
+    fim = next((i for i in range(inicio, len(linhas))
+                if RE_FIM_DO_COMENTARIO.match(linhas[i])), len(linhas))
+
+    # A regra horizontal só separa: não faz parte da auditoria, e mandá-la ao
+    # modelo como primeira linha do campo seria ruído. Título em negrito, sim.
+    corpo = fim + 1 if fim < len(linhas) and RE_REGRA.match(linhas[fim]) else fim
+    return ("\n".join(linhas[inicio:fim]).strip(),
+            "\n".join(linhas[corpo:]).strip())
+
+
+def texto_do_comentario(redacao: str) -> str:
+    """O comentário da saída da redação — os marcadores do topo."""
+    return partes_da_redacao(redacao)[0]
 
 
 class FormatoInesperado(RuntimeError):
