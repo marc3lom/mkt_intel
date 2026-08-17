@@ -15,7 +15,8 @@ matplotlib.use("Agg")
 import pandas as pd
 import pytest
 
-from comentario_matinal.config import TZ_BR, carrega_config
+from comentario_matinal.config import carrega_config
+from comentario_matinal.janela import fuso_local
 
 # Onde os coletores estão ligados. ``from … import`` liga o nome no módulo que
 # importa, então é lá que o monkeypatch precisa agir — não no módulo de origem.
@@ -62,14 +63,38 @@ def _bancos() -> pd.DataFrame:
 
 
 @pytest.fixture
-def bloomberg_falsa(monkeypatch):
+def chamadas():
+    """Registro mutável de quem foi chamado, com o quê.
+
+    A aridade posicional das lambdas originais provava que o número de
+    argumentos batia, nunca o valor: um ``asof`` errado ou a lista de ativos
+    errada passariam sem que nenhum teste notasse. Este registro é o que
+    fecha esse buraco — ``bloomberg_falsa`` grava aqui, e quem quiser
+    inspecionar o que cada coletor recebeu pede este fixture junto.
+    """
+    return []
+
+
+@pytest.fixture
+def bloomberg_falsa(monkeypatch, chamadas):
     cfg = carrega_config()
-    monkeypatch.setattr(f"{MODULO}.coleta_referencia",
-                        lambda ativos: (_referencia(cfg), []))
-    monkeypatch.setattr(f"{MODULO}.coleta_intraday",
-                        lambda ativos, asof, ref: _intraday(cfg))
-    monkeypatch.setattr(f"{MODULO}.coleta_calendario",
-                        lambda: (_eco(), _bancos()))
+
+    def _coleta_referencia(ativos):
+        ref = _referencia(cfg)
+        chamadas.append(("coleta_referencia", list(ativos), ref))
+        return ref, []
+
+    def _coleta_intraday(ativos, asof, ref):
+        chamadas.append(("coleta_intraday", list(ativos), asof, ref))
+        return _intraday(cfg)
+
+    def _coleta_calendario():
+        chamadas.append(("coleta_calendario",))
+        return _eco(), _bancos()
+
+    monkeypatch.setattr(f"{MODULO}.coleta_referencia", _coleta_referencia)
+    monkeypatch.setattr(f"{MODULO}.coleta_intraday", _coleta_intraday)
+    monkeypatch.setattr(f"{MODULO}.coleta_calendario", _coleta_calendario)
     return cfg
 
 
@@ -111,3 +136,96 @@ def test_bloco_direcional_lista_todo_ativo_do_painel(bloomberg_falsa, monkeypatc
     assert "17/08/2026 07:40" in texto
     for ativo in bloomberg_falsa.ativos:
         assert ativo.rotulo in texto, f"{ativo.rotulo} sumiu do bloco direcional"
+
+
+def test_coletores_recebem_o_material_certo_na_ordem_certa(bloomberg_falsa, chamadas,
+                                                            monkeypatch, tmp_path):
+    """A fiação entre os três coletores, não só a contagem de argumentos.
+
+    ``coleta_intraday`` ancora a série intradiária no fechamento anterior — é o
+    que faz a variação ler como a do dia, e não a da sessão (ver
+    ``test_ancora_faz_a_variacao_ser_a_do_dia_e_nao_a_da_sessao`` em
+    ``test_matinal.py``). Isso depende de três coisas que a Tarefa 2 pode
+    embaralhar ao mover de onde ``asof`` flui: o ``asof`` que chega precisa ser
+    o mesmo da linha de comando, a referência precisa ser exatamente o objeto
+    que ``coleta_referencia`` devolveu, e a ordem de chamada precisa manter
+    referência antes de intraday — inverter a ordem quebraria a âncora.
+    """
+    from comentario_matinal.cli import main
+
+    monkeypatch.setattr(
+        "sys.argv",
+        ["matinal", "--asof", "2026-08-17T07:40", "--saida", str(tmp_path)],
+    )
+    assert main() == 0
+
+    nomes = [c[0] for c in chamadas]
+    assert nomes.index("coleta_referencia") < nomes.index("coleta_intraday"), (
+        "coleta_intraday precisa da referência já coletada para ancorar a "
+        "série no fechamento anterior; fora de ordem, essa âncora quebra."
+    )
+
+    _, ativos_ref, ref_devolvida = next(
+        c for c in chamadas if c[0] == "coleta_referencia"
+    )
+    assert [a.ticker for a in ativos_ref] == [a.ticker for a in bloomberg_falsa.ativos]
+
+    _, ativos_intraday, asof_recebido, ref_recebida = next(
+        c for c in chamadas if c[0] == "coleta_intraday"
+    )
+    assert [a.ticker for a in ativos_intraday] == [a.ticker for a in bloomberg_falsa.ativos]
+    assert asof_recebido == datetime(2026, 8, 17, 7, 40, tzinfo=fuso_local())
+    assert ref_recebida is ref_devolvida, (
+        "coleta_intraday recebeu uma referência diferente da que "
+        "coleta_referencia devolveu — a âncora do fechamento anterior estaria "
+        "olhando para o DataFrame errado."
+    )
+
+
+def test_referencia_vazia_aborta_sem_gravar_nada(monkeypatch, tmp_path):
+    """Sem dado de referência algum, `main()` recusa prosseguir.
+
+    A Tarefa 2 troca este ``return 1`` por uma exceção dedicada
+    (``SemDadoDeMercado``); fixar o efeito aqui — código de saída 1, nenhum
+    arquivo gravado — é o que prova que a tradução preservou o comportamento.
+    """
+    from comentario_matinal.cli import main
+
+    monkeypatch.setattr(f"{MODULO}.coleta_referencia",
+                        lambda ativos: (pd.DataFrame(), []))
+    monkeypatch.setattr(
+        "sys.argv",
+        ["matinal", "--asof", "2026-08-17T07:40", "--saida", str(tmp_path)],
+    )
+    assert main() == 1
+    assert list(tmp_path.iterdir()) == [], (
+        "saída abortada não pode deixar arquivo parcial para trás"
+    )
+
+
+def test_sem_calendario_pula_a_consulta_e_nao_gera_a_tabela(bloomberg_falsa, chamadas,
+                                                             monkeypatch, tmp_path):
+    """``--sem-calendario`` existe para terminal sem licença BQL: não pode tocar o BQL.
+
+    A Tarefa 2 troca a passagem do flag por uma chamada condicional a
+    ``prepara_calendario`` na fachada; este teste fixa a forma de hoje — pular
+    a consulta e as duas saídas de calendário, sem afetar painel nem bloco
+    direcional — para que a extração tenha contra o que se aferir.
+    """
+    from comentario_matinal.cli import main
+
+    monkeypatch.setattr(
+        "sys.argv",
+        ["matinal", "--asof", "2026-08-17T07:40", "--saida", str(tmp_path),
+         "--sem-calendario"],
+    )
+    assert main() == 0
+
+    assert (tmp_path / f"painel_{MARCA}.png").stat().st_size > 10_000
+    assert (tmp_path / f"painel_{MARCA}.txt").exists()
+    assert not (tmp_path / f"calendario_{MARCA}.png").exists()
+    assert not (tmp_path / f"calendario_{MARCA}.md").exists()
+    assert not any(c[0] == "coleta_calendario" for c in chamadas), (
+        "--sem-calendario existe para terminal sem licença BQL; tocar a "
+        "consulta mesmo assim é o próprio bug que o flag existe para evitar."
+    )
