@@ -45,13 +45,21 @@ class Contexto:
     cfg: Config
     asof: datetime
     saida: Path
+    fontes: Path        # onde os PDFs do dia são largados
+    arquivo: Path       # onde os comentários enviados moram
     marca: str          # AAAAMMDD
     dry_run: bool
 
 def contexto(asof: datetime | str | None = None,
              saida: Path = SAIDA_PADRAO,
+             fontes: Path = FONTES_PADRAO,
+             arquivo: Path = ARQUIVO_PADRAO,
              config: Path = CONFIG_PADRAO) -> Contexto
 ```
+
+`fontes` e `arquivo` entram no contexto pelo mesmo motivo que os outros campos: as duas
+fachadas precisam deles, ambos têm padrão, e passá-los a cada chamada encheria as células
+do notebook de argumentos que nunca mudam.
 
 `dry_run` sai de `not na_janela(agora())` — relógio real, nunca o `asof`, como hoje. A
 regra continua num lugar só.
@@ -67,12 +75,21 @@ def desenha_painel(ctx, mercado) -> Painel
 def prepara_calendario(ctx) -> Calendario
 def monta_bloco(ctx, mercado, painel, calendario: Calendario | None) -> Bloco
 
-def roda_etapa(ctx, nome, fontes, arquivo, *, temas=None, anterior=None,
+def roda_etapa(ctx, nome, *, temas=None, anterior=AUTOMATICO,
                web=False, modelo=None) -> Etapa
-def monta_documento(ctx, comentario, template, painel, calendario) -> Path
+def monta_documento(ctx, comentario, template=TEMPLATE_PADRAO) -> Path
 def confere(ctx) -> list[Divergencia]      # Divergencia vem de enviado.py
-def fecha_plantao(ctx, arquivo, fontes, forcar=False) -> Fechamento
+def fecha_plantao(ctx, forcar=False) -> Fechamento
 ```
+
+`AUTOMATICO` é uma sentinela de módulo: por padrão, `roda_etapa` procura sozinha o
+comentário do dia anterior em `ctx.arquivo`, que é o comportamento certo para as duas
+fachadas. O comando passa `None` quando recebe `--sem-anterior` e passa o texto lido
+quando recebe `--anterior`. Sem a sentinela, o notebook teria de reimplementar a busca
+automática — e ela é regra de negócio, não vocabulário de terminal.
+
+Os caminhos do painel e do calendário que o `monta_documento` precisa saem de
+`ctx.saida` e `ctx.marca`, como já saem hoje dentro do `main()`.
 
 A garantia de coleta única não vem de os passos serem uma função só; vem do fluxo de
 dados. `desenha_painel` e `monta_bloco` exigem o `Mercado` que `coleta_mercado`
