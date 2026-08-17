@@ -277,19 +277,19 @@ escreve para avisar que não recebeu.
 
 ### O que ainda falta nesta página
 
-> **A PREENCHER — duas coisas que este manual ainda não sabe.**
+O endereço em si não está neste repositório, e não deve estar: a lista é operada no
+DEPIN e muda sem que o repositório fique sabendo. Copie os destinatários do e-mail do dia
+anterior. O que importa aqui não é a identificação — é saber para quem se escreve, e isso
+está logo acima.
+
+> **A PREENCHER — uma coisa que este manual ainda não sabe.**
 >
-> **O alias exato dos destinatários.** Quem mantém a lista já se sabe — é a TI do DEPIN,
-> logo acima —, mas o endereço ou grupo para o qual o comentário é enviado não está
-> registrado neste repositório. Até que esteja, copie a lista do e-mail do dia anterior.
->
-> **A convenção de assunto.** Observação **não confirmada**, e registrada aqui como
-> pista, não como regra: a errata enviada em 17/08 levava um prefixo `[ERRATA]` sobre o
-> que se lê como "Comentário Matinal – Mesa de Investimentos (DEPIN/DIRIN)". Se essa é a
-> forma do assunto de um dia normal, é inferência de um único caso — e de um caso
-> atípico. Confirmar antes de tratar como padrão.
->
-> Quem descobrir as duas, escreva aqui.
+> **A convenção de assunto.** Diferente dos destinatários, esta é sua a cada manhã: você
+> a digita. Observação **não confirmada**, registrada como pista e não como regra: a
+> errata enviada em 17/08 levava um prefixo `[ERRATA]` sobre o que se lê como "Comentário
+> Matinal – Mesa de Investimentos (DEPIN/DIRIN)". Se essa é a forma do assunto de um dia
+> normal, é inferência de um único caso — e de um caso atípico. Confirmar antes de tratar
+> como padrão, e escrever aqui.
 
 Enviado o e-mail — e só então — seguir para o Passo 9.
 
