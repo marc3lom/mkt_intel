@@ -73,13 +73,22 @@ class EspecDeTabela:
     left_align_col: str | None = None
 
 
+# As larguras somam LARGURA_UTIL, e não 1,0: as faixas de cabeçalho e de linha
+# são desenhadas de 0,01 a 0,99, e as colunas começam em 0,02 (ver
+# _compute_x_positions). Somando 1,0, a última coluna terminava em 1,02 — fora
+# da faixa e fora do eixo —, e o cabeçalho REVISADO, que é centralizado nela,
+# saía encostado na borda direita. O teste em tests/test_render.py trava a soma.
+LARGURA_UTIL = 0.96
+
 ESPEC_ECO = EspecDeTabela(
     title="CALENDÁRIO ECONÔMICO",
     columns=[
         "PAÍS", "DATA", "HORÁRIO", "EVENTO", "PERÍODO",
         "ESTIMATIVA", "ATUAL", "ANTERIOR", "REVISADO",
     ],
-    col_widths=[0.12, 0.10, 0.08, 0.25, 0.08, 0.10, 0.08, 0.10, 0.09],
+    # Os 0,04 que sobravam saíram das colunas numéricas e de PAÍS/DATA, que
+    # tinham folga; EVENTO mantém 0,25 porque é onde o texto é mais longo.
+    col_widths=[0.11, 0.09, 0.08, 0.25, 0.08, 0.09, 0.08, 0.09, 0.09],
     highlight_rules={
         "ATUAL": destaca_atual,
         "REVISADO": destaca_revisado,
@@ -89,7 +98,7 @@ ESPEC_ECO = EspecDeTabela(
 ESPEC_BC = EspecDeTabela(
     title="BANCOS CENTRAIS",
     columns=["PAÍS", "DATA", "HORÁRIO", "EVENTO"],
-    col_widths=[0.12, 0.10, 0.08, 0.68],
+    col_widths=[0.12, 0.10, 0.08, 0.66],
     left_align_col="EVENTO",
 )
 

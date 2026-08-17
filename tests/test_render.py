@@ -11,7 +11,34 @@ from matplotlib.figure import Figure
 
 from comentario_matinal.render.gravacao import grava_figura
 from comentario_matinal.render.painel import monta_painel
-from comentario_matinal.render.tabelas import ESPEC_BC, ESPEC_ECO, monta_tabelas
+from comentario_matinal.render.tabelas import (
+    ESPEC_BC,
+    ESPEC_ECO,
+    LARGURA_UTIL,
+    _compute_x_positions,
+    monta_tabelas,
+)
+
+
+@pytest.mark.parametrize("espec", [ESPEC_ECO, ESPEC_BC], ids=["eco", "bc"])
+def test_colunas_cabem_dentro_da_faixa(espec):
+    """A última coluna não pode passar da faixa desenhada atrás das linhas.
+
+    A faixa vai de 0,01 a 0,99 e as colunas começam em 0,02. Uma soma de
+    larguras maior que LARGURA_UTIL empurra a última coluna para fora do eixo, e
+    o cabeçalho dela — centralizado — sai cortado na borda direita. O sintoma
+    aparece só na imagem, que nenhum outro teste olha.
+    """
+    assert len(espec.col_widths) == len(espec.columns), (
+        f"{espec.title}: {len(espec.col_widths)} larguras para "
+        f"{len(espec.columns)} colunas."
+    )
+    assert sum(espec.col_widths) == pytest.approx(LARGURA_UTIL), (
+        f"{espec.title}: as larguras somam {sum(espec.col_widths):.3f}, "
+        f"e precisam somar {LARGURA_UTIL}."
+    )
+    fim = _compute_x_positions(espec.col_widths)[-1] + espec.col_widths[-1]
+    assert fim <= 0.99, f"{espec.title}: a última coluna termina em {fim:.3f}."
 
 
 def test_tabelas_combinadas_sem_caminho_devolvem_figura_e_nao_gravam(monkeypatch):
