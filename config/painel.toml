@@ -172,7 +172,7 @@ coluna = 3
 [[painel.ativo]]
 ticker = "VIX Index"
 rotulo = "VIX"
-rotulo_grade = "Vix"
+rotulo_grade = "VIX"
 tipo = "vol"
 coluna = 4
 
@@ -203,6 +203,6 @@ coluna = 4
 [[painel.ativo]]
 ticker = "BCOM Index"
 rotulo = "BCOM (commodities)"
-rotulo_grade = "Bcom"
+rotulo_grade = "BCOM"
 tipo = "indice"
 coluna = 4
