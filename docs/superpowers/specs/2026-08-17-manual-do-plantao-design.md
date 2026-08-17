@@ -74,7 +74,12 @@ dry run.
 **`04-decisoes.md`.** Recolhe o que hoje está espalhado ou não está escrito:
 
 - a escolha de temas entre a triagem e a redação — o comando **recusa** fazê-la, e o
-  porquê dessa recusa é a coisa mais importante do processo;
+  porquê dessa recusa é a coisa mais importante do processo. A página precisa distinguir
+  duas coisas que a interface junta: os **números** dizem quais temas entram, e essa
+  parte é mecânica; a **ressalva dentro do marcador** é o que o autor acrescenta, e é
+  onde o julgamento dele de fato entra. Em 17/08 foi uma ressalva assim que impediu o
+  comentário de afirmar que o dólar caíra na sessão quando o painel mostrava o câmbio
+  estável — e nenhuma escolha de números teria produzido aquilo;
 - os "pontos sob julgamento do autor" que a revisão devolve, e como decidi-los;
 - quando uma divergência do `conferir` é intencional e quando é acidente;
 - quando `--forcar` é legítimo, e as três recusas que ele contorna de uma vez.
@@ -88,6 +93,8 @@ tela** e a saída. O material vem do que a operação de 17/08 expôs:
 | a consulta do calendário estoura | máquina sem licença BQL | `--sem-calendario`, ou `SEM_CALENDARIO` no notebook |
 | "N PDF(s) não renderam texto" | digitalização sem OCR | reimprimir em PDF |
 | "arquivo(s) NÃO foram lidos" | arquivo que não é PDF em `fontes/` | reimprimir em PDF |
+| "não achei a tabela de temas candidatos" | a triagem saiu fora do formato | escrever os temas à mão, sem os números |
+| "a triagem de … não tem o tema N" | número fora da tabela | reler a tabela; ela diz até onde vai |
 | o `conferir` acusa divergência | texto corrigido no Word e não repetido no `.md` | repetir no `.md`, ou entender o que sumiu |
 | banner de DRY RUN | fora da janela | é ensaio; não enviar |
 | aviso de fuso | máquina fora de Brasília | as regras temporais do guia pressupõem Brasília↔Nova York |
@@ -197,5 +204,5 @@ Então: abrir a aba Wiki, criar qualquer página, e a partir daí o publicador f
 4. Mudar `janela.ABERTURA` para outra hora deixa a suíte vermelha, nomeando os arquivos.
 5. `uv run publica-wiki` monta a cópia com a faixa de origem em cada página; o autor a
    empurra.
-6. `uv run matinal` e todos os subcomandos seguem se comportando como hoje — 130 testes
+6. `uv run matinal` e todos os subcomandos seguem se comportando como hoje — 135 testes
    verdes.

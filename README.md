@@ -272,13 +272,22 @@ Não pular esta etapa em dia corrido. É onde se evita excesso de temas e dado a
 ### Passo 4 — Redação (T0 + 15 min)
 
 ```
-uv run matinal redacao --temas "dominante | tema 2 | tema 3"
+uv run matinal redacao --temas-numeros "1,3,2"
 ```
 
-Os temas vão na ordem de relevância, o dominante primeiro. Para textos longos,
-`--temas-arquivo temas.md`. **É por aqui que a decisão do passo 3 entra no fluxo** — o
-comando recusa rodar sem os temas, porque a hierarquia é escolha do autor e não do
-modelo.
+Os números são os da tabela de temas candidatos da triagem, na ordem de relevância e com
+o dominante primeiro. O texto sai da própria triagem: retranscrever a descrição à mão é
+trabalho de cópia, e cópia erra.
+
+**É por aqui que a decisão do passo 3 entra no fluxo** — o comando recusa rodar sem os
+temas, porque a hierarquia é escolha do autor e não do modelo.
+
+O que os números não dizem é a **ressalva**: um limite temporal, uma atribuição
+obrigatória, uma direção que o painel contradiz. Para acrescentá-la, escrever os temas em
+vez de escolhê-los, com `--temas "dominante | tema 2"` ou `--temas-arquivo temas.md`. Em
+17/08 foi uma ressalva assim — "as moedas estão estáveis na sessão corrente" — que
+impediu o comentário de afirmar que o dólar caíra no dia, quando o painel mostrava o
+câmbio estável.
 
 A redação recebe os alertas da triagem automaticamente, extraídos da seção C do arquivo
 da etapa anterior. Sai `saida/redacao_AAAAMMDD.md`, com o comentário e o bloco de
