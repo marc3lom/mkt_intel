@@ -2,7 +2,7 @@
 
     uv run matinal                      painel, calendário e bloco direcional
     uv run matinal triagem              etapa 1 — inventário de temas
-    uv run matinal redacao --temas "…"  etapa 2 — o texto
+    uv run matinal redacao --temas-numeros "1,3,2"   etapa 2 — o texto
     uv run matinal revisao              etapa 3 — checagem e texto revisado
     uv run matinal --comentario x.md    o .docx a partir do template
     uv run matinal conferir             .docx contra .md, antes do e-mail
@@ -62,6 +62,8 @@ SUBCOMANDOS = ("triagem", "redacao", "revisao", "conferir", "enviado")
 REMEDIO = {
     plantao.COLETA_AUSENTE: " Rodar `uv run matinal` antes das etapas.",
     plantao.TRIAGEM_AUSENTE: " Rodar `uv run matinal triagem` antes.",
+    plantao.TRIAGEM_ILEGIVEL:
+        " Escolher os temas à mão, com --temas ou --temas-arquivo.",
     plantao.REDACAO_AUSENTE: " Rodar `uv run matinal redacao` antes.",
     plantao.FORCAR_FORA_DA_JANELA:
         "\nSe o envio ocorreu mesmo e o plantão atrasou, repetir com --forcar.",
@@ -153,6 +155,10 @@ def main() -> int:
                              "dominante primeiro. Só para `redacao`.")
     parser.add_argument("--temas-arquivo", type=Path, default=None,
                         help="Arquivo com os temas, alternativa a --temas.")
+    parser.add_argument("--temas-numeros", type=str, default=None,
+                        help="Números da tabela da triagem, separados por "
+                             "vírgula e com o dominante primeiro: \"1,3,2\". "
+                             "O texto sai da própria triagem, sem transcrição.")
     parser.add_argument("--fontes", type=Path, default=FONTES_PADRAO,
                         help=f"Pasta com os PDFs do dia. Padrão: {FONTES_PADRAO}")
     parser.add_argument("--anterior", type=Path, default=None,
@@ -203,9 +209,10 @@ def main() -> int:
             return _falha(e, voz, f"Erro: {args.temas_arquivo} não existe.")
         return _falha(e, voz,
                       "Erro: a redação precisa dos temas escolhidos pelo autor. "
-                      "Passar --temas \"dominante | tema 2 | tema 3\" ou "
-                      "--temas-arquivo. A decisão editorial entre a triagem e a "
-                      "redação é humana.")
+                      "Passar --temas-numeros \"1,3,2\", com os números da "
+                      "triagem e o dominante primeiro, ou --temas / "
+                      "--temas-arquivo para escrevê-los. A decisão editorial "
+                      "entre a triagem e a redação é humana.")
     except ErroNoModelo as e:
         return _falha(e, voz, f"Erro na etapa {args.comando}: {e}")
     except RevisaoIlegivel as e:
@@ -308,7 +315,14 @@ def _documento(args, ctx: Contexto) -> int:
 def _etapa(args, ctx: Contexto, voz: _Voz) -> int:
     """Traduz os flags da etapa e mostra o que ela produziu."""
     temas = args.temas
-    if args.temas_arquivo:
+    if args.temas_numeros:
+        # A escolha por número parte da tabela que a triagem acabou de
+        # produzir, e o núcleo é quem a lê — o notebook chama a mesma função.
+        # Erro de leitura sobe como `FaltaInsumo` e é tratado com os demais.
+        temas = plantao.temas_da_triagem(
+            ctx, [int(n) for n in args.temas_numeros.replace(",", " ").split()]
+        )
+    elif args.temas_arquivo:
         # Arquivo ausente vira ausência de temas: quem acusa é o `SemTemas` do
         # núcleo, depois das checagens dele.
         temas = (args.temas_arquivo.read_text(encoding="utf-8")

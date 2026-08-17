@@ -23,6 +23,7 @@ núcleo não conhece front-end nenhum, em vez de conhecer dois.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -64,6 +65,10 @@ PASSOS = (
     "prepara_calendario",
     "monta_bloco",
     "roda_etapa",
+    # Depois de `roda_etapa` porque a escolha de temas acontece entre a triagem
+    # e a redação, e `roda_etapa` cobre as três etapas numa entrada só. É a
+    # ordem em que os dois aparecem no notebook, que é o que o teste afere.
+    "temas_da_triagem",
     "monta_documento",
     "confere",
     "fecha_plantao",
@@ -84,6 +89,7 @@ TOLERANCIA_ASOF = 300
 # `uv run matinal`" no terminal e "rodar as células do Passo 1" no notebook.
 COLETA_AUSENTE = "coleta_ausente"
 TRIAGEM_AUSENTE = "triagem_ausente"
+TRIAGEM_ILEGIVEL = "triagem_ilegivel"
 REDACAO_AUSENTE = "redacao_ausente"
 TEMAS_AUSENTES = "temas_ausentes"
 FORCAR_FORA_DA_JANELA = "forcar_fora_da_janela"
@@ -95,6 +101,7 @@ FORCAR_DESTINO_OCUPADO = "forcar_destino_ocupado"
 REMEDIOS = (
     COLETA_AUSENTE,
     TRIAGEM_AUSENTE,
+    TRIAGEM_ILEGIVEL,
     REDACAO_AUSENTE,
     TEMAS_AUSENTES,
     FORCAR_FORA_DA_JANELA,
@@ -444,6 +451,58 @@ def _do_arquivo(ctx: Contexto, asof: datetime,
     caminho, data = achado
     avisa(f"Anterior:   {caminho.name} ({data:%d/%m/%Y})")
     return com_data(caminho.read_text(encoding="utf-8"), data)
+
+
+# Uma linha da tabela de temas candidatos: o número na primeira célula, o tema
+# na segunda. A linha de separação (`|---|---|`) não casa, porque exige dígitos.
+RE_TEMA_CANDIDATO = re.compile(r"^\|\s*(\d+)\s*\|\s*(.+?)\s*\|", re.MULTILINE)
+
+
+def temas_da_triagem(ctx: Contexto, numeros: list[int]) -> str:
+    """Os temas escolhidos, na ordem do autor, tirados da tabela da triagem.
+
+    O primeiro número é o dominante — é dele que o guia manda partir o marcador
+    de abertura —, e a ordem devolvida é a pedida, não a da tabela.
+
+    O que sai daqui é ponto de partida, não texto final. A ressalva que amarra o
+    marcador — um limite temporal, uma atribuição obrigatória, uma direção que o
+    painel contradiz — é o que o autor acrescenta, e a tabela não tem como saber.
+    Em 17/08 foi uma ressalva dessas que impediu o texto de afirmar que o dólar
+    caíra na sessão, quando o painel mostrava o câmbio estável.
+    """
+    caminho = ctx.saida / f"triagem_{ctx.marca}.md"
+    texto = _le(caminho)
+    if texto is None:
+        raise FaltaInsumo(f"falta a triagem de {ctx.marca}.",
+                          remedio=TRIAGEM_AUSENTE)
+
+    # A tabela numerada é a da seção A. Recortá-la evita que uma tabela futura
+    # noutra seção entre na conta sem ninguém perceber.
+    inicio = texto.find("A) TEMAS CANDIDATOS")
+    trecho = texto[inicio:] if inicio >= 0 else texto
+    fim = trecho.find("\n###", 1)
+    if fim > 0:
+        trecho = trecho[:fim]
+
+    por_numero = {int(n): tema for n, tema in RE_TEMA_CANDIDATO.findall(trecho)}
+    if not por_numero:
+        # O modelo já desobedeceu formato uma vez — o `partes_da_redacao` existe
+        # por isso. Devolver lista vazia em silêncio faria a redação rodar sem
+        # tema algum, e o autor descobriria lendo o comentário.
+        raise FaltaInsumo(
+            f"não achei a tabela de temas candidatos em {caminho.name}.",
+            remedio=TRIAGEM_ILEGIVEL,
+        )
+
+    faltando = [n for n in numeros if n not in por_numero]
+    if faltando:
+        raise FaltaInsumo(
+            f"a triagem de {ctx.marca} não tem o tema "
+            + ", ".join(str(n) for n in faltando)
+            + f"; ela vai de 1 a {max(por_numero)}."
+        )
+
+    return "".join(f"- {por_numero[n]}\n" for n in numeros)
 
 
 def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,

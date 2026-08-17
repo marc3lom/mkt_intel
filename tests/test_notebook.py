@@ -8,6 +8,8 @@ existe no argparse e nas células —, e é ela que estes testes prendem.
 import inspect
 from pathlib import Path
 
+import pytest
+
 RAIZ = Path(__file__).parent.parent
 NOTEBOOK = RAIZ / "notebooks" / "plantao.ipynb"
 CLI = RAIZ / "src" / "comentario_matinal" / "cli.py"
@@ -236,8 +238,34 @@ def test_notebook_cobre_todo_subcomando_do_terminal():
     )
 
 
+def _notebook_no_indice():
+    """O notebook como o git o guardaria, e não como ele está em disco.
+
+    Com o filtro `nbstripout` instalado, rodar o notebook suja a árvore de
+    trabalho e não suja o commit — é exatamente para isso que o filtro existe.
+    Ler o disco deixaria este teste vermelho toda manhã em que alguém usasse o
+    notebook, e teste que fica vermelho todo dia vira teste que ninguém lê.
+
+    O índice é o que de fato entraria no commit: com o filtro ele é limpo mesmo
+    com a árvore suja; sem o filtro ele carrega o que a árvore carrega, e é aí
+    que este teste precisa acusar.
+    """
+    import subprocess
+
+    import nbformat
+
+    try:
+        bruto = subprocess.run(
+            ["git", "show", ":notebooks/plantao.ipynb"],
+            capture_output=True, cwd=RAIZ, check=True,
+        ).stdout.decode("utf-8")
+    except (OSError, subprocess.CalledProcessError) as e:
+        pytest.skip(f"não consegui ler o índice do git: {e}")
+    return nbformat.reads(bruto, as_version=4)
+
+
 def test_notebook_comitado_nao_carrega_saida():
-    sujas = [i for i, c in enumerate(_notebook().cells, 1)
+    sujas = [i for i, c in enumerate(_notebook_no_indice().cells, 1)
              if c.cell_type == "code" and (c.get("outputs")
                                            or c.get("execution_count"))]
     assert not sujas, (

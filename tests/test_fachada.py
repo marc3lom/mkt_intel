@@ -327,6 +327,32 @@ def test_a_instrucao_de_suprir_a_falta_continua_falando_de_terminal(
     )
 
 
+def test_a_instrucao_de_escolher_temas_continua_falando_de_terminal(
+        mesa, monkeypatch, capsys):
+    """A única falta cuja instrução entra no meio da frase, e não no fim.
+
+    Ela não estava presa: a parametrização acima cobre os três códigos do
+    `REMEDIO` e deixa de fora o `REMEDIO_NO_MEIO`. Quando `--temas-numeros`
+    entrou e a frase mudou de forma, nada acusou — que é o defeito de sempre,
+    numa suíte cujo trabalho é justamente acusar.
+    """
+    mesa.grava(f"painel_{MARCA}.txt", PAINEL)
+    mesa.grava(f"triagem_{MARCA}.md", "### A) TEMAS CANDIDATOS\n")
+    monkeypatch.setattr("sys.argv", mesa.argv("redacao"))
+
+    assert main() == 1
+
+    esperado = (
+        "Erro: a redação precisa dos temas escolhidos pelo autor. "
+        'Passar --temas-numeros "1,3,2", com os números da triagem e o '
+        "dominante primeiro, ou --temas / --temas-arquivo para escrevê-los. "
+        "A decisão editorial entre a triagem e a redação é humana."
+    )
+    assert esperado in capsys.readouterr().err.splitlines(), (
+        "a linha que ensina a escolher os temas mudou"
+    )
+
+
 def test_o_aviso_de_asof_divergente_continua_nomeando_o_flag(
         mesa, monkeypatch, capsys, modelo):
     """O aviso é o mesmo fato nas duas fachadas, dito com vocabulários diferentes.
