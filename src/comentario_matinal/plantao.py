@@ -419,14 +419,6 @@ def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,
         avisos.append(mensagem)
         _diz(progresso, mensagem)
 
-    def pendentes() -> list[str]:
-        """Os avisos que quem chamou ainda não viu.
-
-        Quem passou ``progresso`` já recebeu cada um na hora; repeti-los na
-        exceção faria a fachada imprimir tudo duas vezes.
-        """
-        return [] if progresso is not None else avisos
-
     # Fontes: PDF vira texto, para que o insumo seja o mesmo em qualquer backend.
     caminho_fontes = ctx.saida / f"fontes_{ctx.marca}.txt"
     conv = converte(ctx.fontes, caminho_fontes)
@@ -450,7 +442,7 @@ def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,
     calendario_md = _le(ctx.saida / f"calendario_{ctx.marca}.md")
     if painel_txt is None:
         raise FaltaInsumo(f"falta o bloco direcional de {ctx.marca}. Rodar "
-                          "`uv run matinal` antes das etapas.", pendentes())
+                          "`uv run matinal` antes das etapas.", avisos)
     if calendario_md is None:
         avisa(f"Aviso: falta o calendário em texto de {ctx.marca}; a etapa roda "
               "sem ele.")
@@ -496,11 +488,11 @@ def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,
         if not temas:
             raise SemTemas("a redação precisa dos temas escolhidos pelo autor. A "
                            "decisão editorial entre a triagem e a redação é "
-                           "humana.", pendentes())
+                           "humana.", avisos)
         triagem = _le(ctx.saida / f"triagem_{ctx.marca}.md")
         if triagem is None:
             raise FaltaInsumo(f"falta a triagem de {ctx.marca}. Rodar `uv run "
-                              "matinal triagem` antes.", pendentes())
+                              "matinal triagem` antes.", avisos)
         alertas = secao_ou_tudo(triagem, "C) ALERTAS", "alertas")
         mensagem = mensagem_redacao(prompt, ins, temas, alertas, web)
 
@@ -508,14 +500,14 @@ def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,
         redacao = _le(ctx.saida / f"redacao_{ctx.marca}.md")
         if redacao is None:
             raise FaltaInsumo(f"falta a redação de {ctx.marca}. Rodar `uv run "
-                              "matinal redacao` antes.", pendentes())
+                              "matinal redacao` antes.", avisos)
         texto, auditoria = partes_da_redacao(redacao)
         mensagem = mensagem_revisao(prompt, ins, texto, auditoria, web)
 
     try:
         resposta = roda(mensagem, nome, destino, web=web, modelo=modelo)
     except ErroDoModelo as e:
-        raise ErroNoModelo(str(e), pendentes()) from e
+        raise ErroNoModelo(str(e), avisos) from e
 
     comentario: Path | None = None
     if nome == "revisao":
@@ -524,7 +516,7 @@ def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,
         try:
             md = comentario_revisado(resposta)
         except FormatoInesperado as e:
-            raise RevisaoIlegivel(str(e), destino, pendentes()) from e
+            raise RevisaoIlegivel(str(e), destino, avisos) from e
         comentario = ctx.saida / f"comentario_{ctx.marca}.md"
         comentario.write_text(md, encoding="utf-8")
 
@@ -583,13 +575,18 @@ def confere(ctx: Contexto) -> list[Divergencia]:
     return divergencias(docx, md)
 
 
-def fecha_plantao(ctx: Contexto, forcar: bool = False) -> Fechamento:
+def fecha_plantao(ctx: Contexto, forcar: bool = False,
+                  progresso: Callable[[str], None] | None = None) -> Fechamento:
     """Arquiva o comentário enviado e limpa o dia.
 
     Único passo que bloqueia fora da janela. Os outros produzem artefato, que
     sai carimbado como ensaio; este AFIRMA que o comentário foi enviado à
     diretoria, e o que ele arquiva vira o "comentário do dia anterior" da manhã
     seguinte. Registrar um ensaio ali contamina a triagem seguinte em silêncio.
+
+    O aviso daqui precisa sair no momento em que aparece: o ``arquiva`` escreve
+    direto no stderr logo em seguida, e guardar o nosso para o fim trocaria a
+    ordem das duas linhas que o autor lê como uma frase só.
     """
     from comentario_matinal.enviado import (
         DestinoOcupado,
@@ -600,6 +597,10 @@ def fecha_plantao(ctx: Contexto, forcar: bool = False) -> Fechamento:
     )
 
     avisos: list[str] = []
+
+    def avisa(mensagem: str) -> None:
+        avisos.append(mensagem)
+        _diz(progresso, mensagem)
 
     if ctx.dry_run and not forcar:
         raise ErroDePlantao(
@@ -624,8 +625,8 @@ def fecha_plantao(ctx: Contexto, forcar: bool = False) -> Fechamento:
                   "enviado, ou --forcar para arquivar o .md como está.",
                 avisos)
     elif not docx.exists():
-        avisos.append("Aviso: não há .docx da data; arquivando sem conferir o texto "
-                      "contra o documento enviado.")
+        avisa("Aviso: não há .docx da data; arquivando sem conferir o texto "
+              "contra o documento enviado.")
 
     try:
         escritos = arquiva(ctx.saida, ctx.arquivo, ctx.marca, forcar=forcar)

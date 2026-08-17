@@ -58,6 +58,29 @@ def _erra(mensagem: str) -> None:
     print(mensagem, file=sys.stderr)
 
 
+class _Voz:
+    """O stderr do comando, com memória do que já disse.
+
+    Os passos que demoram mostram cada aviso na hora em que ele aparece, para
+    que o autor possa interromper enquanto ainda vale a pena, e ainda assim o
+    devolvem inteiro — no resultado ou na exceção. Quem termina em erro traz o
+    registro completo, e é este objeto que sabe qual parte dele o autor já leu.
+
+    A memória fica na fachada de propósito: o núcleo entrega sempre tudo, e
+    quem tem duas saídas para conciliar é quem escreve na tela.
+    """
+
+    def __init__(self) -> None:
+        self.ditos: list[str] = []
+
+    def __call__(self, mensagem: str) -> None:
+        self.ditos.append(mensagem)
+        _erra(mensagem)
+
+    def ineditos(self, avisos: list[str]) -> list[str]:
+        return [aviso for aviso in avisos if aviso not in self.ditos]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -112,8 +135,9 @@ def main() -> int:
     parser.add_argument("--template", type=Path, default=TEMPLATE_PADRAO)
     args = parser.parse_args()
 
+    voz = _Voz()
     try:
-        return _despacha(args)
+        return _despacha(args, voz)
     except SemTemas as e:
         # A falta é do núcleo; a instrução de como suprir é de quem foi chamado
         # pela linha de comando. No notebook a mesma falta ensina outra coisa.
@@ -123,34 +147,35 @@ def main() -> int:
         # horário de redação — vêm primeiro, e os avisos delas se perderiam se a
         # fachada abortasse antes de chamá-lo.
         if args.temas_arquivo and not args.temas_arquivo.exists():
-            return _falha(e, f"Erro: {args.temas_arquivo} não existe.")
-        return _falha(e, "Erro: a redação precisa dos temas escolhidos pelo autor. "
-                         "Passar --temas \"dominante | tema 2 | tema 3\" ou "
-                         "--temas-arquivo. A decisão editorial entre a triagem e a "
-                         "redação é humana.")
+            return _falha(e, voz, f"Erro: {args.temas_arquivo} não existe.")
+        return _falha(e, voz,
+                      "Erro: a redação precisa dos temas escolhidos pelo autor. "
+                      "Passar --temas \"dominante | tema 2 | tema 3\" ou "
+                      "--temas-arquivo. A decisão editorial entre a triagem e a "
+                      "redação é humana.")
     except ErroNoModelo as e:
-        return _falha(e, f"Erro na etapa {args.comando}: {e}")
+        return _falha(e, voz, f"Erro na etapa {args.comando}: {e}")
     except RevisaoIlegivel as e:
         # A revisão foi gravada antes de o extrator falhar, e o caminho dela sai
         # como o de qualquer etapa que termina: é o arquivo que o autor precisa
         # abrir para ver o que o modelo devolveu.
         print(f"{args.comando.capitalize():<11} {e.destino}")
-        return _falha(e, f"\nErro: {e}\nA revisão completa está em {e.destino}.")
+        return _falha(e, voz, f"\nErro: {e}\nA revisão completa está em {e.destino}.")
     except MontagemFalhou as e:
-        return _falha(e, f"Erro ao montar o documento: {e}")
+        return _falha(e, voz, f"Erro ao montar o documento: {e}")
     except ErroDePlantao as e:
-        return _falha(e, f"Erro: {e}")
+        return _falha(e, voz, f"Erro: {e}")
 
 
-def _falha(e: ErroDePlantao, mensagem: str) -> int:
-    """Mostra o que o passo já tinha a dizer antes de dizer por que parou."""
-    for aviso in e.avisos:
+def _falha(e: ErroDePlantao, voz: _Voz, mensagem: str) -> int:
+    """Mostra o que o passo ainda não disse, e então por que ele parou."""
+    for aviso in voz.ineditos(e.avisos):
         _erra(aviso)
     _erra(mensagem)
     return 1
 
 
-def _despacha(args) -> int:
+def _despacha(args, voz: _Voz) -> int:
     ctx = plantao.contexto(asof=args.asof, saida=args.saida, fontes=args.fontes,
                            arquivo=args.arquivo, config=args.config)
     for aviso in ctx.avisos:
@@ -160,17 +185,17 @@ def _despacha(args) -> int:
         return _conferir(ctx)
 
     if args.comando == "enviado":
-        return _enviado(args, ctx)
+        return _enviado(args, ctx, voz)
 
     # As etapas de IA consomem o material já gerado pela coleta; nenhuma delas
     # toca no Bloomberg.
     if args.comando:
-        return _etapa(args, ctx)
+        return _etapa(args, ctx, voz)
 
-    return _coleta(args, ctx)
+    return _coleta(args, ctx, voz)
 
 
-def _coleta(args, ctx: Contexto) -> int:
+def _coleta(args, ctx: Contexto, voz: _Voz) -> int:
     """Painel, calendário e bloco direcional — e o documento, se houver texto."""
     caminho_painel = ctx.saida / f"painel_{ctx.marca}.png"
     caminho_tabela = ctx.saida / f"calendario_{ctx.marca}.png"
@@ -182,14 +207,14 @@ def _coleta(args, ctx: Contexto) -> int:
     if args.comentario and caminho_painel.exists() and caminho_tabela.exists():
         return _documento(args, ctx)
 
-    mercado = plantao.coleta_mercado(ctx, progresso=_erra)
+    mercado = plantao.coleta_mercado(ctx, progresso=voz)
 
     painel = plantao.desenha_painel(ctx, mercado)
     print(f"Painel:     {painel.caminho}")
 
     calendario = None
     if not args.sem_calendario:
-        calendario = plantao.prepara_calendario(ctx, progresso=_erra)
+        calendario = plantao.prepara_calendario(ctx, progresso=voz)
         for aviso in calendario.avisos:
             _erra(aviso)
         if calendario.caminho_png:
@@ -223,7 +248,7 @@ def _documento(args, ctx: Contexto) -> int:
     return 0
 
 
-def _etapa(args, ctx: Contexto) -> int:
+def _etapa(args, ctx: Contexto, voz: _Voz) -> int:
     """Traduz os flags da etapa e mostra o que ela produziu."""
     temas = args.temas
     if args.temas_arquivo:
@@ -252,7 +277,7 @@ def _etapa(args, ctx: Contexto) -> int:
     # modelo leva minutos, e o que eles dizem — fontes ausentes, comentário
     # anterior sem base — só serve para decidir se vale interromper.
     etapa = plantao.roda_etapa(ctx, args.comando, temas=temas, anterior=anterior,
-                               web=args.web, modelo=args.modelo, progresso=_erra)
+                               web=args.web, modelo=args.modelo, progresso=voz)
 
     print(f"{etapa.nome.capitalize():<11} {etapa.caminho}")
 
@@ -282,11 +307,12 @@ def _conferir(ctx: Contexto) -> int:
     return 1
 
 
-def _enviado(args, ctx: Contexto) -> int:
-    fechamento = plantao.fecha_plantao(ctx, forcar=args.forcar)
+def _enviado(args, ctx: Contexto, voz: _Voz) -> int:
+    # O aviso de arquivamento sem conferência sai por `voz`, no instante em que
+    # aparece: logo depois dele o `arquiva` escreve o seu direto no stderr, e as
+    # duas linhas só fazem sentido na ordem em que os fatos ocorreram.
+    fechamento = plantao.fecha_plantao(ctx, forcar=args.forcar, progresso=voz)
 
-    for aviso in fechamento.avisos:
-        _erra(aviso)
     for caminho in fechamento.arquivados:
         print(f"Arquivado:  {caminho}")
     print(f"Limpeza:    {fechamento.removidos} arquivo(s) removidos de "
