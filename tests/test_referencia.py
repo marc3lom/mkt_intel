@@ -28,7 +28,7 @@ TICKERS = ["AA Index", "BB Index", "CC Curncy", "DD Comdty"]
 
 
 def _itens():
-    from daily.tickers import TickerInfo
+    from comentario_matinal.render.tickers import TickerInfo
 
     return [
         TickerInfo("AA Index", "aa", "Taxa 10a", "rate"),
@@ -64,7 +64,8 @@ def _intraday() -> dict[str, pd.Series]:
 
 
 def _desenha(destino: Path):
-    from daily.monitor import build_monitor_panel
+    from comentario_matinal.config import MERCADO_FECHADO
+    from comentario_matinal.render.monitor import build_monitor_panel
 
     fig, _ = build_monitor_panel(
         _itens(),
@@ -75,6 +76,7 @@ def _desenha(destino: Path):
         grid=(1, 4),
         asof=ASOF,
         column_headers=["Taxas", "Bolsas", "Moedas", "Commodities"],
+        market_closed_path=MERCADO_FECHADO,
     )
     plt.close(fig)
     return destino

@@ -2,8 +2,8 @@
 
 A tabela enviada à diretoria e o bloco de status usado na checagem do comentário
 saem do mesmo ``DataFrame`` do BQL. O que os separa é apenas o recorte: a tabela
-mostra a janela do dia anterior e do dia, como o ``daily`` sempre fez; o bloco de
-status olha só o dia da redação.
+mostra a janela do dia anterior e do dia, como a camada de renderização sempre
+fez; o bloco de status olha só o dia da redação.
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ def coleta_calendario() -> tuple[pd.DataFrame, pd.DataFrame]:
     BQL do xbbg não envia — a chamada volta como "User not authorized to use BQL".
     Por isso esta consulta é separada da de mercado; não há como fundi-las.
     """
-    from daily.bloomberg import fetch_central_banks, fetch_eco_calendar
+    from comentario_matinal.bloomberg import fetch_central_banks, fetch_eco_calendar
 
     eco = fetch_eco_calendar()
     bancos = fetch_central_banks()

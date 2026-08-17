@@ -6,27 +6,22 @@ readme = "README.md"
 authors = [
     { name = "Marcelo Martinelli", email = "mmartinelli@gmail.com" }
 ]
-# O piso vem do pacote `daily`, que exige 3.14. Ele é dependência daqui, então
-# este projeto não pode pedir menos.
+# O piso de 3.14 é o mesmo que a camada de renderização absorvida exigia.
 requires-python = ">=3.14"
 dependencies = [
-    "daily",
     "matplotlib>=3.10",
     "pandas>=2.2",
+    "numpy>=2.0",
     "xbbg>=1.4",
     "blpapi>=3.24",
+    "polars-bloomberg>=0.5.4",
+    "pandas-market-calendars>=5.4.0",
     "python-docx>=1.2.0",
     "pypdf>=6.16.1",
     "cryptography>=50.0.0",
 ]
 
-# A camada de renderização (grade do painel, tabelas do calendário, detecção de
-# feriado) vive no repositório `daily` e é compartilhada, não copiada: ela tem
-# outros consumidores lá — os notebooks de `drafts/` e o `tests/test_render.py`.
-# Duplicar aqui criaria duas cópias divergindo com o tempo, que é a versão
-# estrutural do problema que este comando existe para resolver.
 [tool.uv.sources]
-daily = { path = "../daily", editable = true }
 blpapi = { index = "bloomberg" }
 
 # blpapi não é publicado no PyPI. Vem do índice da própria Bloomberg, declarado

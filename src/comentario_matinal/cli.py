@@ -38,6 +38,7 @@ from comentario_matinal.config import (  # noqa: E402
     CONFIG_PADRAO,
     FONTES_PADRAO,
     GUIA_DE_ESTILO,
+    MERCADO_FECHADO,
     PROMPT_ETAPA,
     SAIDA_PADRAO,
     TEMPLATE_PADRAO,
@@ -162,7 +163,7 @@ def main() -> int:
     intraday = coleta_intraday(cfg.ativos, asof, ref)
 
     # --- Saída 1: o painel em imagem ---------------------------------------
-    from daily.monitor import build_monitor_panel
+    from comentario_matinal.render.monitor import build_monitor_panel
 
     # A grade é desenhada na ordem de leitura por linha; o painel.toml lista por
     # coluna. As métricas voltam indexadas por ticker, então o texto não é afetado.
@@ -173,6 +174,7 @@ def main() -> int:
         allowed_root=saida,
         asof=asof,
         column_headers=cfg.titulos_colunas or None,
+        market_closed_path=MERCADO_FECHADO,
     )
     plt.close(fig)
     print(f"Painel:     {caminho_painel}")
@@ -183,7 +185,7 @@ def main() -> int:
         print("Consultando calendário econômico (BQL)...", file=sys.stderr)
         eco, bancos = coleta_calendario()
 
-        from daily.tables import (
+        from comentario_matinal.render.tables import (
             CB_TABLE_SPEC_COMBINED,
             ECO_TABLE_SPEC,
             render_combined_tables,

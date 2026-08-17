@@ -40,7 +40,8 @@ comentario_matinal/
 │   ├── etapas.py               as três etapas de IA e o encadeamento
 │   ├── documento.py            montagem do .docx a partir do template
 │   ├── enviado.py              arquivamento do enviado e limpeza do dia
-│   └── cli.py                  o comando
+│   ├── cli.py                  o comando
+│   └── render/                 painel, tabelas do calendário e o que elas precisam
 ├── fontes/                     PDFs do dia (fora do repositório)
 ├── saida/                      saídas do dia (fora do repositório)
 ├── config/
@@ -61,36 +62,12 @@ partir dos arquivos de `prompts/`. O Project continua existindo como caminho
 alternativo — ver "O Project do Claude", mais abaixo.
 
 1. Instalar as dependências: `uv sync`.
-2. Clonar o `daily` ao lado deste repositório, em `../daily`, em `main`.
-3. Ter o `claude` no PATH, autenticado. É o backend padrão das etapas de IA.
+2. Ter o `claude` no PATH, autenticado. É o backend padrão das etapas de IA.
 
 O `uv sync` cria o `.venv` e instala tudo, inclusive o `blpapi`, que não vem do PyPI —
 o `pyproject.toml` já aponta para o índice da Bloomberg. Rodar sempre do Windows nativo,
 nunca do WSL: o `blpapi` conversa com o terminal por IPC local. A instalação não exige
 terminal aberto; a execução do comando, sim.
-
-O `../daily` é dependência de instalação, não de execução apenas: sem ele o `uv sync`
-falha. A camada que desenha a grade do painel e as tabelas do calendário mora lá e é
-compartilhada, não copiada — ela tem outros consumidores naquele repositório.
-
-O plantão lê `../daily` diretamente do disco, sem passar pelo GitHub. Um `git checkout`
-naquele diretório muda o código que o comando `matinal` executa na manhã seguinte, sem
-aviso e sem reinstalação. Por isso `../daily` fica fixo em `main`, e o desenvolvimento
-acontece em outro lugar:
-
-```
-../daily        main      o que o plantão consome
-../daily-dev    develop   worktree de desenvolvimento
-```
-
-**Alteração na renderização se faz em `../daily-dev`, e só chega ao plantão depois de
-mesclada em `main`.** As duas pastas compartilham o mesmo repositório git, então o
-trabalho feito na worktree já está versionado — o que a separação garante é que ele não
-entre em produção antes da hora. Para conferir onde cada uma está:
-
-```
-git -C ../daily worktree list
-```
 
 Sempre que uma convenção mudar, editar `prompts/00_guia_de_estilo.md` e comitar. O
 comando lê o arquivo do disco a cada execução, então a mudança vale no plantão

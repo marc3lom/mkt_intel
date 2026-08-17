@@ -1,8 +1,8 @@
 """Leitura da configuração canônica do painel.
 
 O ``config/painel.toml`` é a única lista de ativos do sistema. Ela é convertida
-aqui para os ``TickerInfo`` que a camada de renderização do ``daily`` consome, de
-modo que imagem e texto partam literalmente da mesma sequência de ativos.
+aqui para os ``TickerInfo`` que a camada de renderização consome, de modo que
+imagem e texto partam literalmente da mesma sequência de ativos.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from daily.tickers import TickerInfo
+from comentario_matinal.render.tickers import TickerInfo
 
 TZ_BR = ZoneInfo("America/Sao_Paulo")
 
@@ -20,6 +20,7 @@ RAIZ = Path(__file__).resolve().parent.parent.parent
 CONFIG_PADRAO = RAIZ / "config" / "painel.toml"
 SAIDA_PADRAO = RAIZ / "saida"
 TEMPLATE_PADRAO = RAIZ / "templates" / "comentario.dotx"
+MERCADO_FECHADO = RAIZ / "templates" / "mercado_fechado.png"
 FONTES_PADRAO = RAIZ / "fontes"
 ARQUIVO_PADRAO = RAIZ / "arquivo"
 PROMPTS = RAIZ / "prompts"
@@ -30,7 +31,7 @@ PROMPT_ETAPA = {
     "revisao": PROMPTS / "03_revisao.md",
 }
 
-# Os tipos do painel.toml estão em português; a camada de renderização do daily
+# Os tipos do painel.toml estão em português; a camada de renderização
 # despacha o formatador por chaves em inglês. A tradução é aqui, e só aqui.
 TIPOS = {
     "taxa": "rate",
@@ -113,7 +114,7 @@ class Config:
         return preenchidas
 
     def para_ticker_info(self, ativos: list[Ativo] | None = None) -> list[TickerInfo]:
-        """Converte para o formato que ``daily.monitor`` espera."""
+        """Converte para o formato que ``render.monitor`` espera."""
         return [
             TickerInfo(
                 ticker=a.ticker,
