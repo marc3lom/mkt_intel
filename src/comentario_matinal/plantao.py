@@ -12,6 +12,13 @@ lista ``avisos`` do resultado, em vez de ir ao stderr e sumir. Código de saída
 Os avisos acumulados até um erro viajam na própria exceção. Sem isso eles se
 perderiam justamente na execução que deu errado, que é quando o autor mais
 precisa deles para entender o que faltou.
+
+Este módulo diz o que aconteceu, nunca o que digitar em seguida: "Rodar `uv run
+matinal` antes das etapas" é conselho certo no terminal e errado numa célula de
+notebook, onde não há linha de comando alguma na tela que o autor está olhando.
+O que falta, e o que contornaria uma recusa, viaja como dado — ``REMEDIOS`` nas
+exceções, ``AVISOS`` nos avisos —, e a frase é escrita por cada fachada. Assim o
+núcleo não conhece front-end nenhum, em vez de conhecer dois.
 """
 
 from __future__ import annotations
@@ -20,6 +27,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Self
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -71,17 +79,72 @@ COM_ANTERIOR = ("triagem", "revisao")
 # redação das 07h35 —, e acima disso o painel provavelmente é de outro dia.
 TOLERANCIA_ASOF = 300
 
+# O que falta, ou o que contornaria a recusa, nomeado como dado. A frase que
+# ensina a supri-lo é de cada fachada: o mesmo `COLETA_AUSENTE` vira "rodar
+# `uv run matinal`" no terminal e "rodar as células do Passo 1" no notebook.
+COLETA_AUSENTE = "coleta_ausente"
+TRIAGEM_AUSENTE = "triagem_ausente"
+REDACAO_AUSENTE = "redacao_ausente"
+TEMAS_AUSENTES = "temas_ausentes"
+FORCAR_FORA_DA_JANELA = "forcar_fora_da_janela"
+FORCAR_DIVERGENCIA = "forcar_divergencia"
+FORCAR_DESTINO_OCUPADO = "forcar_destino_ocupado"
+
+# Todos eles, para que a fachada que esquecer um seja pega por teste em vez de
+# calar a instrução em silêncio.
+REMEDIOS = (
+    COLETA_AUSENTE,
+    TRIAGEM_AUSENTE,
+    REDACAO_AUSENTE,
+    TEMAS_AUSENTES,
+    FORCAR_FORA_DA_JANELA,
+    FORCAR_DIVERGENCIA,
+    FORCAR_DESTINO_OCUPADO,
+)
+
+# Avisos que cada fachada mostra à sua maneira. Um deles chama a coisa de
+# `--asof` no terminal e de argumento de função no notebook; o outro é banner de
+# stderr de um lado e faixa colorida do outro, e quem já o desenhou não quer o
+# texto de novo logo abaixo.
+DRY_RUN = "dry_run"
+ASOF_DIVERGE_DO_PAINEL = "asof_diverge_do_painel"
+
+AVISOS = (DRY_RUN, ASOF_DIVERGE_DO_PAINEL)
+
+
+class Aviso(str):
+    """Aviso que cada fachada pode dizer com o seu próprio vocabulário.
+
+    É ``str`` para que quem só precisa mostrá-lo não precise saber de nada: o
+    texto que ele carrega já está pronto e não nomeia flag alguma. O ``codigo`` e
+    os ``dados`` existem para quem precisa dizer a mesma coisa em outra língua.
+    """
+
+    codigo: str
+    dados: dict[str, str]
+
+    def __new__(cls, texto: str, codigo: str, **dados: str) -> Self:
+        aviso = super().__new__(cls, texto)
+        aviso.codigo = codigo
+        aviso.dados = dados
+        return aviso
+
 
 class ErroDePlantao(RuntimeError):
     """Impede seguir. Cada fachada decide como mostrar.
 
     Carrega os avisos já acumulados quando o erro apareceu, porque eles foram
     produzidos antes dele e o autor precisa vê-los na mesma ordem.
+
+    A mensagem diz o fato e para aí. ``remedio``, quando existe, nomeia o que
+    supriria a falta; a frase que ensina a supri-la é de quem chamou.
     """
 
-    def __init__(self, mensagem: str, avisos: list[str] | None = None) -> None:
+    def __init__(self, mensagem: str, avisos: list[str] | None = None,
+                 remedio: str | None = None) -> None:
         super().__init__(mensagem)
         self.avisos = list(avisos or [])
+        self.remedio = remedio
 
 
 class SemDadoDeMercado(ErroDePlantao):
@@ -234,8 +297,10 @@ def contexto(asof: datetime | str | None = None,
     avisos: list[str] = []
     dry_run = not na_janela(agora())
     if dry_run:
-        avisos.append(f"\n*** DRY RUN — fora da janela de {faixa()} ***\n"
-                      "Execução de ensaio. Não enviar o resultado à diretoria.\n")
+        avisos.append(Aviso(
+            f"\n*** DRY RUN — fora da janela de {faixa()} ***\n"
+            "Execução de ensaio. Não enviar o resultado à diretoria.\n",
+            DRY_RUN, faixa=faixa()))
     aviso_fuso = divergencia()
     if aviso_fuso:
         avisos.append(aviso_fuso)
@@ -441,8 +506,8 @@ def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,
     painel_txt = _le(ctx.saida / f"painel_{ctx.marca}.txt")
     calendario_md = _le(ctx.saida / f"calendario_{ctx.marca}.md")
     if painel_txt is None:
-        raise FaltaInsumo(f"falta o bloco direcional de {ctx.marca}. Rodar "
-                          "`uv run matinal` antes das etapas.", avisos)
+        raise FaltaInsumo(f"falta o bloco direcional de {ctx.marca}.", avisos,
+                          remedio=COLETA_AUSENTE)
     if calendario_md is None:
         avisa(f"Aviso: falta o calendário em texto de {ctx.marca}; a etapa roda "
               "sem ele.")
@@ -454,9 +519,12 @@ def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,
     if ctx.asof_explicito:
         asof = ctx.asof
         if do_painel and abs((asof - do_painel).total_seconds()) > TOLERANCIA_ASOF:
-            avisa(f"Aviso: --asof ({asof:%d/%m %Hh%M}) diverge da referência do "
-                  f"painel ({do_painel:%d/%m %Hh%M}). O painel é o material que a "
-                  "etapa analisa; conferir se é mesmo o do dia.")
+            avisa(Aviso(
+                f"Aviso: o horário de redação fixado ({asof:%d/%m %Hh%M}) diverge "
+                f"da referência do painel ({do_painel:%d/%m %Hh%M}). O painel é o "
+                "material que a etapa analisa; conferir se é mesmo o do dia.",
+                ASOF_DIVERGE_DO_PAINEL,
+                asof=f"{asof:%d/%m %Hh%M}", painel=f"{do_painel:%d/%m %Hh%M}"))
     elif do_painel:
         asof = do_painel
     else:
@@ -488,19 +556,19 @@ def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,
         if not temas:
             raise SemTemas("a redação precisa dos temas escolhidos pelo autor. A "
                            "decisão editorial entre a triagem e a redação é "
-                           "humana.", avisos)
+                           "humana.", avisos, remedio=TEMAS_AUSENTES)
         triagem = _le(ctx.saida / f"triagem_{ctx.marca}.md")
         if triagem is None:
-            raise FaltaInsumo(f"falta a triagem de {ctx.marca}. Rodar `uv run "
-                              "matinal triagem` antes.", avisos)
+            raise FaltaInsumo(f"falta a triagem de {ctx.marca}.", avisos,
+                              remedio=TRIAGEM_AUSENTE)
         alertas = secao_ou_tudo(triagem, "C) ALERTAS", "alertas")
         mensagem = mensagem_redacao(prompt, ins, temas, alertas, web)
 
     else:  # revisao
         redacao = _le(ctx.saida / f"redacao_{ctx.marca}.md")
         if redacao is None:
-            raise FaltaInsumo(f"falta a redação de {ctx.marca}. Rodar `uv run "
-                              "matinal redacao` antes.", avisos)
+            raise FaltaInsumo(f"falta a redação de {ctx.marca}.", avisos,
+                              remedio=REDACAO_AUSENTE)
         texto, auditoria = partes_da_redacao(redacao)
         mensagem = mensagem_revisao(prompt, ins, texto, auditoria, web)
 
@@ -606,9 +674,8 @@ def fecha_plantao(ctx: Contexto, forcar: bool = False,
         raise ErroDePlantao(
             f"fora da janela de {faixa()} — esta execução é ensaio, e `enviado` "
             "registra o comentário como enviado à diretoria. O que for arquivado "
-            "vira o \"comentário do dia anterior\" de amanhã.\n"
-            "Se o envio ocorreu mesmo e o plantão atrasou, repetir com --forcar.",
-            avisos)
+            "vira o \"comentário do dia anterior\" de amanhã.",
+            avisos, remedio=FORCAR_FORA_DA_JANELA)
 
     md = ctx.saida / f"comentario_{ctx.marca}.md"
     docx = ctx.saida / f"comentario_{ctx.marca}.docx"
@@ -621,9 +688,8 @@ def fecha_plantao(ctx: Contexto, forcar: bool = False,
                 "que fica arquivado e o que a triagem de amanhã lê como comentário "
                 "do dia anterior.\n\n"
                 + "\n".join(relatorio(div))
-                + "\nNada foi arquivado. Corrigir o .md para refletir o que foi "
-                  "enviado, ou --forcar para arquivar o .md como está.",
-                avisos)
+                + "\nNada foi arquivado.",
+                avisos, remedio=FORCAR_DIVERGENCIA)
     elif not docx.exists():
         avisa("Aviso: não há .docx da data; arquivando sem conferir o texto "
               "contra o documento enviado.")
@@ -633,9 +699,8 @@ def fecha_plantao(ctx: Contexto, forcar: bool = False,
     except FileNotFoundError as e:
         raise ErroDePlantao(str(e), avisos) from e
     except DestinoOcupado as e:
-        raise ErroDePlantao(f"{e}.\nNada foi arquivado e nada foi apagado. Conferir "
-                            "se a data está certa; --forcar sobrescreve.",
-                            avisos) from e
+        raise ErroDePlantao(f"{e}.\nNada foi arquivado e nada foi apagado.",
+                            avisos, remedio=FORCAR_DESTINO_OCUPADO) from e
 
     # Só aqui, e só depois de o arquivamento ter dado certo.
     n = limpa([ctx.fontes, ctx.saida])

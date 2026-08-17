@@ -53,9 +53,60 @@ from comentario_matinal.plantao import (  # noqa: E402
 # Os subcomandos que o plantão expõe, na ordem do runbook.
 SUBCOMANDOS = ("triagem", "redacao", "revisao", "conferir", "enviado")
 
+# O núcleo diz o que falta e para aí; a frase que ensina a suprir é de quem foi
+# chamado. Estas são as do terminal — falam em `uv run matinal` e em flags, que
+# é o que o autor tem à mão quando lê o erro.
+#
+# O separador de cada frase faz parte dela. O fato do núcleo termina onde
+# termina, e é aqui que se decide se a instrução continua a linha ou abre outra.
+REMEDIO = {
+    plantao.COLETA_AUSENTE: " Rodar `uv run matinal` antes das etapas.",
+    plantao.TRIAGEM_AUSENTE: " Rodar `uv run matinal triagem` antes.",
+    plantao.REDACAO_AUSENTE: " Rodar `uv run matinal redacao` antes.",
+    plantao.FORCAR_FORA_DA_JANELA:
+        "\nSe o envio ocorreu mesmo e o plantão atrasou, repetir com --forcar.",
+    plantao.FORCAR_DIVERGENCIA:
+        " Corrigir o .md para refletir o que foi enviado, ou --forcar para "
+        "arquivar o .md como está.",
+    plantao.FORCAR_DESTINO_OCUPADO:
+        " Conferir se a data está certa; --forcar sobrescreve.",
+}
+
+# `SemTemas` é o único cuja instrução não cabe no fim: ela entra no meio, entre
+# a falta e a razão dela. Por isso o seu handler reescreve a mensagem inteira em
+# vez de completá-la, e por isso o código não está no REMEDIO acima.
+REMEDIO_NO_MEIO = frozenset({plantao.TEMAS_AUSENTES})
+
+# Os avisos que o terminal diz com o seu próprio vocabulário. O núcleo entrega
+# um texto que não nomeia flag alguma, porque numa célula de notebook não há
+# flag; aqui eles voltam a falar de linha de comando.
+AVISO = {
+    plantao.ASOF_DIVERGE_DO_PAINEL:
+        "Aviso: --asof ({asof}) diverge da referência do painel ({painel}). O "
+        "painel é o material que a etapa analisa; conferir se é mesmo o do dia.",
+}
+
+# O banner de dry run já sai do núcleo na forma que o terminal usa — asteriscos
+# e linha em branco em volta, para interromper a leitura do stderr. Aqui não há
+# o que reescrever; o notebook é que o troca por uma faixa.
+AVISO_INTACTO = frozenset({plantao.DRY_RUN})
+
 
 def _erra(mensagem: str) -> None:
-    print(mensagem, file=sys.stderr)
+    print(_no_vocabulario_do_terminal(mensagem), file=sys.stderr)
+
+
+def _no_vocabulario_do_terminal(mensagem: str) -> str:
+    """Reescreve o aviso que o núcleo deixou em forma neutra.
+
+    Passa por aqui tudo o que o comando escreve no stderr, e não só os avisos:
+    o que não tiver código atravessa intacto, e assim nenhum ponto de saída
+    precisa lembrar de traduzir.
+    """
+    codigo = getattr(mensagem, "codigo", None)
+    if codigo in AVISO:
+        return AVISO[codigo].format(**mensagem.dados)
+    return mensagem
 
 
 class _Voz:
@@ -141,6 +192,8 @@ def main() -> int:
     except SemTemas as e:
         # A falta é do núcleo; a instrução de como suprir é de quem foi chamado
         # pela linha de comando. No notebook a mesma falta ensina outra coisa.
+        # Aqui a mensagem é reescrita inteira, e não completada no fim: ver
+        # REMEDIO_NO_MEIO.
         #
         # O arquivo inexistente só é acusado aqui, e não na hora de ler: as
         # checagens que o núcleo faz antes — bloco direcional, calendário,
@@ -168,10 +221,15 @@ def main() -> int:
 
 
 def _falha(e: ErroDePlantao, voz: _Voz, mensagem: str) -> int:
-    """Mostra o que o passo ainda não disse, e então por que ele parou."""
+    """Mostra o que o passo ainda não disse, e então por que ele parou.
+
+    A instrução de como suprir a falta é acrescentada aqui, e não no núcleo:
+    lá ela seria a mesma nas duas fachadas, e no notebook mandaria o autor
+    digitar um comando que não existe na célula que ele está olhando.
+    """
     for aviso in voz.ineditos(e.avisos):
         _erra(aviso)
-    _erra(mensagem)
+    _erra(mensagem + REMEDIO.get(e.remedio, ""))
     return 1
 
 

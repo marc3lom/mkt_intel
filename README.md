@@ -179,6 +179,11 @@ vezes, no argparse e nas células —, e é isso que `tests/test_notebook.py` pr
 passo novo no núcleo ou subcomando novo no terminal derruba o teste até que o notebook
 seja atualizado junto.
 
+O núcleo também não escreve instrução de terminal. Ele diz o que falta — "falta a
+triagem de 20260817." — e nomeia a falta como dado; a frase que ensina a supri-la é de
+cada fachada, porque "rodar `uv run matinal triagem`" é conselho certo no terminal e
+errado numa célula, onde não há linha de comando na tela que o autor está olhando.
+
 **O Passo 9 só existe no terminal.** `uv run matinal enviado` arquiva o comentário e
 esvazia `fontes/` e `saida/`; o que ele arquiva vira o "comentário do dia anterior" de
 amanhã. É o único passo destrutivo do processo e o único que afirma um fato que

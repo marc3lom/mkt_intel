@@ -60,6 +60,10 @@ REVISAO_ILEGIVEL = """## 3) TEXTO REVISADO
 Esqueci o bloco de código.
 """
 
+# O mesmo painel, gravado com um horário de redação longe do `--asof` que a Mesa
+# passa. É o que dispara o aviso de divergência.
+PAINEL_DE_OUTRA_HORA = PAINEL.replace("17/08/2026 07:40", "17/08/2026 09:30")
+
 MARCADOR = "[[o modelo começou]]"
 
 
@@ -254,3 +258,86 @@ def test_avisos_da_etapa_chegam_antes_da_chamada_ao_modelo(
             f"{trecho!r} saiu depois da chamada ao modelo; o autor só o leria "
             "quando a espera que ele evitaria já tivesse acontecido."
         )
+
+
+# O núcleo diz o que falta e para aí; a frase que ensina a suprir é de cada
+# fachada, porque "rodar `uv run matinal`" é conselho errado numa célula de
+# notebook. Estes prendem as frases do terminal, que não podem mudar.
+
+
+@pytest.mark.parametrize("etapa, extras, com_painel, esperado", [
+    ("triagem", [], False,
+     ("Erro: falta o bloco direcional de 20260817. "
+      "Rodar `uv run matinal` antes das etapas.")),
+    ("redacao", ["--temas", "dominante"], True,
+     "Erro: falta a triagem de 20260817. Rodar `uv run matinal triagem` antes."),
+    ("revisao", ["--sem-anterior"], True,
+     "Erro: falta a redação de 20260817. Rodar `uv run matinal redacao` antes."),
+])
+def test_a_instrucao_de_suprir_a_falta_continua_falando_de_terminal(
+        mesa, monkeypatch, capsys, etapa, extras, com_painel, esperado):
+    """A linha inteira, como o autor a lê às 7h da manhã.
+
+    O núcleo passou a mandar só o fato — `falta a triagem de 20260817.` — e o
+    comando volta a completá-lo. Se a emenda se perder, o autor fica sabendo o
+    que falta e não o que digitar; se ela mudar de forma, a linha que ele
+    aprendeu a reconhecer muda com ela.
+    """
+    if com_painel:
+        mesa.grava(f"painel_{MARCA}.txt", PAINEL)
+    monkeypatch.setattr("sys.argv", mesa.argv(etapa, *extras))
+
+    assert main() == 1
+
+    assert esperado in capsys.readouterr().err.splitlines(), (
+        f"a linha de erro do terminal mudou; esperada: {esperado!r}"
+    )
+
+
+def test_o_aviso_de_asof_divergente_continua_nomeando_o_flag(
+        mesa, monkeypatch, capsys, modelo):
+    """O aviso é o mesmo fato nas duas fachadas, dito com vocabulários diferentes.
+
+    O núcleo o entrega sem nomear flag alguma — num notebook o horário fixado é
+    argumento de função, não `--asof` —, e o comando o reescreve na sua língua.
+    """
+    mesa.grava(f"painel_{MARCA}.txt", PAINEL_DE_OUTRA_HORA)
+    modelo("saída do dublê\n")
+    monkeypatch.setattr("sys.argv", mesa.argv("triagem", "--sem-anterior"))
+
+    assert main() == 0
+
+    esperado = ("Aviso: --asof (17/08 07h40) diverge da referência do painel "
+                "(17/08 09h30). O painel é o material que a etapa analisa; "
+                "conferir se é mesmo o do dia.")
+    assert esperado in capsys.readouterr().err.splitlines(), (
+        f"o aviso do terminal mudou; esperado: {esperado!r}"
+    )
+
+
+def test_o_terminal_tem_frase_para_todo_codigo_do_nucleo():
+    """Código novo no núcleo sem frase na fachada some da tela em silêncio.
+
+    O `REMEDIO.get(..., "")` não falha: ele imprime o fato e engole a instrução.
+    Este teste é o que transforma esse silêncio em erro visível.
+    """
+    from comentario_matinal import plantao
+    from comentario_matinal.cli import (
+        AVISO,
+        AVISO_INTACTO,
+        REMEDIO,
+        REMEDIO_NO_MEIO,
+    )
+
+    orfaos = sorted(set(plantao.REMEDIOS) - set(REMEDIO) - REMEDIO_NO_MEIO)
+    assert not orfaos, (
+        f"{orfaos} não tem frase no terminal. Ou entra em REMEDIO, ou em "
+        "REMEDIO_NO_MEIO se a instrução não couber no fim da mensagem."
+    )
+
+    mudos = sorted(set(plantao.AVISOS) - set(AVISO) - AVISO_INTACTO)
+    assert not mudos, (
+        f"{mudos} não tem texto no terminal, e o aviso sairia na forma neutra "
+        "do núcleo — que não nomeia flag alguma. Se a forma do núcleo já servir "
+        "ao terminal, listar em AVISO_INTACTO com o motivo."
+    )
