@@ -282,14 +282,18 @@ DEPIN e muda sem que o repositório fique sabendo. Copie os destinatários do e-
 anterior. O que importa aqui não é a identificação — é saber para quem se escreve, e isso
 está logo acima.
 
-> **A PREENCHER — uma coisa que este manual ainda não sabe.**
->
-> **A convenção de assunto.** Diferente dos destinatários, esta é sua a cada manhã: você
-> a digita. Observação **não confirmada**, registrada como pista e não como regra: a
-> errata enviada em 17/08 levava um prefixo `[ERRATA]` sobre o que se lê como "Comentário
-> Matinal – Mesa de Investimentos (DEPIN/DIRIN)". Se essa é a forma do assunto de um dia
-> normal, é inferência de um único caso — e de um caso atípico. Confirmar antes de tratar
-> como padrão, e escrever aqui.
+O assunto é sempre o mesmo, sem data:
+
+```
+Comentário Matinal – Mesa de Investimentos (DEPIN/DIRIN)
+```
+
+Ele não varia com o dia, e não precisa variar: o comentário é diário e o corpo já traz a
+referência. Um assunto constante é o que faz a série ficar agrupada na caixa de quem
+recebe.
+
+Correção enviada depois leva o prefixo `[ERRATA]` — foi o que se fez em 17/08, quando
+quatro palavras haviam sumido do documento durante a edição à mão.
 
 Enviado o e-mail — e só então — seguir para o Passo 9.
 
