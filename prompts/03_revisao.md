@@ -82,7 +82,9 @@ Cada item abaixo é aprovação ou reprovação, sem gradação:
    enumeração interna separada por ponto e vírgula.
 5. Ausência de níveis e variações numéricas (seção 6 do guia).
 6. Ausência de agenda econômica no corpo do texto.
-7. Máximo de três atribuições nominais.
+7. Máximo de três atribuições nominais, e nenhuma referência a coletivo de fontes não
+   nomeadas — "as fontes", "nas fontes", "pelas fontes" e equivalentes (seção 7.3 do
+   guia). Ao propor a supressão, conferir que a oração não fica sem verbo principal.
 8. Ausência de opinião, projeção, recomendação ou avaliação normativa da divisão.
 9. Itálico, nomenclatura e ortografia conforme seções 9.1 a 9.4 do guia.
 10. Primeira oração de cada marcador carrega a asserção central do tema.

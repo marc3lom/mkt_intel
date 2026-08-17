@@ -68,8 +68,8 @@ Explicitar relações causais apenas quando reportadas nas fontes ou amplamente
 reconhecidas. Quando o movimento não tiver explicação nas fontes, descrever o movimento
 e parar — não formular hipótese.
 
-Formulações preferenciais: "os mercados repercutem"; "o foco permanece em"; "as fontes
-atribuem o movimento a"; "os mercados seguem monitorando"; "movimento acompanhado por".
+Formulações preferenciais: "os mercados repercutem"; "o foco permanece em"; "o movimento
+é atribuído a"; "os mercados seguem monitorando"; "movimento acompanhado por".
 
 ---
 

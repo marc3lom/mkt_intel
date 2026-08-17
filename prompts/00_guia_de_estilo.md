@@ -1,6 +1,6 @@
 # GUIA DE ESTILO — COMENTÁRIO MATINAL (DEPIN/DIRIN)
 
-Versão 1.3 — 16/08/2026
+Versão 1.4 — 17/08/2026
 Documento de referência único. Alterações de convenção são feitas AQUI, nunca nos prompts.
 
 ---
@@ -94,7 +94,7 @@ sinaliza; não decide.
 - atribuição inflacionada, com cargo e instituição onde bastaria a instituição.
 
 Ressalva sobre lacunas: registrar UMA lacuna relevante em oração subordinada é
-legítimo e às vezes necessário — "sem que as fontes especifiquem o escopo" —, e
+legítimo e às vezes necessário — "sem que o escopo tenha sido especificado" —, e
 difere de enumerar ausências para ocupar espaço.
 
 ---
@@ -179,15 +179,49 @@ recua ante as principais moedas.
 - Atribuir UMA VEZ POR BLOCO TEMÁTICO, nunca por frase.
 - Máximo de TRÊS atribuições nominais em todo o texto.
 - Cargo e instituição apenas quando a autoridade da fonte for relevante para o leitor.
-  Caso contrário, agregar: "estrategistas citados pelas fontes".
+  Caso contrário, agregar de forma implícita: "estrategistas de mercado".
 - Variar as fórmulas. Repetição literal da mesma construção em parágrafos consecutivos
   é erro de estilo.
 
-Fórmulas disponíveis (alternar): segundo as fontes; conforme reportado; de acordo com
-participantes de mercado; na avaliação de; segundo pessoas familiarizadas com o assunto;
-estrategistas citados pelas fontes avaliam que; as fontes atribuem o movimento a.
+Fórmulas disponíveis (alternar): conforme reportado; de acordo com participantes de
+mercado; na avaliação de [instituição nomeada]; segundo pessoas familiarizadas com o
+assunto; estrategistas de mercado avaliam que; o movimento é atribuído a; a leitura
+predominante é de que.
 
-### 7.3 Hierarquia das fontes
+### 7.3 A fonte não viaja com o comentário
+
+O leitor recebe o texto, não os PDFs que o originaram. Escrever "as fontes" no corpo
+nomeia um conjunto que ele não pode consultar, e abre a pergunta seguinte — quais
+fontes? — que o comentário não tem como responder.
+
+PROIBIDO no corpo: "as fontes", "nas fontes", "pelas fontes", "segundo as fontes",
+"estrategistas citados pelas fontes", e qualquer outra referência a um coletivo de
+fontes não nomeadas.
+
+Agregar continua permitido, e às vezes é a escolha certa. O que muda é que a agregação
+fica IMPLÍCITA: ou se nomeia a casa, ou se deixa a atribuição na voz passiva, sem
+inventar um sujeito coletivo que o leitor não consegue verificar.
+
+**Rejeitado** (comentário de 17/08, marcador 4):
+
+> "As fontes registram, em sentido oposto, que fluxos encobertos de petróleo saídos do
+> Golfo Pérsico ajudam a conter os preços globais."
+
+**Corrigido:**
+
+> "Em sentido oposto, fluxos encobertos de petróleo saídos do Golfo Pérsico ajudam a
+> conter os preços globais."
+
+**Motivo:** a atribuição não se perde — ela permanece implícita na regra de que o
+comentário só afirma o que foi reportado. O que se perde é o sujeito coletivo
+inverificável.
+
+Ao suprimir o andaime, conferir que a oração não fica sem verbo principal. "Entre os
+fatores sob monitoramento, a desaceleração da atividade chinesa […], além da saúde do
+consumidor americano" é frase nominal, vedada pela seção 3. A correção é dar verbo à
+oração, não devolver o andaime.
+
+### 7.4 Hierarquia das fontes
 
 - **Jornalismo** (Bloomberg News, First Word, Financial Times, Wall Street Journal):
   base factual. Atribuição genérica é suficiente.
@@ -313,16 +347,16 @@ do padrão a seguir. A prosa é boa; o enquadramento é que está fora da norma 
 **Motivo:** quase o dobro do teto de 115 palavras. O parágrafo acumula três assuntos —
 posições negociais, canais de transmissão do choque, e sinalização diplomática.
 
-**Corrigido** (98 palavras):
+**Corrigido** (96 palavras):
 
 > "No campo geopolítico, o endurecimento é simultâneo das duas partes: Washington amplia
 > suas exigências, enquanto Teerã condiciona a reabertura do estreito à suspensão do
-> bloqueio naval e a compensações. O choque não se restringe ao preço do barril: as
-> fontes registram pressão sobre destilados médios e forte elevação do custo de
-> afretamento na rota do Golfo para a Ásia. Em sentido oposto, o ministro da Defesa do
-> Paquistão, que atua como mediador, afirmou que os sinais recentes apontam para a
-> proximidade de um arranjo, o que ajuda a explicar por que o mercado ainda não precifica
-> ruptura definitiva."
+> bloqueio naval e a compensações. O choque não se restringe ao preço do barril: há
+> pressão sobre destilados médios e forte elevação do custo de afretamento na rota do
+> Golfo para a Ásia. Em sentido oposto, o ministro da Defesa do Paquistão, que atua
+> como mediador, afirmou que os sinais recentes apontam para a proximidade de um
+> arranjo, o que ajuda a explicar por que o mercado ainda não precifica ruptura
+> definitiva."
 
 ### 12.2 Inferência causal não atribuída
 
@@ -337,8 +371,8 @@ e o "tende a" caracterizam raciocínio da divisão, não descrição.
 
 **Corrigido:**
 
-> "as fontes descrevem um choque que combina preço do barril e custo logístico,
-> apontando transmissão mais rápida aos índices cheios de inflação"
+> "o choque combina preço do barril e custo logístico, com transmissão mais rápida aos
+> índices cheios de inflação, conforme reportado"
 
 ### 12.3 Projeção
 
@@ -381,7 +415,7 @@ primeira linha de cada marcador não retém nada sobre renda fixa.
 **Corrigido:**
 
 > "Na renda fixa, o recuo das vendas no varejo americanas, no maior ritmo em mais de um
-> ano, foi apontado nas fontes como reforço à cautela do Fed."
+> ano, foi lido como reforço à cautela do Fed."
 
 ### 12.6 Atribuição inflacionada
 
@@ -394,8 +428,8 @@ primeira linha de cada marcador não retém nada sobre renda fixa.
 **Motivo:** cerca de setenta palavras consumidas apenas em identificação, acima do teto
 de três atribuições nominais. Cargo só quando a autoridade da fonte for relevante.
 
-**Corrigido:** manter no máximo três, agregando as demais como "estrategistas citados
-pelas fontes".
+**Corrigido:** manter no máximo três, agregando as demais de forma implícita, como
+"estrategistas de mercado".
 
 ### 12.7 Exemplo positivo
 
