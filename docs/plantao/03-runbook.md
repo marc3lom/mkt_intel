@@ -25,13 +25,13 @@ redistribuição. O material não é redistribuído em nenhuma hipótese: apenas
 informa a redação do comentário, que é produto derivado e interno. Os PDFs não entram
 no repositório (ver `.gitignore`), e a `fontes/` é esvaziada no Passo 9.
 
-Gerar as três saídas do dia:
+Gerar as saídas do dia:
 
 ```
 uv run matinal
 ```
 
-Uma execução, uma consulta de mercado, três arquivos em `saida/`:
+Uma execução, uma consulta de mercado, quatro arquivos em `saida/`:
 
 | Arquivo | Uso |
 |---|---|
@@ -40,7 +40,7 @@ Uma execução, uma consulta de mercado, três arquivos em `saida/`:
 | `painel_AAAAMMDD.txt` | bloco direcional, insumo das etapas de IA |
 | `calendario_AAAAMMDD.md` | o mesmo calendário em texto, idem |
 
-As três saem do mesmo conjunto de dados. O texto não recalcula direção nenhuma: ele lê
+Os quatro saem do mesmo conjunto de dados. O texto não recalcula direção nenhuma: ele lê
 os mesmos números que cada tile da imagem renderizou. Por construção, a imagem enviada à
 diretoria e o texto usado na conferência não podem discordar sobre a direção de um ativo.
 
@@ -221,6 +221,16 @@ já pronto — é para isso que ele foi montado com as duas imagens no lugar.
 
 **O anexo é esse mesmo `.docx` exportado em PDF**, do Word, na mesma passagem em que
 você conferiu o documento no Passo 7.
+
+> **Se o Passo 8 acusou alguma divergência e você editou o `.docx`, exporte o PDF de
+> novo.** O que você tem na mão é o PDF de antes da correção.
+>
+> Sem isso, o corpo do e-mail leva o texto corrigido e o anexo leva o antigo — e é o
+> anexo que a chefia encaminha por WhatsApp. A diretoria receberia a versão errada, por
+> um canal que ninguém na divisão enxerga. É a falha de 17/08 outra vez, e pior: lá os
+> dois artefatos em desacordo eram o `.docx` e o `.md`, e a conferência apanhou o
+> problema, ainda que tarde. Aqui os dois só concordam se alguém se lembrar de refazer
+> o PDF — nenhuma checagem compara o PDF com coisa alguma.
 
 ### Por que o anexo não é redundante
 

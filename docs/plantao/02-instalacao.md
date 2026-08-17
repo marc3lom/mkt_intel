@@ -5,26 +5,22 @@ terminal Bloomberg aberto — a instalação não fala com ele; a execução do 
 
 Faça isto na véspera, não às 7h de um dia em que você está de plantão.
 
-## Antes de clonar
-
-**O repositório é privado.** Ele guarda comentários institucionais já enviados à
-diretoria, e o acesso não é público. Peça acesso a quem administra o repositório na
-divisão — sem ele o `git clone` responde que o repositório não existe, que é como o
-GitHub nega leitura a quem não tem permissão.
-
-Você vai precisar também de uma credencial do GitHub na máquina: o GitHub CLI
-(`gh auth login`) resolve os dois lados de uma vez, ou uma chave SSH cadastrada na sua
-conta, se você já usa uma.
-
 ## O que precisa estar na máquina
 
-Quatro coisas, e o plantão para sem qualquer uma delas.
+Cinco coisas, e o plantão para sem qualquer uma delas.
 
 **1. Windows nativo.** Não WSL. O `blpapi` conversa com o terminal Bloomberg por IPC
 local, e do WSL ele não alcança. Vale para a execução; a instalação você faz de onde
 quiser, mas não há razão para instalar duas vezes.
 
-**2. O `uv`.** É o gerenciador de ambiente e é como tudo neste repositório roda — daí
+**2. O `git`.** É como o repositório chega à máquina, e como o comentário arquivado
+volta para o repositório depois. Uma máquina recém-formatada não tem. Baixar de
+[git-scm.com](https://git-scm.com/download/win) e conferir com `git --version`.
+
+Vale instalar junto o **GitHub CLI** ([cli.github.com](https://cli.github.com/)): o
+`gh auth login` resolve a credencial do GitHub numa passagem só, sem chave SSH.
+
+**3. O `uv`.** É o gerenciador de ambiente e é como tudo neste repositório roda — daí
 todo comando começar por `uv run`. Instalar pelo PowerShell:
 
 ```
@@ -34,19 +30,50 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 Fechar e reabrir o terminal depois, para que o PATH seja relido. Conferir com
 `uv --version`.
 
-**3. O `claude`, autenticado.** É o backend das três etapas de IA — os passos 2, 4 e 6
+**4. O `claude`, autenticado.** É o backend das três etapas de IA — os passos 2, 4 e 6
 do runbook. Sem ele no PATH, o plantão para na triagem.
 
-Instalar a CLI do Claude Code e rodar `claude` uma vez, no terminal, para autenticar.
-A autenticação fica gravada na máquina e não se repete a cada plantão. Conferir com
+Instalar pelo PowerShell:
+
+```
+irm https://claude.ai/install.ps1 | iex
+```
+
+Quem já tem Node.js na máquina pode usar `npm install -g @anthropic-ai/claude-code`.
+A documentação de instalação e autenticação está em
+[docs.claude.com/en/docs/claude-code](https://docs.claude.com/en/docs/claude-code).
+
+Depois de instalar, rodar `claude` uma vez, no terminal, e concluir o login. A
+autenticação fica gravada na máquina e não se repete a cada plantão. Conferir com
 `claude --version`, e conferir que ele responde: `claude -p "responda ok"`.
 
 O acesso ao modelo está hoje em assinatura pessoal — ver as notas do
 [`README.md`](../../README.md) da raiz sobre a migração para o ambiente corporativo.
 
-**4. O Word.** O Passo 7 monta um `.docx` a partir de `templates/comentario.dotx`, e é
+**5. O Word.** O Passo 7 monta um `.docx` a partir de `templates/comentario.dotx`, e é
 no Word que você insere o gráfico do dia, confere o documento e **exporta o PDF** que
 vai anexado ao e-mail. O comando não gera o PDF, e não há caminho sem esse passo manual.
+
+## Clonar o repositório
+
+**O repositório é privado.** Ele guarda comentários institucionais já enviados à
+diretoria, e o acesso não é público. Sem permissão, o `git clone` responde que o
+repositório não existe — é assim que o GitHub nega leitura a quem não tem acesso, e não
+significa que você errou o endereço.
+
+```
+gh repo clone marc3lom/comentario_matinal
+```
+
+Sem o GitHub CLI, o equivalente é
+`git clone https://github.com/marc3lom/comentario_matinal.git`.
+
+> **A PREENCHER — como se obtém o acesso.** A quem pedir, e por qual via (chave SSH,
+> `gh auth login`, conta institucional, algum processo da instituição), não está
+> registrado neste repositório e não foi inventado aqui. Até que esteja, pergunte a
+> quem administra o repositório na divisão. Quem descobrir, escreva aqui.
+
+Os comandos abaixo rodam **de dentro da pasta clonada**.
 
 ## A instalação
 
@@ -55,14 +82,13 @@ etapas de IA montam a mensagem com o guia de estilo e o prompt da etapa embutido
 partir dos arquivos de `prompts/`. O Project continua existindo como caminho
 alternativo — ver [O Project do Claude](#o-project-do-claude), mais abaixo.
 
-Clonar o repositório e, de dentro dele:
+Três comandos:
 
 1. Instalar as dependências: `uv sync`.
-2. Ter o `claude` no PATH, autenticado. É o backend padrão das etapas de IA.
-3. Instalar o filtro de notebook: `uv run nbstripout --install`.
-4. Criar a pasta das fontes: `mkdir fontes` (ver abaixo por que ela não vem no clone).
+2. Instalar o filtro de notebook: `uv run nbstripout --install`.
+3. Criar a pasta das fontes: `mkdir fontes` (ver abaixo por que ela não vem no clone).
 
-O passo 3 vale por clone, e é o que impede que um notebook executado leve para o
+O passo 2 vale por clone, e é o que impede que um notebook executado leve para o
 commit os dados de mercado e o texto do comentário — possivelmente antes de ele ter
 sido enviado. O filtro tira as saídas no `git add`, sem tocar no arquivo aberto na
 tela. Sem ele nada avisa na hora: quem percebe é o `tests/test_notebook.py`, que
