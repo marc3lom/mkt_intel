@@ -17,12 +17,17 @@ from comentario_matinal.render.tables import (
 )
 
 
-def test_render_table_no_save_returns_figure_and_writes_nothing(tmp_path):
+def test_render_table_no_save_returns_figure_and_writes_nothing(monkeypatch):
+    chamadas = []
+    monkeypatch.setattr(
+        "comentario_matinal.render.tables.save_figure",
+        lambda *a, **k: chamadas.append(a),
+    )
     df = pd.DataFrame({"PAÍS": ["US"]})  # _prepare_dataframe fills the rest
     fig = render_table(df, ECO_TABLE_SPEC)
     try:
         assert isinstance(fig, Figure)
-        assert list(tmp_path.iterdir()) == []
+        assert chamadas == []
     finally:
         plt.close(fig)
 
@@ -43,7 +48,12 @@ def test_render_table_saves_when_path_given(tmp_path):
         plt.close(fig)
 
 
-def test_render_combined_no_save_returns_figure_and_writes_nothing(tmp_path):
+def test_render_combined_no_save_returns_figure_and_writes_nothing(monkeypatch):
+    chamadas = []
+    monkeypatch.setattr(
+        "comentario_matinal.render.tables.save_figure",
+        lambda *a, **k: chamadas.append(a),
+    )
     tables = [
         (pd.DataFrame({"PAÍS": ["US"]}), ECO_TABLE_SPEC),
         (pd.DataFrame({"PAÍS": ["BR"]}), CB_TABLE_SPEC_COMBINED),
@@ -51,7 +61,7 @@ def test_render_combined_no_save_returns_figure_and_writes_nothing(tmp_path):
     fig = render_combined_tables(tables)
     try:
         assert isinstance(fig, Figure)
-        assert list(tmp_path.iterdir()) == []
+        assert chamadas == []
     finally:
         plt.close(fig)
 
@@ -84,11 +94,16 @@ def _itens_minimos():
     return [TickerInfo("AA Index", "aa", "Taxa 10a", "rate")]
 
 
-def test_monitor_sem_save_devolve_figura_e_nao_grava(tmp_path):
+def test_monitor_sem_save_devolve_figura_e_nao_grava(monkeypatch):
+    chamadas = []
+    monkeypatch.setattr(
+        "comentario_matinal.render.monitor.save_figure",
+        lambda *a, **k: chamadas.append(a),
+    )
     fig, _ = build_monitor_panel(_itens_minimos(), pd.DataFrame(), {}, grid=(1, 1))
     try:
         assert isinstance(fig, Figure)
-        assert list(tmp_path.iterdir()) == []
+        assert chamadas == []
     finally:
         plt.close(fig)
 
