@@ -11,43 +11,7 @@ from matplotlib.figure import Figure
 
 from comentario_matinal.render.gravacao import grava_figura
 from comentario_matinal.render.painel import monta_painel
-from comentario_matinal.render.tabelas import (
-    ESPEC_BC,
-    ESPEC_ECO,
-    monta_tabela,
-    monta_tabelas,
-)
-
-
-def test_tabela_sem_caminho_devolve_figura_e_nao_grava(monkeypatch):
-    chamadas = []
-    monkeypatch.setattr(
-        "comentario_matinal.render.tabelas.grava_figura",
-        lambda *a, **k: chamadas.append(a),
-    )
-    df = pd.DataFrame({"PAÍS": ["US"]})  # _prepare_dataframe completa o resto
-    fig = monta_tabela(df, ESPEC_ECO)
-    try:
-        assert isinstance(fig, Figure)
-        assert chamadas == []
-    finally:
-        plt.close(fig)
-
-
-def test_tabela_vazia_devolve_none():
-    fig = monta_tabela(pd.DataFrame(), ESPEC_ECO)
-    assert fig is None
-
-
-def test_tabela_grava_quando_recebe_caminho(tmp_path):
-    df = pd.DataFrame({"PAÍS": ["US"]})
-    target = tmp_path / "test_render_table.png"
-    fig = monta_tabela(df, ESPEC_ECO, save_path=target, allowed_root=tmp_path)
-    try:
-        assert isinstance(fig, Figure)
-        assert target.exists()
-    finally:
-        plt.close(fig)
+from comentario_matinal.render.tabelas import ESPEC_BC, ESPEC_ECO, monta_tabelas
 
 
 def test_tabelas_combinadas_sem_caminho_devolvem_figura_e_nao_gravam(monkeypatch):

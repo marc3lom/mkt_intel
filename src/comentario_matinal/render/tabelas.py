@@ -121,123 +121,6 @@ def _compute_x_positions(col_widths: list[float]) -> list[float]:
 
 
 # ---------------------------------------------------------------------------
-# Renderização de tabela avulsa
-# ---------------------------------------------------------------------------
-
-
-def monta_tabela(
-    df: pd.DataFrame,
-    spec: EspecDeTabela,
-    save_path: Path | None = None,
-    allowed_root: Path | None = None,
-) -> Figure | None:
-    """Renderiza uma única figura de tabela.
-
-    Retorna a Figure para exibição inline. Só grava um PNG quando
-    ``save_path`` é informado, e só dentro de ``allowed_root``, que
-    ``grava_figura`` exige sempre que um PNG é de fato gravado.
-    """
-    # ``allowed_root`` só é dispensável enquanto nada é gravado. Cobrar aqui
-    # troca um ``TypeError`` obscuro de ``Path(None)`` lá dentro de
-    # ``grava_figura`` por uma mensagem que nomeia o argumento que faltou.
-    if save_path is not None and allowed_root is None:
-        raise ValueError(
-            "save_path foi informado sem allowed_root: gravar exige a raiz "
-            "permitida de saída."
-        )
-    if df.empty:
-        logger.warning("DataFrame vazio, não é possível renderizar %s", spec.title)
-        return None
-
-    df = _prepare_dataframe(df, spec.columns)
-    n_rows = len(df)
-
-    # O layout difere para ECO (9 colunas) vs BC (4 colunas) em tabelas avulsas
-    is_eco = len(spec.columns) > 4
-
-    fig_width = 14 if is_eco else 10
-    fig_height = max(3 if is_eco else 2.5, 1 + n_rows * 0.4)
-
-    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-    ax.axis("off")
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1)
-
-    title_y = 0.95 if is_eco else 0.92
-    table_top = 0.85 if is_eco else 0.80
-    usable_height = 0.7 if is_eco else 0.65
-    row_height = usable_height / (n_rows + 1)
-
-    # Título
-    ax.text(
-        0.5, title_y, spec.title,
-        fontsize=FONTES["title"], fontweight="bold", color=CORES["title"],
-        ha="center", va="top", transform=ax.transAxes,
-    )
-
-    # Cabeçalho
-    x_positions = _compute_x_positions(spec.col_widths)
-    header_y = table_top
-
-    header_rect = mpatches.FancyBboxPatch(
-        (0.01, header_y - row_height), 0.98, row_height,
-        boxstyle="round,pad=0.01", facecolor=CORES["header_bg"],
-        edgecolor="none", transform=ax.transAxes,
-    )
-    ax.add_patch(header_rect)
-
-    hdr_fs = FONTES["header"] if is_eco else FONTES["header_cb"]
-    for i, col in enumerate(spec.columns):
-        ax.text(
-            x_positions[i] + spec.col_widths[i] / 2, header_y - row_height / 2,
-            col, fontsize=hdr_fs, fontweight="bold",
-            color=CORES["header_text"], ha="center", va="center",
-            transform=ax.transAxes,
-        )
-
-    # Linhas de dado
-    cell_fs = FONTES["cell"] if is_eco else FONTES["cell_cb"]
-
-    for row_idx, (_, row) in enumerate(df.iterrows()):
-        y = header_y - (row_idx + 1) * row_height - row_height
-
-        bg_color = CORES["row_odd"] if row_idx % 2 == 0 else CORES["row_even"]
-        row_rect = mpatches.FancyBboxPatch(
-            (0.01, y), 0.98, row_height,
-            boxstyle="round,pad=0.01", facecolor=bg_color,
-            edgecolor="none", transform=ax.transAxes,
-        )
-        ax.add_patch(row_rect)
-
-        for col_idx, col in enumerate(spec.columns):
-            value = formata_valor(row[col])
-
-            text_color = CORES["text_normal"]
-            if col in spec.highlight_rules and spec.highlight_rules[col](row):
-                text_color = CORES["text_positive"]
-
-            if col == spec.left_align_col:
-                ha = "left"
-                x_offset = 0.01
-            else:
-                ha = "center"
-                x_offset = spec.col_widths[col_idx] / 2
-
-            ax.text(
-                x_positions[col_idx] + x_offset, y + row_height / 2,
-                value, fontsize=cell_fs, color=text_color,
-                ha=ha, va="center", transform=ax.transAxes,
-            )
-
-    plt.tight_layout()
-
-    if save_path is not None:
-        grava_figura(fig, save_path, allowed_root=allowed_root)
-
-    return fig
-
-
-# ---------------------------------------------------------------------------
 # Renderização de tabelas combinadas (empilhadas)
 # ---------------------------------------------------------------------------
 
@@ -254,8 +137,8 @@ def monta_tabelas(
     ``save_path`` é informado, e só dentro de ``allowed_root``, que
     ``grava_figura`` exige sempre que um PNG é de fato gravado.
     """
-    # Mesma cobrança de ``monta_tabela``: sem a raiz permitida, gravar falharia
-    # com ``TypeError`` de ``Path(None)`` só no fim, depois de desenhar tudo.
+    # Sem a raiz permitida, gravar falharia com ``TypeError`` de ``Path(None)``
+    # só no fim, depois de desenhar tudo.
     if save_path is not None and allowed_root is None:
         raise ValueError(
             "save_path foi informado sem allowed_root: gravar exige a raiz "
