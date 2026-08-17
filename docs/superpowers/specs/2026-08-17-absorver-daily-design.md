@@ -75,7 +75,8 @@ que só os notebooks de `drafts/` usavam.
 | `config.ECO_COLUMNS`, `ECO_COL_WIDTHS` | `render.tabelas`, junto do `ESPEC_ECO` |
 | `config.CB_COLUMNS`, `CB_COL_WIDTHS_COMBINED` | `render.tabelas`, junto do `ESPEC_BC` |
 | `config.CB_COL_WIDTHS_STANDALONE` | **removido** |
-| `config.PROJECT_ROOT`, `OUTPUT_DIR`, `INPUT_DIR` | **removidos** |
+| `config.PROJECT_ROOT`, `OUTPUT_DIR` | **removidos** |
+| `config.INPUT_DIR` | `config.MERCADO_FECHADO`, ver abaixo |
 | `bloomberg.fetch_eco_calendar` | `bql.busca_calendario` |
 | `bloomberg.fetch_central_banks` | `bql.busca_bancos_centrais` |
 | `config.BQL_COUNTRIES`, `BQL_DATE_RANGE` | `bql.PAISES`, `bql.JANELA` |
@@ -84,6 +85,27 @@ que só os notebooks de `drafts/` usavam.
 `PROJECT_ROOT`, `OUTPUT_DIR` e `INPUT_DIR` saem porque são os caminhos do `daily`; este
 repositório já tem os seus em `config.py`, e o plantão passa `save_path` e `allowed_root`
 explícitos.
+
+### O ativo em disco
+
+O painel não é só código. Ele carrega `input/market_closed.png` (110 KB) em tempo de
+execução e o estampa nos tiles sem barras intradiárias. É o único uso vivo de `INPUT_DIR`
+— o `eco_data.xlsx` que divide a pasta com ele só serve aos notebooks.
+
+A imagem vem para `templates/mercado_fechado.png`, ao lado do `comentario.dotx`, e é
+localizada por uma constante em `config.py`, do mesmo jeito que o template do Word:
+
+```python
+MERCADO_FECHADO = RAIZ / "templates" / "mercado_fechado.png"
+```
+
+O `render/painel.py` recebe o caminho por parâmetro, com esse valor como padrão, em vez
+de derivá-lo de uma raiz de projeto. Assim a camada de desenho não precisa saber onde o
+repositório começa.
+
+Esquecer este item não quebra teste algum: o código já trata a ausência do arquivo como
+caso normal (`if market_closed_path.exists()`), e o painel sai sem o selo. É exatamente o
+tipo de regressão silenciosa que o teste de imagem de referência existe para pegar.
 
 ### `TickerInfo` vira `ItemDaGrade`, não `Ativo`
 
