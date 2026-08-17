@@ -28,13 +28,13 @@ TICKERS = ["AA Index", "BB Index", "CC Curncy", "DD Comdty"]
 
 
 def _itens():
-    from comentario_matinal.render.tickers import TickerInfo
+    from comentario_matinal.render.ativos import ItemDaGrade
 
     return [
-        TickerInfo("AA Index", "aa", "Taxa 10a", "rate"),
-        TickerInfo("BB Index", "bb", "Bolsa Fut", "equity"),
-        TickerInfo("CC Curncy", "cc", "Moeda", "fx"),
-        TickerInfo("DD Comdty", "dd", "Petróleo", "commodity"),
+        ItemDaGrade("AA Index", "aa", "Taxa 10a", "rate"),
+        ItemDaGrade("BB Index", "bb", "Bolsa Fut", "equity"),
+        ItemDaGrade("CC Curncy", "cc", "Moeda", "fx"),
+        ItemDaGrade("DD Comdty", "dd", "Petróleo", "commodity"),
     ]
 
 
@@ -65,9 +65,9 @@ def _intraday() -> dict[str, pd.Series]:
 
 def _desenha(destino: Path):
     from comentario_matinal.config import MERCADO_FECHADO
-    from comentario_matinal.render.monitor import build_monitor_panel
+    from comentario_matinal.render.painel import monta_painel
 
-    fig, _ = build_monitor_panel(
+    fig, _ = monta_painel(
         _itens(),
         _referencia(),
         _intraday(),
@@ -75,8 +75,8 @@ def _desenha(destino: Path):
         allowed_root=destino.parent,
         grid=(1, 4),
         asof=ASOF,
-        column_headers=["Taxas", "Bolsas", "Moedas", "Commodities"],
-        market_closed_path=MERCADO_FECHADO,
+        cabecalhos=["Taxas", "Bolsas", "Moedas", "Commodities"],
+        selo_fechado=MERCADO_FECHADO,
     )
     plt.close(fig)
     return destino

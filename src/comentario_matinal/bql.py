@@ -1,14 +1,20 @@
-"""Bloomberg data fetching for monitor and calendar notebooks."""
+"""Coleta via Bloomberg para o painel de monitoramento e o calendário."""
 
 import logging
 from datetime import datetime
 
 import pandas as pd
 
-from comentario_matinal.render.estilo import BQL_COUNTRIES, BQL_DATE_RANGE
-
-
 logger = logging.getLogger("comentario_matinal")
+
+# Países consultados no BQL
+PAISES = [
+    "US Country", "CA Country", "GB Country", "DE Country",
+    "AU Country", "JP Country", "EZ Country", "CN Country",
+]
+
+# Janela de datas do BQL
+JANELA = "range(-1d,0d)"
 
 
 # ---------------------------------------------------------------------------
@@ -227,24 +233,24 @@ def _map_bql_columns(df: pd.DataFrame, column_mapping: dict[str, str]) -> pd.Dat
     return df.rename(columns=rename_dict)
 
 
-def fetch_eco_calendar() -> pd.DataFrame:
-    """Fetch economic calendar via BQL.
+def busca_calendario() -> pd.DataFrame:
+    """Busca o calendário econômico via BQL.
 
-    Uses polars-bloomberg.BQuery because it tags the BQL request with
-    ``clientContext.appName=EXCEL``, which Bloomberg Anywhere requires for
-    BQL access. xbbg's BQL endpoint omits that tag and is rejected with
-    "User not authorized to use BQL" on Anywhere licenses.
+    Usa polars-bloomberg.BQuery porque marca a requisição BQL com
+    ``clientContext.appName=EXCEL``, que a licença Bloomberg Anywhere exige
+    para acesso ao BQL. O endpoint BQL do xbbg omite essa marca e é rejeitado
+    com "User not authorized to use BQL" em licenças Anywhere.
 
-    Returns DataFrame with columns: PAÍS, DATA, HORÁRIO, EVENTO, PERÍODO,
+    Retorna DataFrame com as colunas: PAÍS, DATA, HORÁRIO, EVENTO, PERÍODO,
     ESTIMATIVA, ATUAL, ANTERIOR, REVISADO
     """
     from polars_bloomberg import BQuery
 
-    countries = ",".join(f"'{c}'" for c in BQL_COUNTRIES)
+    countries = ",".join(f"'{c}'" for c in PAISES)
     query = f"""
         get(dropna(calendar(relevancy=VERY_HIGH), remove_id=true))
         for ([{countries}])
-        with(dates={BQL_DATE_RANGE})
+        with(dates={JANELA})
     """
 
     try:
@@ -277,23 +283,23 @@ def fetch_eco_calendar() -> pd.DataFrame:
         return df[cols_present]
 
     except Exception as e:
-        logger.error("Failed to fetch economic calendar via BQL: %s", e)
+        logger.error("Falha ao buscar o calendário econômico via BQL: %s", e)
         return pd.DataFrame()
 
 
-def fetch_central_banks() -> pd.DataFrame:
-    """Fetch central bank events via BQL.
+def busca_bancos_centrais() -> pd.DataFrame:
+    """Busca os eventos de bancos centrais via BQL.
 
-    Returns DataFrame with columns: PAÍS, DATA, HORÁRIO, EVENTO.
-    See ``fetch_eco_calendar`` for why this uses polars-bloomberg.
+    Retorna DataFrame com as colunas: PAÍS, DATA, HORÁRIO, EVENTO.
+    Ver ``busca_calendario`` para o motivo de usar polars-bloomberg.
     """
     from polars_bloomberg import BQuery
 
-    countries = ",".join(f"'{c}'" for c in BQL_COUNTRIES)
+    countries = ",".join(f"'{c}'" for c in PAISES)
     query = f"""
         get(dropna(calendar(view=condensed, type=central_banks), remove_id=true))
         for ([{countries}])
-        with(dates={BQL_DATE_RANGE})
+        with(dates={JANELA})
     """
 
     try:
@@ -318,5 +324,5 @@ def fetch_central_banks() -> pd.DataFrame:
         return df[cols_present]
 
     except Exception as e:
-        logger.error("Failed to fetch central bank events via BQL: %s", e)
+        logger.error("Falha ao buscar os eventos de bancos centrais via BQL: %s", e)
         return pd.DataFrame()

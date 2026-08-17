@@ -163,18 +163,18 @@ def main() -> int:
     intraday = coleta_intraday(cfg.ativos, asof, ref)
 
     # --- Saída 1: o painel em imagem ---------------------------------------
-    from comentario_matinal.render.monitor import build_monitor_panel
+    from comentario_matinal.render.painel import monta_painel
 
     # A grade é desenhada na ordem de leitura por linha; o painel.toml lista por
     # coluna. As métricas voltam indexadas por ticker, então o texto não é afetado.
-    fig, metricas = build_monitor_panel(
-        cfg.para_ticker_info(cfg.ordem_da_grade()), ref, intraday,
+    fig, metricas = monta_painel(
+        cfg.para_itens_da_grade(cfg.ordem_da_grade()), ref, intraday,
         save_path=caminho_painel,
         grid=cfg.grade,
         allowed_root=saida,
         asof=asof,
-        column_headers=cfg.titulos_colunas or None,
-        market_closed_path=MERCADO_FECHADO,
+        cabecalhos=cfg.titulos_colunas or None,
+        selo_fechado=MERCADO_FECHADO,
     )
     plt.close(fig)
     print(f"Painel:     {caminho_painel}")
@@ -185,14 +185,14 @@ def main() -> int:
         print("Consultando calendário econômico (BQL)...", file=sys.stderr)
         eco, bancos = coleta_calendario()
 
-        from comentario_matinal.render.tables import (
-            CB_TABLE_SPEC_COMBINED,
-            ECO_TABLE_SPEC,
-            render_combined_tables,
+        from comentario_matinal.render.tabelas import (
+            ESPEC_BC,
+            ESPEC_ECO,
+            monta_tabelas,
         )
 
-        fig_tab = render_combined_tables(
-            [(eco, ECO_TABLE_SPEC), (bancos, CB_TABLE_SPEC_COMBINED)],
+        fig_tab = monta_tabelas(
+            [(eco, ESPEC_ECO), (bancos, ESPEC_BC)],
             save_path=caminho_tabela,
             allowed_root=saida,
         )

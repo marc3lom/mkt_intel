@@ -77,7 +77,7 @@ def test_grade_recusa_buraco_no_meio():
 def test_config_traduz_tipos_para_a_camada_de_render():
     cfg = carrega_config()
     validos = {"rate", "equity", "fx", "commodity", "vol"}
-    assert {t.type for t in cfg.para_ticker_info()} <= validos
+    assert {t.tipo for t in cfg.para_itens_da_grade()} <= validos
 
 
 def test_rotulo_de_par_de_cambio_e_inequivoco():

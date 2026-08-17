@@ -52,10 +52,10 @@ def coleta_calendario() -> tuple[pd.DataFrame, pd.DataFrame]:
     BQL do xbbg não envia — a chamada volta como "User not authorized to use BQL".
     Por isso esta consulta é separada da de mercado; não há como fundi-las.
     """
-    from comentario_matinal.bloomberg import fetch_central_banks, fetch_eco_calendar
+    from comentario_matinal.bql import busca_bancos_centrais, busca_calendario
 
-    eco = fetch_eco_calendar()
-    bancos = fetch_central_banks()
+    eco = busca_calendario()
+    bancos = busca_bancos_centrais()
 
     # Sem isto, o bloco de calendário desaparece em silêncio e a checagem de
     # status some junto, sem ninguém notar que ela deixou de acontecer.

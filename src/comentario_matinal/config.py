@@ -1,7 +1,7 @@
 """Leitura da configuração canônica do painel.
 
 O ``config/painel.toml`` é a única lista de ativos do sistema. Ela é convertida
-aqui para os ``TickerInfo`` que a camada de renderização consome, de modo que
+aqui para os ``ItemDaGrade`` que a camada de renderização consome, de modo que
 imagem e texto partam literalmente da mesma sequência de ativos.
 """
 
@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from comentario_matinal.render.tickers import TickerInfo
+from comentario_matinal.render.ativos import ItemDaGrade
 
 TZ_BR = ZoneInfo("America/Sao_Paulo")
 
@@ -113,14 +113,14 @@ class Config:
             )
         return preenchidas
 
-    def para_ticker_info(self, ativos: list[Ativo] | None = None) -> list[TickerInfo]:
-        """Converte para o formato que ``render.monitor`` espera."""
+    def para_itens_da_grade(self, ativos: list[Ativo] | None = None) -> list[ItemDaGrade]:
+        """Converte para o formato que ``render.painel`` espera."""
         return [
-            TickerInfo(
+            ItemDaGrade(
                 ticker=a.ticker,
-                name=a.rotulo,
-                display=a.rotulo_grade,
-                type=a.tipo_render,
+                nome=a.rotulo,
+                rotulo=a.rotulo_grade,
+                tipo=a.tipo_render,
             )
             for a in (self.ativos if ativos is None else ativos)
         ]

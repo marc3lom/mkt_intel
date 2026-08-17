@@ -1,4 +1,4 @@
-"""Monitor panel rendering — sparklines + 4x4 grid."""
+"""Renderização do painel de monitoramento — sparklines + grade 4x4."""
 
 import logging
 from datetime import datetime
@@ -10,23 +10,23 @@ import pandas as pd
 from matplotlib.figure import Figure
 
 from comentario_matinal.render.estilo import (
-    COLORS,
-    FONT_SIZES,
+    CORES,
+    FONTES,
     MONITOR_FIGSIZE,
     MONITOR_GRID,
     SPARKLINE_FILL_ALPHA,
     SPARKLINE_LINE_WIDTH,
     SPARKLINE_YLIM,
 )
-from comentario_matinal.render.calendars import is_market_holiday
-from comentario_matinal.render.output import save_figure
-from comentario_matinal.render.tickers import TickerInfo
+from comentario_matinal.render.feriados import e_feriado_de_mercado
+from comentario_matinal.render.gravacao import grava_figura
+from comentario_matinal.render.ativos import ItemDaGrade
 
 logger = logging.getLogger("comentario_matinal")
 
 
 # ---------------------------------------------------------------------------
-# Asset formatters — return (is_positive, value_str, change_str)
+# Formatadores de ativo — devolvem (is_positive, value_str, change_str)
 # ---------------------------------------------------------------------------
 
 
@@ -60,15 +60,15 @@ FORMATTERS = {
 
 
 # ---------------------------------------------------------------------------
-# Sparkline helpers
+# Ajudantes de sparkline
 # ---------------------------------------------------------------------------
 
 
-def normalize_price_series(price_series: pd.Series) -> tuple[np.ndarray, float]:
-    """Normalize intraday prices to 0-1 scale using min/max.
+def normaliza_serie(price_series: pd.Series) -> tuple[np.ndarray, float]:
+    """Normaliza preços intradiários para escala 0-1 usando mínimo/máximo.
 
-    Returns (normalized_values, midpoint) where midpoint is the
-    normalized position of the opening price.
+    Retorna (normalized_values, midpoint), onde midpoint é a posição
+    normalizada do preço de abertura.
     """
     min_price = price_series.min()
     max_price = price_series.max()
@@ -81,36 +81,36 @@ def normalize_price_series(price_series: pd.Series) -> tuple[np.ndarray, float]:
     return normalized, midpoint
 
 
-def plot_sparkline_with_areas(
+def desenha_sparkline(
     ax: plt.Axes,
     price_series: pd.Series,
-    positive_color: str = COLORS["positive"],
-    negative_color: str = COLORS["negative"],
+    positive_color: str = CORES["positive"],
+    negative_color: str = CORES["negative"],
     line_width: float = SPARKLINE_LINE_WIDTH,
     fill_alpha: float = SPARKLINE_FILL_ALPHA,
 ) -> None:
-    """Plot sparkline with green/red areas based on midpoint."""
+    """Desenha o sparkline com áreas verde/vermelha a partir do ponto médio."""
     if price_series.empty or len(price_series) < 2:
         return
 
-    normalized, midpoint = normalize_price_series(price_series)
+    normalized, midpoint = normaliza_serie(price_series)
     x = np.arange(len(normalized))
 
-    # Positive area (above midpoint) — green
+    # Área positiva (acima do ponto médio) — verde
     ax.fill_between(
         x, normalized, midpoint,
         where=(normalized >= midpoint),
         facecolor=positive_color, alpha=fill_alpha, interpolate=True,
     )
 
-    # Negative area (below midpoint) — red
+    # Área negativa (abaixo do ponto médio) — vermelha
     ax.fill_between(
         x, normalized, midpoint,
         where=(normalized < midpoint),
         facecolor=negative_color, alpha=fill_alpha, interpolate=True,
     )
 
-    # Segmented line — color follows fill
+    # Linha segmentada — a cor acompanha o preenchimento
     for i in range(len(x) - 1):
         color = positive_color if normalized[i] >= midpoint else negative_color
         ax.plot(x[i : i + 2], normalized[i : i + 2], color=color, linewidth=line_width)
@@ -119,108 +119,111 @@ def plot_sparkline_with_areas(
 
 
 # ---------------------------------------------------------------------------
-# Panel
+# Painel
 # ---------------------------------------------------------------------------
 
 
-def build_monitor_panel(
-    tickers_info: list[TickerInfo],
-    ref_data: pd.DataFrame,
-    price_data: dict[str, pd.Series],
+def monta_painel(
+    itens: list[ItemDaGrade],
+    referencia: pd.DataFrame,
+    intraday: dict[str, pd.Series],
     save_path: Path | None = None,
     figsize: tuple = MONITOR_FIGSIZE,
     grid: tuple[int, int] = MONITOR_GRID,
     allowed_root: Path | None = None,
     asof: datetime | None = None,
-    column_headers: list[str] | None = None,
-    market_closed_path: Path | None = None,
+    cabecalhos: list[str] | None = None,
+    selo_fechado: Path | None = None,
 ) -> tuple[Figure, dict[str, dict]]:
-    """Build the monitor panel and report, per ticker, what each tile shows.
+    """Monta o painel de monitoramento e relata, por ticker, o que cada tile mostra.
 
-    Returns ``(figure, metrics)``. The metrics dict is keyed by ticker and holds
-    exactly the numbers the tile rendered — including the change recomputed from
-    the intraday series, which is NOT ``ref_data``'s ``chg_net_1d`` whenever bars
-    came back. A caller that also narrates these moves in prose must read them
-    from here; deriving them again from the reference fields would let the image
-    and the text disagree about direction on the same morning.
+    Retorna ``(figure, metrics)``. O dict de métricas é indexado por ticker e
+    guarda exatamente os números que o tile renderizou — inclusive a variação
+    recalculada a partir da série intradiária, que NÃO é o ``chg_net_1d`` de
+    ``referencia`` sempre que barras chegaram. Um chamador que também narra
+    esses movimentos em texto precisa lê-los daqui; derivá-los de novo a
+    partir dos campos de referência deixaria a imagem e o texto discordarem
+    sobre a direção na mesma manhã.
 
-    ``grid`` is (rows, cols) and must hold every ticker. Tiles beyond the ticker
-    list are simply not drawn, so a grid larger than the list leaves blanks.
+    ``grid`` é (linhas, colunas) e precisa comportar todo item. Tiles além da
+    lista de itens simplesmente não são desenhados, então uma grade maior que
+    a lista deixa espaços em branco.
 
-    ``column_headers`` labels each grid column — one string per column — for
-    panels whose columns mean something (a category per column). Room is
-    reserved at the top only when headers are given, so panels without them keep
-    their current spacing exactly.
+    ``cabecalhos`` rotula cada coluna da grade — uma string por coluna — para
+    painéis cujas colunas significam algo (uma categoria por coluna). Espaço
+    é reservado no topo só quando há cabeçalhos, então painéis sem eles mantêm
+    seu espaçamento atual exatamente como está.
 
-    Writes a PNG only when ``save_path`` is given, and only inside
-    ``allowed_root``, which is required.
+    Grava um PNG só quando ``save_path`` é informado, e só dentro de
+    ``allowed_root``, que é obrigatório.
     """
     nrows, ncols = grid
-    if len(tickers_info) > nrows * ncols:
+    if len(itens) > nrows * ncols:
         raise ValueError(
             f"Grid {nrows}x{ncols} comporta {nrows * ncols} tiles, "
-            f"mas foram passados {len(tickers_info)} tickers."
+            f"mas foram passados {len(itens)} tickers."
         )
-    if column_headers and len(column_headers) != ncols:
+    if cabecalhos and len(cabecalhos) != ncols:
         raise ValueError(
-            f"column_headers tem {len(column_headers)} entradas, "
+            f"cabecalhos tem {len(cabecalhos)} entradas, "
             f"mas a grade tem {ncols} colunas."
         )
 
     metrics: dict[str, dict] = {}
-    color_title = COLORS["title"]
-    color_green = COLORS["positive"]
-    color_red = COLORS["negative"]
+    color_title = CORES["title"]
+    color_green = CORES["positive"]
+    color_red = CORES["negative"]
 
     fig = plt.figure(figsize=figsize, facecolor="white")
 
     # O selo vem por parâmetro, não de uma raiz de projeto: esta camada
     # desenha, não sabe onde o repositório começa.
     market_closed_img = None
-    if market_closed_path is not None and market_closed_path.exists():
-        market_closed_img = plt.imread(str(market_closed_path))
+    if selo_fechado is not None and selo_fechado.exists():
+        market_closed_img = plt.imread(str(selo_fechado))
 
-    for idx, item in enumerate(tickers_info):
+    for idx, item in enumerate(itens):
         ticker = item.ticker
-        display_name = item.display
-        asset_type = item.type
+        display_name = item.rotulo
+        asset_type = item.tipo
 
         ax = fig.add_subplot(nrows, ncols, idx + 1)
 
-        # Reference data
+        # Dados de referência
         px_last = 0.0
         chg_net, chg_pct = 0.0, 0.0
         has_display_override = False
-        if ticker in ref_data.index:
-            row_data = ref_data.loc[ticker]
+        if ticker in referencia.index:
+            row_data = referencia.loc[ticker]
             px_last = row_data.get("px_last", 0)
             chg_net = row_data.get("chg_net_1d", 0)
             chg_pct = row_data.get("chg_pct_1d", 0)
 
-            # Yield tickers store display overrides separately
+            # Tickers de yield guardam overrides de exibição à parte
             if "px_last_display" in row_data.index and pd.notna(row_data["px_last_display"]):
                 px_last = row_data["px_last_display"]
                 chg_net = row_data.get("chg_net_display", chg_net)
                 has_display_override = True
 
-        # Price series
-        price_series = price_data.get(ticker, pd.Series())
+        # Série de preço
+        price_series = intraday.get(ticker, pd.Series())
 
-        # The exchange calendar is authoritative: if the market is officially
-        # closed for a holiday, force the "market closed" tile even when a few
-        # stray bars come back (e.g. USGG10YR keeps ticking from overnight
-        # London/Asia trading on a SIFMA holiday). Only draw the sparkline on
-        # non-holiday days.
-        holiday = is_market_holiday(ticker)
+        # O calendário de bolsa é autoritativo: se o mercado está oficialmente
+        # fechado por feriado, força o tile de "mercado fechado" mesmo quando
+        # algumas barras avulsas chegam (ex.: USGG10YR continua marcando por
+        # conta do pregão overnight de Londres/Ásia num feriado da SIFMA). Só
+        # desenha o sparkline em dias que não são feriado.
+        holiday = e_feriado_de_mercado(ticker)
         has_chart = (
             not holiday
             and not price_series.empty
             and len(price_series) >= 2
         )
 
-        # On a chart day, derive the change from the intraday series (unless
-        # ref_data already provides a more accurate yield-based override).
-        # On a holiday, keep ref_data's official 1-day change.
+        # Num dia com gráfico, deriva a variação da série intradiária (a menos
+        # que a referência já traga um override baseado em yield mais
+        # preciso). Num feriado, mantém a variação oficial de 1 dia da
+        # referência.
         if has_chart and not has_display_override:
             first_price = price_series.iloc[0]
             last_price = price_series.iloc[-1]
@@ -231,13 +234,14 @@ def build_monitor_panel(
                 else 0
             )
 
-        # Format values via dispatch table
+        # Formata os valores via tabela de despacho
         formatter = FORMATTERS.get(asset_type, _format_default)
         is_positive, value_str, change_str = formatter(px_last, chg_net, chg_pct)
         text_color = color_green if is_positive else color_red
 
-        # Record what this tile actually shows, so prose about the same move can
-        # be generated from the rendered numbers rather than re-derived.
+        # Registra o que este tile de fato mostra, para que o texto sobre o
+        # mesmo movimento possa ser gerado a partir dos números renderizados
+        # em vez de recalculado.
         metrics[ticker] = {
             "display": display_name,
             "type": asset_type,
@@ -251,11 +255,12 @@ def build_monitor_panel(
             "holiday": holiday,
         }
 
-        # Sparkline on chart days; otherwise the "market closed" image — both
-        # for a genuine data gap and for a holiday (where it wins over any
-        # stray bars, since `has_chart` is False on holidays).
+        # Sparkline em dias com gráfico; caso contrário, a imagem de "mercado
+        # fechado" — tanto para uma falta de dado genuína quanto para um
+        # feriado (onde ela prevalece sobre qualquer barra avulsa, já que
+        # `has_chart` é False em feriados).
         if has_chart:
-            plot_sparkline_with_areas(
+            desenha_sparkline(
                 ax=ax,
                 price_series=price_series,
                 positive_color=color_green,
@@ -284,80 +289,66 @@ def build_monitor_panel(
 
         ax.axis("off")
 
-        # Asset name (top)
+        # Nome do ativo (topo)
         ax.text(
             0, 1.15, display_name, transform=ax.transAxes,
-            fontsize=FONT_SIZES["monitor_name"], fontweight="bold",
+            fontsize=FONTES["monitor_name"], fontweight="bold",
             color=color_title, va="bottom", ha="left",
         )
 
-        # Value and change
+        # Valor e variação
         ax.text(
             0, 1.0, value_str, transform=ax.transAxes,
-            fontsize=FONT_SIZES["monitor_value"], color=text_color,
+            fontsize=FONTES["monitor_value"], color=text_color,
             va="bottom", ha="left",
         )
         ax.text(
             0.5, 1.0, change_str, transform=ax.transAxes,
-            fontsize=FONT_SIZES["monitor_change"], color=text_color,
+            fontsize=FONTES["monitor_change"], color=text_color,
             va="bottom", ha="left",
         )
 
-    # Footer
+    # Rodapé
     fig.text(
         0.02, 0.02, "OBS: Gráficos intraday.",
-        fontsize=FONT_SIZES["monitor_obs"], color="black",
+        fontsize=FONTES["monitor_obs"], color="black",
         ha="left", va="bottom",
     )
-    # The stamp must be the reference moment the caller is working to, not the
-    # wall clock: a caller that also writes prose headed "Referência: 07:35"
-    # would otherwise ship an image stamped with whatever time it rendered.
+    # O carimbo precisa ser o momento de referência que o chamador está
+    # trabalhando, não o relógio da máquina: um chamador que também escreve
+    # texto com o cabeçalho "Referência: 07:35" do contrário entregaria uma
+    # imagem carimbada com a hora em que ela foi de fato renderizada.
     timestamp = (asof or datetime.now()).strftime("Atualizado em %d/%m/%y - %H:%M")
     fig.text(
         0.98, 0.02, timestamp,
-        fontsize=FONT_SIZES["monitor_obs"], color=color_red,
+        fontsize=FONTES["monitor_obs"], color=color_red,
         ha="right", va="bottom",
     )
 
-    # Headers need vertical room above the first row's asset names, which
-    # already sit above their axes. Reserve it only when there are headers, so
-    # panels without them keep their existing spacing untouched.
-    topo = 0.93 if column_headers else 0.97
+    # Os cabeçalhos precisam de espaço vertical acima dos nomes de ativo da
+    # primeira linha, que já ficam acima dos seus eixos. Reserva esse espaço
+    # só quando há cabeçalhos, então painéis sem eles mantêm seu espaçamento
+    # existente intocado.
+    topo = 0.93 if cabecalhos else 0.97
     plt.tight_layout(rect=[0, 0.03, 1, topo])
     plt.subplots_adjust(hspace=0.5, wspace=0.3)
 
-    if column_headers:
-        # Center each header over its column, taken from the laid-out position of
-        # the first-row axes. Reading the geometry back beats hardcoding offsets,
-        # which would drift with figure size and column count.
-        for coluna, titulo in enumerate(column_headers):
+    if cabecalhos:
+        # Centraliza cada cabeçalho sobre sua coluna, a partir da posição já
+        # diagramada dos eixos da primeira linha. Ler a geometria de volta é
+        # melhor que fixar deslocamentos, que iriam variar com o tamanho da
+        # figura e o número de colunas.
+        for coluna, titulo in enumerate(cabecalhos):
             if coluna >= len(fig.axes):
                 break
             caixa = fig.axes[coluna].get_position()
             fig.text(
                 (caixa.x0 + caixa.x1) / 2, 0.965, titulo,
-                fontsize=FONT_SIZES["monitor_column_header"], fontweight="bold",
+                fontsize=FONTES["monitor_column_header"], fontweight="bold",
                 color=color_title, ha="center", va="center",
             )
 
     if save_path is not None:
-        save_figure(fig, save_path, allowed_root=allowed_root)
+        grava_figura(fig, save_path, allowed_root=allowed_root)
 
     return fig, metrics
-
-
-def create_monitor_panel(
-    tickers_info: list[TickerInfo],
-    ref_data: pd.DataFrame,
-    price_data: dict[str, pd.Series],
-    save_path: Path | None = None,
-    figsize: tuple = MONITOR_FIGSIZE,
-) -> Figure:
-    """Create the monitor panel with sparklines, returning just the Figure.
-
-    Thin wrapper over ``build_monitor_panel`` for callers that only render.
-    """
-    fig, _ = build_monitor_panel(
-        tickers_info, ref_data, price_data, save_path=save_path, figsize=figsize,
-    )
-    return fig
