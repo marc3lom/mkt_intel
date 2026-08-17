@@ -903,3 +903,118 @@ def test_ativo_sem_dado_sai_como_indisponivel():
     }
     texto = monta_texto(cfg, metricas, [], ASOF, [alvo.ticker], calendario_vazio=True)
     assert f"  {alvo.rotulo}: indisponível" in texto
+
+
+# --- mapa de feriados de mercado ---------------------------------------------
+
+
+def test_todo_ticker_do_mapa_de_feriados_esta_no_painel():
+    """Ticker mapeado que ninguém mais carrega é sinal de deriva da lista.
+
+    A direção contrária é legítima e esperada: câmbio, ouro, petróleo e cripto
+    negociam quase ininterruptamente, não têm calendário de bolsa única
+    confiável, e ficam fora do mapa de propósito. Já um calendário apontando
+    para ticker que não está no painel.toml quer dizer que a lista de ativos
+    andou e o mapa ficou — e a detecção de feriado do ativo que entrou no lugar
+    simplesmente deixa de acontecer, sem erro nenhum.
+    """
+    from comentario_matinal.render.ativos import CALENDARIOS_DE_MERCADO
+
+    do_painel = set(carrega_config().tickers)
+    orfaos = sorted(t for t in CALENDARIOS_DE_MERCADO if t not in do_painel)
+    assert not orfaos, (
+        "CALENDARIOS_DE_MERCADO mapeia ticker(s) que não estão em "
+        f"config/painel.toml: {', '.join(orfaos)}. A lista de ativos mudou e o "
+        "mapa não acompanhou; enquanto isso, a detecção de feriado deixou de "
+        "valer para o ativo que entrou no lugar, e o painel passa a rotular "
+        "feriado de bolsa como falta de dado."
+    )
+
+
+# --- conversão do retorno do BQL ---------------------------------------------
+
+
+class _QuadroFalso:
+    """Dublê do DataFrame polars: o conversor só usa len() e to_pandas()."""
+
+    def __init__(self, df: pd.DataFrame):
+        self._df = df
+
+    def __len__(self) -> int:
+        return len(self._df)
+
+    def to_pandas(self) -> pd.DataFrame:
+        return self._df
+
+
+class _ResultadoFalso:
+    """Dublê do BqlResult: combine() ou, se ela falhar, a lista dataframes."""
+
+    def __init__(self, combinado=None, dataframes=None):
+        self._combinado = combinado
+        self.dataframes = dataframes if dataframes is not None else []
+
+    def combine(self):
+        if self._combinado is None:
+            raise RuntimeError("combine() indisponível neste retorno")
+        return self._combinado
+
+
+def test_bql_sem_resultado_vira_none():
+    from comentario_matinal.bql import _bql_to_pandas
+
+    assert _bql_to_pandas(None) is None
+
+
+def test_bql_converte_o_combinado():
+    from comentario_matinal.bql import _bql_to_pandas
+
+    esperado = pd.DataFrame({"ACTUAL": [1.0]})
+    df = _bql_to_pandas(_ResultadoFalso(combinado=_QuadroFalso(esperado)))
+    assert df is not None
+    assert list(df.columns) == ["ACTUAL"]
+
+
+def test_bql_cai_no_primeiro_dataframe_quando_combine_falha():
+    """A queda é o caminho normal quando o BQL devolve séries de larguras
+    diferentes, que combine() se recusa a juntar."""
+    from comentario_matinal.bql import _bql_to_pandas
+
+    primeiro = pd.DataFrame({"ACTUAL": [2.0]})
+    resultado = _ResultadoFalso(
+        dataframes=[_QuadroFalso(primeiro), _QuadroFalso(pd.DataFrame({"X": [9]}))]
+    )
+    df = _bql_to_pandas(resultado)
+    assert list(df.columns) == ["ACTUAL"]
+
+
+def test_bql_resultado_vazio_vira_none():
+    """Zero linhas é dia sem evento, não erro: quem chama trata como vazio."""
+    from comentario_matinal.bql import _bql_to_pandas
+
+    assert _bql_to_pandas(_ResultadoFalso(combinado=_QuadroFalso(pd.DataFrame()))) is None
+
+
+def test_mapeamento_de_colunas_casa_por_pedaco_do_nome():
+    """O BQL devolve nomes decorados; o mapa é por substring maiúscula."""
+    from comentario_matinal.bql import _map_bql_columns
+
+    df = pd.DataFrame(columns=["#calendar().country_name", "release_date", "sobra"])
+    renomeado = _map_bql_columns(
+        df, {"COUNTRY_NAME": "PAÍS", "RELEASE_DATE": "DATA", "AUSENTE": "NADA"}
+    )
+    assert list(renomeado.columns) == ["PAÍS", "DATA", "sobra"]
+
+
+def test_mapeamento_de_colunas_fica_com_a_primeira_que_casa():
+    """Duas colunas casando, a escolhida é a primeira — inclusive quando erra.
+
+    Aqui "ACTUAL_RELEASE" vem antes de "ACTUAL" e leva o nome ATUAL, deixando a
+    coluna certa para trás. É o preço da regra por substring, e está fixado aqui
+    para que mudá-la seja uma decisão, e não um efeito colateral.
+    """
+    from comentario_matinal.bql import _map_bql_columns
+
+    df = pd.DataFrame(columns=["ACTUAL_RELEASE", "ACTUAL"])
+    renomeado = _map_bql_columns(df, {"ACTUAL": "ATUAL"})
+    assert list(renomeado.columns) == ["ATUAL", "ACTUAL"]
