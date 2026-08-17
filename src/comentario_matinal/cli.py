@@ -131,6 +131,10 @@ def main() -> int:
     except ErroNoModelo as e:
         return _falha(e, f"Erro na etapa {args.comando}: {e}")
     except RevisaoIlegivel as e:
+        # A revisão foi gravada antes de o extrator falhar, e o caminho dela sai
+        # como o de qualquer etapa que termina: é o arquivo que o autor precisa
+        # abrir para ver o que o modelo devolveu.
+        print(f"{args.comando.capitalize():<11} {e.destino}")
         return _falha(e, f"\nErro: {e}\nA revisão completa está em {e.destino}.")
     except MontagemFalhou as e:
         return _falha(e, f"Erro ao montar o documento: {e}")
@@ -230,21 +234,26 @@ def _etapa(args, ctx: Contexto) -> int:
     elif temas:
         temas = "\n".join(f"- {t.strip()}" for t in temas.split("|") if t.strip())
 
+    # Só as etapas que consomem o comentário do dia anterior traduzem os flags
+    # dele. Quem decide quais são é o núcleo: avisar sobre um arquivo que a
+    # redação nem vai receber engana em vez de informar.
     anterior = plantao.AUTOMATICO
-    if args.sem_anterior:
-        anterior = None
-    elif args.anterior:
-        anterior = (args.anterior.read_text(encoding="utf-8")
-                    if args.anterior.exists() else None)
-        if anterior is None:
-            _erra(f"Aviso: {args.anterior} não existe; a etapa roda sem o "
-                  "comentário do dia anterior.")
+    if args.comando in plantao.COM_ANTERIOR:
+        if args.sem_anterior:
+            anterior = None
+        elif args.anterior:
+            anterior = (args.anterior.read_text(encoding="utf-8")
+                        if args.anterior.exists() else None)
+            if anterior is None:
+                _erra(f"Aviso: {args.anterior} não existe; a etapa roda sem o "
+                      "comentário do dia anterior.")
 
+    # Os avisos da etapa saem enquanto ela roda, e não no fim: a chamada ao
+    # modelo leva minutos, e o que eles dizem — fontes ausentes, comentário
+    # anterior sem base — só serve para decidir se vale interromper.
     etapa = plantao.roda_etapa(ctx, args.comando, temas=temas, anterior=anterior,
-                               web=args.web, modelo=args.modelo)
+                               web=args.web, modelo=args.modelo, progresso=_erra)
 
-    for aviso in etapa.avisos:
-        _erra(aviso)
     print(f"{etapa.nome.capitalize():<11} {etapa.caminho}")
 
     if etapa.comentario:
@@ -276,6 +285,8 @@ def _conferir(ctx: Contexto) -> int:
 def _enviado(args, ctx: Contexto) -> int:
     fechamento = plantao.fecha_plantao(ctx, forcar=args.forcar)
 
+    for aviso in fechamento.avisos:
+        _erra(aviso)
     for caminho in fechamento.arquivados:
         print(f"Arquivado:  {caminho}")
     print(f"Limpeza:    {fechamento.removidos} arquivo(s) removidos de "

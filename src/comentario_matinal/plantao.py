@@ -190,6 +190,11 @@ class Etapa:
 class Fechamento:
     arquivados: list[Path]
     removidos: int
+    # O que foi arquivado sem conferência contra o documento enviado. Este aviso
+    # não impede fechar o plantão, mas diz que o `.md` que amanhã será lido como
+    # comentário do dia anterior entrou no arquivo sem ninguém garantir que é o
+    # texto que a diretoria recebeu.
+    avisos: list[str]
 
 
 def _le(caminho: Path) -> str | None:
@@ -354,7 +359,8 @@ def monta_bloco(ctx: Contexto, mercado: Mercado, painel: Painel,
     return Bloco(texto=texto, caminho=caminho, avisos=avisos)
 
 
-def _do_arquivo(ctx: Contexto, asof: datetime, avisos: list[str]) -> str | None:
+def _do_arquivo(ctx: Contexto, asof: datetime,
+                avisa: Callable[[str], None]) -> str | None:
     """Procura o comentário do dia anterior em ``ctx.arquivo``.
 
     Depender de alguém lembrar de apontar o arquivo fazia as duas checagens que
@@ -365,25 +371,32 @@ def _do_arquivo(ctx: Contexto, asof: datetime, avisos: list[str]) -> str | None:
 
     achado = comentario_anterior(ctx.arquivo, asof)
     if achado is None:
-        avisos.append(f"Aviso: nenhum comentário recente em {ctx.arquivo}. A etapa "
-                      "roda sem o do dia anterior — a checagem de ineditismo e de "
-                      "contradição fica sem base. Arquivar o comentário enviado "
-                      "resolve.")
+        avisa(f"Aviso: nenhum comentário recente em {ctx.arquivo}. A etapa roda "
+              "sem o do dia anterior — a checagem de ineditismo e de contradição "
+              "fica sem base. Arquivar o comentário enviado resolve.")
         return None
 
     caminho, data = achado
-    avisos.append(f"Anterior:   {caminho.name} ({data:%d/%m/%Y})")
+    avisa(f"Anterior:   {caminho.name} ({data:%d/%m/%Y})")
     return com_data(caminho.read_text(encoding="utf-8"), data)
 
 
 def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,
                anterior: str | None | object = AUTOMATICO,
-               web: bool = False, modelo: str | None = None) -> Etapa:
+               web: bool = False, modelo: str | None = None,
+               progresso: Callable[[str], None] | None = None) -> Etapa:
     """Executa uma das três etapas de IA a partir do material já coletado.
 
     A ordem das checagens importa. O painel é lido antes de o horário de redação
     ser resolvido, porque é dele que esse horário sai; e o comentário anterior é
     procurado depois, porque a busca é datada por ele.
+
+    Todo aviso daqui nasce antes da chamada ao modelo, que leva minutos. Guardá-lo
+    só no resultado o entregaria depois da espera, quando ele já não serve para
+    decidir se vale interromper: sem fontes noticiosas, ou sem o comentário do dia
+    anterior, o autor prefere parar e resolver a rodar a etapa assim. Por isso
+    ``progresso`` — quem o passa vê cada aviso na hora, e o resultado continua
+    carregando todos para quem só quiser lê-los no fim.
     """
     from comentario_matinal.etapas import (
         FormatoInesperado,
@@ -402,35 +415,45 @@ def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,
 
     avisos: list[str] = []
 
+    def avisa(mensagem: str) -> None:
+        avisos.append(mensagem)
+        _diz(progresso, mensagem)
+
+    def pendentes() -> list[str]:
+        """Os avisos que quem chamou ainda não viu.
+
+        Quem passou ``progresso`` já recebeu cada um na hora; repeti-los na
+        exceção faria a fachada imprimir tudo duas vezes.
+        """
+        return [] if progresso is not None else avisos
+
     # Fontes: PDF vira texto, para que o insumo seja o mesmo em qualquer backend.
     caminho_fontes = ctx.saida / f"fontes_{ctx.marca}.txt"
     conv = converte(ctx.fontes, caminho_fontes)
     n = conv.aproveitados
     if n:
-        avisos.append(f"Fontes:     {n} PDF(s) convertidos em {caminho_fontes}")
+        avisa(f"Fontes:     {n} PDF(s) convertidos em {caminho_fontes}")
     else:
-        avisos.append(f"Aviso: nenhum PDF aproveitado em {ctx.fontes}. A etapa vai "
-                      "rodar sem fontes noticiosas.")
+        avisa(f"Aviso: nenhum PDF aproveitado em {ctx.fontes}. A etapa vai rodar "
+              "sem fontes noticiosas.")
     if conv.vazios:
-        avisos.append(f"Aviso: {len(conv.vazios)} PDF(s) não renderam texto — "
-                      "provavelmente digitalização sem OCR: "
-                      f"{', '.join(conv.vazios)}")
+        avisa(f"Aviso: {len(conv.vazios)} PDF(s) não renderam texto — provavelmente "
+              f"digitalização sem OCR: {', '.join(conv.vazios)}")
     if conv.ignorados:
-        avisos.append(f"Aviso: {len(conv.ignorados)} arquivo(s) de {ctx.fontes} NÃO "
-                      "foram lidos, porque só PDF é aproveitado como fonte — o "
-                      "conteúdo deles não chegou ao modelo: "
-                      f"{', '.join(conv.ignorados)}. Reimprimir em PDF (Outlook: "
-                      "Arquivo → Imprimir → Microsoft Print to PDF; navegador: "
-                      "Ctrl+P → Salvar em PDF).")
+        avisa(f"Aviso: {len(conv.ignorados)} arquivo(s) de {ctx.fontes} NÃO foram "
+              "lidos, porque só PDF é aproveitado como fonte — o conteúdo deles "
+              f"não chegou ao modelo: {', '.join(conv.ignorados)}. "
+              "Reimprimir em PDF (Outlook: Arquivo → Imprimir → Microsoft Print "
+              "to PDF; navegador: Ctrl+P → Salvar em PDF).")
 
     painel_txt = _le(ctx.saida / f"painel_{ctx.marca}.txt")
     calendario_md = _le(ctx.saida / f"calendario_{ctx.marca}.md")
     if painel_txt is None:
         raise FaltaInsumo(f"falta o bloco direcional de {ctx.marca}. Rodar "
-                          "`uv run matinal` antes das etapas.", avisos)
+                          "`uv run matinal` antes das etapas.", pendentes())
     if calendario_md is None:
-        avisos.append(f"Aviso: falta o calendário em texto de {ctx.marca}; a etapa "
-                      "roda sem ele.")
+        avisa(f"Aviso: falta o calendário em texto de {ctx.marca}; a etapa roda "
+              "sem ele.")
 
     # O horário de redação é o do término da coleta, que é o carimbo do painel.
     # O relógio da máquina faria a etapa analisar material das 7h35 afirmando ser
@@ -439,21 +462,19 @@ def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,
     if ctx.asof_explicito:
         asof = ctx.asof
         if do_painel and abs((asof - do_painel).total_seconds()) > TOLERANCIA_ASOF:
-            avisos.append(f"Aviso: --asof ({asof:%d/%m %Hh%M}) diverge da referência "
-                          f"do painel ({do_painel:%d/%m %Hh%M}). O painel é o "
-                          "material que a etapa analisa; conferir se é mesmo o do "
-                          "dia.")
+            avisa(f"Aviso: --asof ({asof:%d/%m %Hh%M}) diverge da referência do "
+                  f"painel ({do_painel:%d/%m %Hh%M}). O painel é o material que a "
+                  "etapa analisa; conferir se é mesmo o do dia.")
     elif do_painel:
         asof = do_painel
     else:
         asof = agora()
-        avisos.append("Aviso: não consegui ler a referência do painel; usando o "
-                      "relógio.")
+        avisa("Aviso: não consegui ler a referência do painel; usando o relógio.")
 
     if nome not in COM_ANTERIOR:
         texto_anterior = None
     elif anterior is AUTOMATICO:
-        texto_anterior = _do_arquivo(ctx, asof, avisos)
+        texto_anterior = _do_arquivo(ctx, asof, avisa)
     else:
         texto_anterior = anterior
 
@@ -475,11 +496,11 @@ def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,
         if not temas:
             raise SemTemas("a redação precisa dos temas escolhidos pelo autor. A "
                            "decisão editorial entre a triagem e a redação é "
-                           "humana.", avisos)
+                           "humana.", pendentes())
         triagem = _le(ctx.saida / f"triagem_{ctx.marca}.md")
         if triagem is None:
             raise FaltaInsumo(f"falta a triagem de {ctx.marca}. Rodar `uv run "
-                              "matinal triagem` antes.", avisos)
+                              "matinal triagem` antes.", pendentes())
         alertas = secao_ou_tudo(triagem, "C) ALERTAS", "alertas")
         mensagem = mensagem_redacao(prompt, ins, temas, alertas, web)
 
@@ -487,14 +508,14 @@ def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,
         redacao = _le(ctx.saida / f"redacao_{ctx.marca}.md")
         if redacao is None:
             raise FaltaInsumo(f"falta a redação de {ctx.marca}. Rodar `uv run "
-                              "matinal redacao` antes.", avisos)
+                              "matinal redacao` antes.", pendentes())
         texto, auditoria = partes_da_redacao(redacao)
         mensagem = mensagem_revisao(prompt, ins, texto, auditoria, web)
 
     try:
         resposta = roda(mensagem, nome, destino, web=web, modelo=modelo)
     except ErroDoModelo as e:
-        raise ErroNoModelo(str(e), avisos) from e
+        raise ErroNoModelo(str(e), pendentes()) from e
 
     comentario: Path | None = None
     if nome == "revisao":
@@ -503,7 +524,7 @@ def roda_etapa(ctx: Contexto, nome: str, *, temas: str | None = None,
         try:
             md = comentario_revisado(resposta)
         except FormatoInesperado as e:
-            raise RevisaoIlegivel(str(e), destino, avisos) from e
+            raise RevisaoIlegivel(str(e), destino, pendentes()) from e
         comentario = ctx.saida / f"comentario_{ctx.marca}.md"
         comentario.write_text(md, encoding="utf-8")
 
@@ -617,4 +638,4 @@ def fecha_plantao(ctx: Contexto, forcar: bool = False) -> Fechamento:
 
     # Só aqui, e só depois de o arquivamento ter dado certo.
     n = limpa([ctx.fontes, ctx.saida])
-    return Fechamento(arquivados=escritos, removidos=n)
+    return Fechamento(arquivados=escritos, removidos=n, avisos=avisos)
