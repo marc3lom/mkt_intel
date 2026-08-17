@@ -56,9 +56,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("comando", nargs="?", default=None,
-                        choices=["triagem", "redacao", "revisao"],
-                        help="Etapa de IA a executar. Sem argumento, coleta o "
-                             "mercado e gera painel, calendário e texto.")
+                        choices=["triagem", "redacao", "revisao", "enviado"],
+                        help="Etapa a executar. `enviado` fecha o plantão: "
+                             "arquiva o comentário e limpa fontes/ e saida/. "
+                             "Sem argumento, coleta o mercado e gera painel, "
+                             "calendário e texto.")
+    parser.add_argument("--forcar", action="store_true",
+                        help="Só para `enviado`: contorna as três recusas — "
+                             "fora da janela, divergência entre .docx e .md, e "
+                             "destino já arquivado. É rombudo de propósito, "
+                             "contorna as três de uma vez.")
     parser.add_argument("--temas", type=str, default=None,
                         help="Temas escolhidos pelo autor, separados por '|': "
                              "dominante primeiro. Só para `redacao`.")
@@ -119,6 +126,9 @@ def main() -> int:
 
     caminho_painel = saida / f"painel_{marca}.png"
     caminho_tabela = saida / f"calendario_{marca}.png"
+
+    if args.comando == "enviado":
+        return _fecha_plantao(args, saida, marca, dry_run)
 
     # As etapas de IA consomem o material já gerado pela coleta; nenhuma delas
     # toca no Bloomberg.
@@ -257,6 +267,67 @@ def _anterior(args, asof: datetime) -> str | None:
     caminho, data = achado
     print(f"Anterior:   {caminho.name} ({data:%d/%m/%Y})", file=sys.stderr)
     return com_data(caminho.read_text(encoding="utf-8"), data)
+
+
+def _fecha_plantao(args, saida: Path, marca: str, dry_run: bool) -> int:
+    """Arquiva o comentário enviado e limpa o dia.
+
+    Única etapa que bloqueia fora da janela. As outras produzem artefato, que sai
+    carimbado como ensaio; esta AFIRMA que o comentário foi enviado à diretoria,
+    e o que ela arquiva vira o "comentário do dia anterior" da manhã seguinte.
+    Registrar um ensaio ali contamina a triagem seguinte em silêncio.
+    """
+    from comentario_matinal.enviado import DestinoOcupado, arquiva, divergencias, limpa
+
+    if dry_run and not args.forcar:
+        print(f"Erro: fora da janela de {faixa()} — esta execução é ensaio, e "
+              "`enviado` registra o comentário como enviado à diretoria. O que "
+              "for arquivado vira o \"comentário do dia anterior\" de amanhã.\n"
+              "Se o envio ocorreu mesmo e o plantão atrasou, repetir com "
+              "--forcar.", file=sys.stderr)
+        return 1
+
+    md = saida / f"comentario_{marca}.md"
+    docx = saida / f"comentario_{marca}.docx"
+
+    if docx.exists() and md.exists():
+        div = divergencias(docx, md)
+        if div and not args.forcar:
+            print(f"Erro: o .docx e o .md divergem em {len(div)} marcador(es). "
+                  "O .md é o que fica arquivado e o que a triagem de amanhã lê "
+                  "como comentário do dia anterior.\n", file=sys.stderr)
+            for d in div:
+                print(f"  M{d.indice}  .md   : {d.no_md[:100] or '(ausente)'}",
+                      file=sys.stderr)
+                print(f"      .docx : {d.no_docx[:100] or '(ausente)'}\n",
+                      file=sys.stderr)
+            print("Nada foi arquivado. Corrigir o .md para refletir o que foi "
+                  "enviado, ou --forcar para arquivar o .md como está.",
+                  file=sys.stderr)
+            return 1
+    elif not docx.exists():
+        print("Aviso: não há .docx da data; arquivando sem conferir o texto "
+              "contra o documento enviado.", file=sys.stderr)
+
+    try:
+        escritos = arquiva(saida, args.arquivo, marca, forcar=args.forcar)
+    except FileNotFoundError as e:
+        print(f"Erro: {e}", file=sys.stderr)
+        return 1
+    except DestinoOcupado as e:
+        print(f"Erro: {e}.\nNada foi arquivado e nada foi apagado. Conferir se "
+              "a data está certa; --forcar sobrescreve.", file=sys.stderr)
+        return 1
+
+    for caminho in escritos:
+        print(f"Arquivado:  {caminho}")
+
+    # Só aqui, e só depois de o arquivamento ter dado certo.
+    n = limpa([args.fontes, saida])
+    print(f"Limpeza:    {n} arquivo(s) removidos de {args.fontes.name}/ e "
+          f"{saida.name}/")
+    print("\nPlantão encerrado. O repositório está pronto para amanhã.")
+    return 0
 
 
 def _roda_etapa(args, saida: Path, marca: str) -> int:

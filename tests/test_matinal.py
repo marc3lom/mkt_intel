@@ -335,6 +335,134 @@ def test_referencia_do_painel_vem_do_cabecalho():
     assert referencia_do_painel("sem cabeçalho") is None
 
 
+# --- arquivamento do enviado ------------------------------------------------
+
+
+def _docx_com(tmp_path, *marcadores):
+    """Um .docx mínimo com os marcadores no estilo do template."""
+    from docx import Document
+
+    d = Document()
+    d.add_paragraph("Comentário Matinal – Mesa de Investimentos")
+    for m in marcadores:
+        d.add_paragraph(m, style="List Paragraph")
+    d.add_paragraph("Atenciosamente,")
+    caminho = tmp_path / "comentario.docx"
+    d.save(str(caminho))
+    return caminho
+
+
+def test_marcadores_iguais_nao_divergem(tmp_path):
+    """Ênfase não conta: *termo* no Markdown vira termo no Word."""
+    from comentario_matinal.enviado import divergencias
+
+    md = tmp_path / "c.md"
+    md.write_text("- O *term premium* avança.\n\n- O dólar cede.\n", encoding="utf-8")
+    docx = _docx_com(tmp_path, "O term premium avança.", "O dólar cede.")
+
+    assert divergencias(docx, md) == []
+
+
+def test_texto_corrigido_no_word_e_apontado(tmp_path):
+    """O caso que motiva a comparação: o autor corrige no Word e o .md fica para
+    trás — e é o .md que vira o "dia anterior" da triagem seguinte."""
+    from comentario_matinal.enviado import divergencias
+
+    md = tmp_path / "c.md"
+    md.write_text("- A volatilidade implícita cede.\n\n- O dólar cede.\n",
+                  encoding="utf-8")
+    docx = _docx_com(tmp_path, "A volatilidade implícita recua.", "O dólar cede.")
+
+    div = divergencias(docx, md)
+    assert len(div) == 1
+    assert div[0].indice == 1
+    assert "cede" in div[0].no_md and "recua" in div[0].no_docx
+
+
+def test_contagem_diferente_de_marcadores_e_divergencia(tmp_path):
+    """Marcador apagado no Word não pode passar por coincidência de prefixo."""
+    from comentario_matinal.enviado import divergencias
+
+    md = tmp_path / "c.md"
+    md.write_text("- Um.\n\n- Dois.\n\n- Três.\n", encoding="utf-8")
+    docx = _docx_com(tmp_path, "Um.", "Dois.")
+
+    div = divergencias(docx, md)
+    assert len(div) == 1
+    assert div[0].indice == 3
+    assert div[0].no_docx == ""
+
+
+def test_espaco_e_quebra_nao_contam_como_divergencia(tmp_path):
+    from comentario_matinal.enviado import divergencias
+
+    md = tmp_path / "c.md"
+    md.write_text("- Uma frase\n  quebrada por largura.\n", encoding="utf-8")
+    docx = _docx_com(tmp_path, "Uma frase  quebrada   por largura.")
+
+    assert divergencias(docx, md) == []
+
+
+def test_arquiva_nos_dois_destinos(tmp_path):
+    from comentario_matinal.enviado import arquiva
+
+    saida, arq = tmp_path / "saida", tmp_path / "arquivo"
+    saida.mkdir()
+    (saida / "comentario_20260817.md").write_text("- Um.\n", encoding="utf-8")
+    (saida / "comentario_20260817.docx").write_bytes(b"PK-falso")
+
+    destinos = arquiva(saida, arq, "20260817")
+
+    assert (arq / "2026" / "08" / "20260817.md").read_text(encoding="utf-8") == "- Um.\n"
+    assert (arq / "2026" / "08" / "comentario_20260817.docx").exists()
+    assert len(destinos) == 2
+
+
+def test_destino_existente_nao_e_sobrescrito(tmp_path):
+    """Rearquivar não pode apagar em silêncio o comentário de um dia já enviado."""
+    from comentario_matinal.enviado import DestinoOcupado, arquiva
+
+    saida, arq = tmp_path / "saida", tmp_path / "arquivo"
+    saida.mkdir()
+    (saida / "comentario_20260817.md").write_text("- Novo.\n", encoding="utf-8")
+    antigo = arq / "2026" / "08" / "20260817.md"
+    antigo.parent.mkdir(parents=True)
+    antigo.write_text("- Original.\n", encoding="utf-8")
+
+    with pytest.raises(DestinoOcupado, match="20260817.md"):
+        arquiva(saida, arq, "20260817")
+    assert antigo.read_text(encoding="utf-8") == "- Original.\n"
+
+
+def test_docx_ausente_arquiva_so_o_texto(tmp_path):
+    """O .md é o que importa; sem o .docx o arquivamento segue, com aviso."""
+    from comentario_matinal.enviado import arquiva
+
+    saida, arq = tmp_path / "saida", tmp_path / "arquivo"
+    saida.mkdir()
+    (saida / "comentario_20260817.md").write_text("- Um.\n", encoding="utf-8")
+
+    destinos = arquiva(saida, arq, "20260817")
+    assert len(destinos) == 1
+    assert destinos[0].name == "20260817.md"
+
+
+def test_limpeza_apaga_conteudo_e_preserva_as_pastas(tmp_path):
+    from comentario_matinal.enviado import limpa
+
+    fontes, saida = tmp_path / "fontes", tmp_path / "saida"
+    for d in (fontes, saida):
+        d.mkdir()
+        (d / "algo.txt").write_text("x", encoding="utf-8")
+    (saida / "sub").mkdir()
+
+    n = limpa([fontes, saida])
+
+    assert fontes.is_dir() and saida.is_dir()
+    assert list(fontes.iterdir()) == [] and list(saida.iterdir()) == []
+    assert n == 3
+
+
 # --- janela do plantão ------------------------------------------------------
 
 

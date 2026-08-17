@@ -39,6 +39,7 @@ comentario_matinal/
 │   ├── modelo.py               a chamada ao modelo, atrás de uma função única
 │   ├── etapas.py               as três etapas de IA e o encadeamento
 │   ├── documento.py            montagem do .docx a partir do template
+│   ├── enviado.py              arquivamento do enviado e limpeza do dia
 │   └── cli.py                  o comando
 ├── fontes/                     PDFs do dia (fora do repositório)
 ├── saida/                      saídas do dia (fora do repositório)
@@ -325,13 +326,53 @@ Abrir o `.docx` no Word para inserir o gráfico do dia, quando houver, conferir 
 exportar o PDF. **O PDF não é gerado pelo comando**: a exportação é feita do Word, na
 mesma passagem em que o analista confere o documento.
 
+### Passo 8 — Após o envio
+
+```
+uv run matinal enviado
+```
+
+Arquiva `arquivo/AAAA/MM/AAAAMMDD.md` e `arquivo/AAAA/MM/comentario_AAAAMMDD.docx`, e
+esvazia `fontes/` e `saida/`. **Rodar só depois de o e-mail ter saído** — o comando
+afirma que o comentário foi enviado.
+
+Antes de arquivar, ele **compara os marcadores do `.docx` com os do `.md`**. Se você
+corrigiu o texto no Word, os dois divergem, e o comando para mostrando a diferença sem
+arquivar nada. É o `.md` que fica versionado e que a triagem de amanhã lê como
+comentário do dia anterior: registrar ali um texto que não foi o enviado não erra hoje,
+erra amanhã, como contradição inventada.
+
+Três recusas, todas contornáveis com `--forcar`, que é rombudo e passa pelas três de
+uma vez:
+
+| Recusa | Por quê |
+|---|---|
+| Fora da janela de 7h–9h | É a única etapa que bloqueia. As outras produzem artefato, carimbado como ensaio; esta afirma um envio, e o que arquiva vira o insumo de amanhã |
+| `.docx` e `.md` divergem | Ver acima |
+| Já existe comentário arquivado para a data | Rearquivar por engano apagaria em silêncio o comentário de um dia já enviado |
+
+A limpeza só ocorre **depois** de o arquivamento dar certo. Falhando o arquivamento,
+nada é apagado.
+
+O `.docx` vai para `arquivo/` como registro local do que foi mandado, mas **não é
+versionado** — `.gitignore` cobre `*.docx`. O que entra no git é o `.md`.
+
+**O nome do arquivo é lido pelo comando**, não é só convenção de organização: é dele
+que sai o comentário do dia anterior da triagem e da revisão do plantão seguinte.
+Nome fora do padrão `AAAAMMDD.md` é ignorado em silêncio, e a checagem de ineditismo
+roda sem base. Pular o arquivamento tem o mesmo efeito.
+
+Os arquivos de etapa — `triagem`, `redacao`, `revisao`, com seus blocos de auditoria —
+vão embora na limpeza. Para guardar a memória de como um comentário foi construído,
+copiá-los à mão antes de rodar `enviado`.
+
 ### Referência de fusos
 
-| Brasília | Nova York | Observação                                                |
-|----------|-----------|-----------------------------------------------------------|
+| Brasília | Nova York | Observação                                                  |
+|----------|-----------|-------------------------------------------------------------|
 | 07h00    | 06h00     | Abertura da janela. Releases europeus e britânicos já saíram |
-| 09h00    | 08h00     | Fecho da janela. Mercado americano à vista ainda fechado   |
-| 09h30    | 08h30     | Maioria dos releases americanos — sempre após a redação    |
+| 09h00    | 08h00     | Fecho da janela. Mercado americano à vista ainda fechado     |
+| 09h30    | 08h30     | Maioria dos releases americanos — sempre após a redação      |
 
 Horários de Nova York consideram o horário de verão americano. Fora dele, subtrair uma
 hora adicional da conversão.
@@ -340,17 +381,6 @@ hora adicional da conversão.
 Redigindo perto das 9h, conferir com cuidado redobrado o status de cada indicador
 americano do dia — o bloco de calendário em texto traz `AINDA NÃO DIVULGADO` por
 comparação de horário, e é nele que se confia, nunca no campo `ATUAL` da imagem.
-
-### Após o envio
-
-Salvar o texto final em `arquivo/AAAA/MM/AAAAMMDD.md` — Markdown, data ISO no nome do
-arquivo, apenas o corpo do comentário. Não incluir painel, calendário nem bloco de
-auditoria.
-
-**O nome do arquivo é lido pelo comando**, não é só convenção de organização: é dele
-que sai o comentário do dia anterior da triagem e da revisão do plantão seguinte.
-Nome fora do padrão `AAAAMMDD.md` é ignorado em silêncio, e a checagem de ineditismo
-roda sem base. Pular o arquivamento tem o mesmo efeito.
 
 O formato é Markdown por decisão deliberada: o arquivo precisa ser pesquisável por texto
 e legível pelo comando. `arquivo/` guarda apenas o que o processo produz, a partir da
