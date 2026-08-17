@@ -45,4 +45,7 @@ module-name = "comentario_matinal"
 [dependency-groups]
 dev = [
     "pytest>=9.1",
+    "ipykernel>=7.1",
+    "nbformat>=5.10",
+    "nbstripout>=0.9",
 ]

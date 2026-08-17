@@ -40,8 +40,11 @@ comentario_matinal/
 │   ├── etapas.py               as três etapas de IA e o encadeamento
 │   ├── documento.py            montagem do .docx a partir do template
 │   ├── enviado.py              arquivamento do enviado e limpeza do dia
-│   ├── cli.py                  o comando
+│   ├── plantao.py              o plantão como funções — o núcleo das duas fachadas
+│   ├── cli.py                  fachada de terminal: o comando
 │   └── render/                 painel, tabelas do calendário e o que elas precisam
+├── notebooks/
+│   └── plantao.ipynb           fachada de notebook — as mesmas funções, em células
 ├── fontes/                     PDFs do dia (fora do repositório)
 ├── saida/                      saídas do dia (fora do repositório)
 ├── config/
@@ -63,6 +66,13 @@ alternativo — ver "O Project do Claude", mais abaixo.
 
 1. Instalar as dependências: `uv sync`.
 2. Ter o `claude` no PATH, autenticado. É o backend padrão das etapas de IA.
+3. Instalar o filtro de notebook: `uv run nbstripout --install`.
+
+O passo 3 vale por clone, e é o que impede que um notebook executado leve para o
+commit os dados de mercado e o texto do comentário — possivelmente antes de ele ter
+sido enviado. O filtro tira as saídas no `git add`, sem tocar no arquivo aberto na
+tela. Sem ele nada avisa na hora: quem percebe é o `tests/test_notebook.py`, que
+existe como rede para o clone em que o passo foi esquecido.
 
 O `uv sync` cria o `.venv` e instala tudo, inclusive o `blpapi`, que não vem do PyPI —
 o `pyproject.toml` já aponta para o índice da Bloomberg. Rodar sempre do Windows nativo,
@@ -154,6 +164,26 @@ O roteiro é contado em tempo relativo a partir do término da coleta (T0), não
 de relógio. O plantão pode começar às 7h00 ou às 8h30; a sequência e a folga são as
 mesmas. Ciclo completo em torno de vinte e cinco minutos — o que exige começar a coleta
 até 8h30 para caber na janela.
+
+### As duas formas de rodar
+
+O runbook abaixo é contado no terminal, com `uv run matinal`. `notebooks/plantao.ipynb`
+é a outra forma, com os mesmos passos em células: quem prefere ver o painel e as
+tabelas na própria página, ou quer inspecionar o `DataFrame` que virou o bloco
+direcional, roda por lá.
+
+Nenhuma das duas implementa o plantão. As duas são fachadas sobre
+`src/comentario_matinal/plantao.py` e chamam as mesmas funções, então não podem
+divergir no que fazem. O que poderia divergir é a **sequência** — ela existe duas
+vezes, no argparse e nas células —, e é isso que `tests/test_notebook.py` prende:
+passo novo no núcleo ou subcomando novo no terminal derruba o teste até que o notebook
+seja atualizado junto.
+
+**O Passo 9 só existe no terminal.** `uv run matinal enviado` arquiva o comentário e
+esvazia `fontes/` e `saida/`; o que ele arquiva vira o "comentário do dia anterior" de
+amanhã. É o único passo destrutivo do processo e o único que afirma um fato que
+nenhum código pode verificar — que o e-mail foi mesmo enviado. Notebook é onde se
+re-executa célula sem querer, e por isso ele fica de fora de propósito.
 
 ### Passo 1 — Coleta (T0)
 

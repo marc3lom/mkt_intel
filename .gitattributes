@@ -1,0 +1,4 @@
+# Notebooks: as saídas de execução carregam dados de mercado e o texto do
+# comentário antes do envio. O filtro as tira no `git add`; o teste de
+# tests/test_notebook.py é a rede para o clone onde ele não foi instalado.
+*.ipynb filter=nbstripout
