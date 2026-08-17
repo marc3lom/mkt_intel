@@ -161,11 +161,18 @@ decidi-los está em [O que é seu decidir](04-decisoes.md#os-pontos-sob-julgamen
 
 ## Passo 7 — Montagem do documento
 
-Salvar o texto revisado em Markdown, um marcador por parágrafo, e montar o documento:
+O texto revisado já está em `saida/comentario_AAAAMMDD.md` — o Passo 6 o gravou, e o
+comando imprimiu o caminho. Editar esse arquivo, e não uma cópia: é ele que o Passo 8
+compara com o `.docx`, e é ele que o Passo 9 arquiva. Um marcador por parágrafo.
 
 ```
-uv run matinal --comentario comentario.md
+uv run matinal --comentario saida/comentario_AAAAMMDD.md
 ```
+
+**Exceção:** se o Passo 6 não gravou o `.md` — bloco de código malformado —, aí sim
+salvar o texto à mão a partir da revisão, com esse mesmo nome e nessa mesma pasta.
+Salvá-lo noutro lugar faz o Passo 8 comparar o documento com um arquivo que você não
+editou, e acusar divergências que são artefato do par errado.
 
 Sai `saida/comentario_AAAAMMDD.docx`, a partir de `templates/comentario.dotx`, com o
 painel no alto e a tabela do calendário depois dos marcadores. Do Markdown, `- ` vira
@@ -181,7 +188,9 @@ O comando avisa no stderr quando o comentário sai da faixa de quatro a cinco ma
 que o guia fixa, e quando alguma linha fora de marcador foi ignorada.
 
 Abrir o `.docx` no Word para inserir o gráfico do dia, quando houver, conferir o texto e
-exportar o PDF. **O PDF não é gerado pelo comando**: a exportação é feita do Word, na
+exportar o PDF. **O gráfico é opcional e não sai do comando** — é uma imagem que você
+mesmo monta, quando algum tema pede ilustração, e cola à mão no Word; a maioria dos dias
+não tem nenhum. **O PDF não é gerado pelo comando**: a exportação é feita do Word, na
 mesma passagem em que o analista confere o documento.
 
 ## Passo 8 — Conferência, antes do e-mail

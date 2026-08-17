@@ -51,8 +51,9 @@ O acesso ao modelo está hoje em assinatura pessoal — ver as notas do
 [`README.md`](../../README.md) da raiz sobre a migração para o ambiente corporativo.
 
 **5. O Word.** O Passo 7 monta um `.docx` a partir de `templates/comentario.dotx`, e é
-no Word que você insere o gráfico do dia, confere o documento e **exporta o PDF** que
-vai anexado ao e-mail. O comando não gera o PDF, e não há caminho sem esse passo manual.
+no Word que você insere o gráfico do dia — opcional, colado à mão, e nunca gerado pelo
+comando —, confere o documento e **exporta o PDF** que vai anexado ao e-mail. O comando
+não gera o PDF, e não há caminho sem esse passo manual.
 
 ## Clonar o repositório
 

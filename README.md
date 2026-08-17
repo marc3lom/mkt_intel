@@ -54,6 +54,7 @@ comentario_matinal/
 │   ├── enviado.py              arquivamento do enviado e limpeza do dia
 │   ├── plantao.py              o plantão como funções — o núcleo das duas fachadas
 │   ├── cli.py                  fachada de terminal: o comando
+│   ├── wiki.py                 fora do plantão — publica `docs/plantao/` no Wiki
 │   └── render/                 painel, tabelas do calendário e o que elas precisam
 ├── notebooks/
 │   └── plantao.ipynb           fachada de notebook — as mesmas funções, em células

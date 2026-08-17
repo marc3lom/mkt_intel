@@ -356,8 +356,13 @@ def _etapa(args, ctx: Contexto, voz: _Voz) -> int:
         print(f"Comentário: {etapa.comentario}")
         _erra(f"\nMontar o documento: uv run matinal --comentario {etapa.comentario}")
     elif etapa.nome == "triagem":
-        _erra("\nEscolher os temas e seguir para a redação:\n"
-              "  uv run matinal redacao --temas \"dominante | tema 2 | tema 3\"")
+        # Esta é a linha que o autor lê logo depois de ler a triagem, e é por ela
+        # que ele decide o que digitar. Ensinar aqui o que o manual já não ensina
+        # — os temas escritos à mão — é reintroduzir a transcrição pelo caminho
+        # que ninguém revisa. Os números saem da tabela que ele acabou de ler.
+        _erra("\nEscolher os temas e seguir para a redação, pelos números da "
+              "tabela e com o dominante primeiro:\n"
+              "  uv run matinal redacao --temas-numeros \"1,3,2\"")
 
     return 0
 

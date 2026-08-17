@@ -353,6 +353,28 @@ def test_a_instrucao_de_escolher_temas_continua_falando_de_terminal(
     )
 
 
+def test_a_triagem_manda_seguir_pela_escolha_por_numero(
+        mesa, monkeypatch, capsys, modelo):
+    """A linha que o autor lê em T0+10, no instante em que decide o que digitar.
+
+    Ela seguia ensinando `--temas "dominante | tema 2 | tema 3"` depois de o
+    manual ter passado a ensinar `--temas-numeros` — documentar uma coisa e
+    imprimir outra, na própria saída do programa, que é onde a divergência custa
+    mais caro: ninguém confere o manual com a tela ao lado.
+    """
+    mesa.grava(f"painel_{MARCA}.txt", PAINEL)
+    modelo("saída do dublê\n")
+    monkeypatch.setattr("sys.argv", mesa.argv("triagem", "--sem-anterior"))
+
+    assert main() == 0
+
+    linhas = capsys.readouterr().err.splitlines()
+    esperado = '  uv run matinal redacao --temas-numeros "1,3,2"'
+    assert esperado in linhas, (
+        f"o comando que a triagem ensina mudou; esperado: {esperado!r}"
+    )
+
+
 def test_o_aviso_de_asof_divergente_continua_nomeando_o_flag(
         mesa, monkeypatch, capsys, modelo):
     """O aviso é o mesmo fato nas duas fachadas, dito com vocabulários diferentes.
