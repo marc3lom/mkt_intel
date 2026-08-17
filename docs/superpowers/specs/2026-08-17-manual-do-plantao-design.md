@@ -199,7 +199,7 @@ Então: abrir a aba Wiki, criar qualquer página, e a partir daí o publicador f
 1. `docs/plantao/` tem as seis páginas, e o índice lista todas.
 2. Nenhuma seção do README de hoje se perdeu: cada uma está no README ou no manual, e a
    revisão consegue apontar onde.
-3. `tests/test_documentacao.py` passa, e cada uma das suas cinco aferições foi vista
+3. `tests/test_documentacao.py` passa, e cada uma das suas seis aferições foi vista
    vermelha ao ser provocada.
 4. Mudar `janela.ABERTURA` para outra hora deixa a suíte vermelha, nomeando os arquivos.
 5. `uv run publica-wiki` monta a cópia com a faixa de origem em cada página; o autor a
