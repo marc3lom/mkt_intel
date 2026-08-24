@@ -21,7 +21,7 @@ Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, 
 | Para quê | Comando | Observação |
 |---|---|---|
 | Instalar | `uv sync` | cria o `.venv` e puxa o `blpapi` do índice da Bloomberg |
-| **Verificar (o padrão)** | `uv run pytest` | 167 testes, ~5 s, **sem Bloomberg** |
+| **Verificar (o padrão)** | `uv run pytest` | 169 testes, ~7 s, **sem Bloomberg** |
 | Coletar o mercado | `uv run matinal` | **chama a Bloomberg e grava em `saida/`** |
 | Coletar sem o BQL | `uv run matinal --sem-calendario` | pula só a consulta do calendário |
 | Triagem | `uv run matinal triagem` | chama o modelo; leva minutos |
@@ -41,7 +41,7 @@ Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, 
 
 **Não existe portão de lint.** O `ruff` não é declarado nem configurado; hoje `uvx ruff check .` acusa 38 erros e `uvx ruff format --check .` diz que 30 arquivos seriam reformatados. Não "consertar" isso de passagem, e não acrescentar etapa de lint sem pedido. O portão é o `pytest`.
 
-O `tests/test_documentacao.py` prende o `docs/plantao/*.md` e o `README.md` contra o código — flags, subcomandos, a janela, nomes de pasta, âncoras. **Ele não cobre este arquivo.** Nada afere o AGENTS.md, então conferir à mão cada caminho, flag e número daqui antes de confiar.
+O `tests/test_documentacao.py` prende o `docs/plantao/*.md`, o `README.md` e também este arquivo e o `CLAUDE.md` contra o código — flags, subcomandos, a janela, nomes de pasta, âncoras, as seções do guia que a prosa cita e a contagem de testes anunciada aqui em cima. **O que ele não afere é a prosa**: um invariante editorial resumido errado, uma norma inventada, um motivo que deixou de valer — nada disso fica vermelho. Conferir à mão o que for julgamento; a máquina só cuida do que é verificável.
 
 ## 4. Arquitetura do pipeline
 
@@ -69,7 +69,7 @@ São de carga, e estão repetidos do guia. Se algum dia divergirem, o guia vence
 - **O tempo verbal segue a sessão, e não uma regra só.** Ásia fechada → passado. Europa em curso → presente. Bolsa americana ainda sem abrir → só futuros, nomeados como futuros (§5). Presente para tudo é erro que a revisão tem de pegar.
 - **O registro é formal e impessoal**, calibrado para leitores com domínio macro pleno que não são especialistas em microestrutura: nunca explicar conceito macro, explicar *en passant* mecanismo de mercado não trivial, nunca usar gíria de mesa (§2). Nenhuma opinião, projeção, recomendação ou juízo normativo da divisão (§8). Não é informal.
 - **Nenhum número no corpo — sem exceção.** Nem nível de índice, taxa, câmbio ou commodity; nem variação em pontos-base, pontos percentuais ou porcentagem; nem valor nominal de emissão, receita ou volume. Não existe a exceção "salvo quando o número é a própria notícia". Permitido: direção e intensidade qualitativa, datas e prazos, referência relativa sem número ("maior rendimento em um quarto de século"), probabilidade qualitativa (§6).
-- **A atribuição é racionada, não geral.** Fato de mercado observável e consenso amplamente reportado dispensam fórmula de atribuição (§7.1). Atribuir uma vez por bloco temático, nunca por frase; **no máximo três atribuições nominais** no texto inteiro; variar as fórmulas (§7.2). Nunca escrever "as fontes" nem qualquer coletivo sem nome — o leitor não recebe os PDFs (§7.3). Ao remover esse andaime, conferir se a oração continua com verbo principal.
+- **A atribuição é racionada, não geral.** Fato de mercado observável e consenso amplamente reportado dispensam fórmula de atribuição (§7.1). Atribuir uma vez por bloco temático, nunca por frase; **no máximo três atribuições nominais** no texto inteiro; variar as fórmulas (§7.2). Nunca escrever "as fontes" nem qualquer coletivo sem nome — o leitor não recebe os PDFs (§7.3). A fórmula depende de que tipo de fonte é: jornalismo é base factual e aceita atribuição genérica, research sell-side é opinião de casa com interesse comercial e exige o nome da instituição, e declaração de autoridade leva cargo e veículo (§7.4). Ao remover esse andaime, conferir se a oração continua com verbo principal.
 - **A cobertura segue a relevância e nunca cobre tudo.** A §10 lista oito áreas candidatas e diz explicitamente: nunca todas no mesmo dia. Tema sem efeito de mercado reportado não entra, por mais relevante que seja noutra dimensão. Os agrupamentos Treasuries/Bunds/Gilts/JGBs e bolsas/DXY/petróleo/ouro são *dicas de preenchimento dentro do .dotx*, substituídas na montagem e nunca enviadas — não são lista obrigatória.
 - **Evento da véspera** só entra como explicação reportada de um movimento da sessão corrente, e marcado como tal ("na véspera", "ontem"). Reação de ontem à notícia de ontem nunca entra (§5.2).
 - **O horário de redação é o fim da coleta** — o carimbo do painel, não o relógio e não a hora nominal do plantão. Fonte publicada depois dele é inelegível (§5.1); o `roda_etapa` cobra isso lendo o carimbo no texto do painel.

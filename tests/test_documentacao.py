@@ -14,7 +14,16 @@ import pytest
 
 RAIZ = Path(__file__).parent.parent
 MANUAL = RAIZ / "docs" / "plantao"
-DOCUMENTOS = sorted(MANUAL.glob("*.md")) + [RAIZ / "README.md"]
+# Os dois arquivos de agente entram aqui pelo mesmo motivo que o README: são
+# lidos como verdade sobre este repositório, e ninguém os confere. Eram os
+# únicos documentos fora da aferição, e foi neles que sobreviveram uma contagem
+# de testes velha, uma norma de língua que o código contradizia e uma afirmação
+# sobre qual prompt cita qual seção do guia.
+DOCUMENTOS = sorted(MANUAL.glob("*.md")) + [
+    RAIZ / "README.md",
+    RAIZ / "AGENTS.md",
+    RAIZ / "CLAUDE.md",
+]
 
 # O guia entra na aferição da janela porque o modelo o lê em toda etapa: uma
 # janela errada ali não confunde o leitor, confunde a triagem.
@@ -62,6 +71,8 @@ CAMINHOS_QUE_SAO_MOLDE = {
 # acima — sem ela o teste chamaria de fantasma um comando que existe.
 EXECUTAVEIS_DE_TERCEIROS = {
     "nbstripout": "filtro de notebook, do grupo `dev`; instalado uma vez por clone",
+    "pytest": "o portão de verificação, do grupo `dev`; é o comando que os "
+              "arquivos de agente mandam rodar antes de dizer que algo está pronto",
 }
 
 # As bandeiras que o manual deliberadamente não ensina, com o motivo. Todas
@@ -322,4 +333,91 @@ def test_o_readme_aponta_para_o_manual():
     assert "docs/plantao/" in (RAIZ / "README.md").read_text(encoding="utf-8"), (
         "O README não aponta para o manual, e quem chega pelo repositório não "
         "acha o runbook."
+    )
+
+
+# Uma citação de seção do guia, como os documentos a escrevem: "§4", "§7.3",
+# "§9.1–§9.5". O travessão da faixa não é lido como intervalo: cada número é
+# conferido por si, que é o que torna a aferição barata e exata.
+RE_SECAO = re.compile(r"§\s*(\d+(?:\.\d+)?)")
+
+# Os títulos do guia: "## 7. ATRIBUIÇÃO" e "### 7.3 A fonte não viaja com o
+# comentário". O número é o que se cita; o título, não.
+RE_SECAO_DO_GUIA = re.compile(r"^#{2,3}\s+(\d+(?:\.\d+)?)[.\s]")
+
+# Uma contagem de testes na prosa: "167 testes".
+RE_CONTAGEM = re.compile(r"(\d+)\s+testes\b")
+
+
+def test_toda_secao_do_guia_citada_pela_documentacao_existe():
+    """Citar §7.3 é mandar o leitor a um lugar; o lugar tem de estar lá.
+
+    O guia é a fonte única das convenções editoriais, e os documentos o resumem
+    por número — "no máximo três atribuições nominais (§7.2)". Um resumo que
+    aponta para uma seção inexistente é pior que resumo nenhum: manda conferir
+    no original e não deixa conferir.
+
+    A deriva prevista não é erro de digitação, é renumeração. Quando o guia
+    ganhar uma seção no meio e as seguintes andarem, nada hoje acusaria os
+    ponteiros que ficaram para trás — este teste acusa.
+    """
+    do_guia = {m.group(1) for m in
+               (RE_SECAO_DO_GUIA.match(linha)
+                for linha in GUIA.read_text(encoding="utf-8").splitlines())
+               if m}
+    assert do_guia, "Nenhum título numerado no guia — o formato dele mudou."
+
+    citadas = sorted(
+        (doc.name, numero)
+        for doc in DOCUMENTOS
+        for numero in {m.group(1) for m in
+                       RE_SECAO.finditer(doc.read_text(encoding="utf-8"))}
+        if numero not in do_guia
+    )
+    assert not citadas, (
+        f"Seções citadas que não existem no guia: {citadas}. Ou o número está "
+        "errado, ou o guia foi renumerado e os resumos ficaram apontando para o "
+        "lugar antigo."
+    )
+
+
+def test_a_contagem_de_testes_citada_bate_com_a_suite():
+    """O número que convida a rodar a suíte não pode ser o de outra suíte.
+
+    Os arquivos de agente anunciam quantos testes existem, e é assim que quem
+    chega sabe que o portão é barato de rodar. O número envelhece a cada teste
+    novo — envelheceu de 166 para 167 no dia em que a parada do Passo 3 ganhou o
+    seu —, e envelhece em silêncio, porque nada o lê.
+
+    A coleta roda num processo à parte, e só coleta: não executa teste nenhum, e
+    portanto não há recursão. Sem conseguir coletar, o teste se declara pulado em
+    vez de acusar o documento por um problema que é de ambiente.
+    """
+    import subprocess
+    import sys
+
+    citadas = [(doc.name, int(m.group(1)))
+               for doc in DOCUMENTOS
+               for m in RE_CONTAGEM.finditer(doc.read_text(encoding="utf-8"))]
+    if not citadas:
+        pytest.skip("nenhum documento anuncia uma contagem de testes")
+
+    try:
+        saida = subprocess.run(
+            [sys.executable, "-m", "pytest", "--collect-only", "-q",
+             "-p", "no:cacheprovider"],
+            capture_output=True, cwd=RAIZ, check=True, text=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as e:
+        pytest.skip(f"não consegui coletar a suíte: {e}")
+
+    achado = re.search(r"(\d+) tests? collected", saida)
+    assert achado, f"A coleta não disse quantos testes achou:\n{saida[-400:]}"
+    total = int(achado.group(1))
+
+    erradas = [(nome, n) for nome, n in citadas if n != total]
+    assert not erradas, (
+        f"A suíte tem {total} testes e a documentação anuncia {erradas}. Teste "
+        "novo obriga a atualizar o número, ou a tirá-lo do texto — número que "
+        "ninguém mantém é pior que nenhum, porque parece conferido."
     )
