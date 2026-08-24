@@ -1,137 +1,136 @@
 # AGENTS.md
 
-Instructions to yourself. Errors of fact reach the board of a central bank. Prefer correctness over speed, always.
+Instruções para você mesmo. Erro de fato chega à diretoria de um banco central. Preferir correção a velocidade, sempre.
 
-## 1. Project overview
+## 1. O que é este repositório
 
-This repo produces the **Comentário Matinal** of the Mesa de Investimentos (DEPIN/DIRIN, Banco Central do Brasil): a daily market-opening commentary written and e-mailed between 07h00 and 09h00 local time. Readers: the BCB collegiate board, senior institutional management, directors' chiefs of staff, unit heads, DEPIN senior management. Authors: rotating division managers — the product must be indistinguishable between them, and that invariance is why this repo exists.
+Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, Banco Central do Brasil): um comentário de abertura de mercado escrito e enviado por e-mail entre 7h00 e 9h00, no fuso da máquina. Leitores: a diretoria colegiada do BCB, a alta administração institucional, os chefes de gabinete dos diretores, os chefes de unidade, a chefia do DEPIN. Autores: os gestores da divisão, em rodízio — o produto tem de ser indistinguível entre eles, e é essa invariância que justifica o repositório.
 
-`prompts/`, `docs/plantao/` and the archive are pt-BR, as is all generated commentary. Write code and comments in English; never translate the editorial vocabulary.
+**Tudo aqui é em português**: os prompts, o `docs/plantao/`, o arquivo, o comentário gerado — e também o código. Os identificadores são portugueses (`ErroDePlantao`, `SemTemas`, `coleta_mercado`), e os comentários também: são 329 linhas de comentário em `src/`, e nenhuma em inglês. Escrever em inglês aqui é divergir do repositório. A única exceção é o vocabulário editorial que o guia manda preservar em inglês e itálico (§9.1) — esse nunca se traduz.
 
-## 2. Environment
+## 2. Ambiente
 
-- **uv only.** Never `pip install`. Deps via `uv add`, execution via `uv run`. `uv.lock` is committed on purpose — do not gitignore it. Python floor is **3.14**.
-- **Bloomberg**: `xbbg` + `blpapi` need Windows with the Terminal running and logged in. `blpapi` is not on PyPI; it resolves from the explicit Bloomberg index in `pyproject.toml`, so `uv sync` needs network reach to it.
-- Install: `uv sync`, then `uv run nbstripout --install` (notebook output filter, wired by `.gitattributes`).
-- Template: `templates/comentario.dotx` (`TEMPLATE_PADRAO` in `config.py`; every repo path derives from `RAIZ` there).
-- The only env var the code reads is `COMENTARIO_MATINAL_BACKEND` (default `claude-code`). The AI steps shell out to `claude`, which must be on PATH.
+- **Só uv.** Nunca `pip install`. Dependência entra com `uv add`, execução é `uv run`. O `uv.lock` é versionado de propósito — não colocar no gitignore. O piso do Python é **3.14**.
+- **Bloomberg**: `xbbg` e `blpapi` exigem Windows com o terminal aberto e logado. O `blpapi` não está no PyPI; vem do índice explícito da Bloomberg declarado no `pyproject.toml`, e por isso o `uv sync` precisa de rede até ele.
+- Instalação: `uv sync` e depois `uv run nbstripout --install` (o filtro de saída dos notebooks, ligado pelo `.gitattributes`).
+- Template: `templates/comentario.dotx` (`TEMPLATE_PADRAO` no `config.py`; todo caminho do repositório deriva do `RAIZ`, que está lá).
+- A única variável de ambiente que o código lê é `COMENTARIO_MATINAL_BACKEND` (padrão `claude-code`). As etapas de IA chamam o executável `claude`, que precisa estar no PATH.
 
-## 3. Commands
+## 3. Comandos
 
-| Purpose | Command | Notes |
+| Para quê | Comando | Observação |
 |---|---|---|
-| Install | `uv sync` | creates `.venv`, pulls `blpapi` from the Bloomberg index |
-| **Verify (default)** | `uv run pytest` | 166 tests, ~7 s, **no Bloomberg needed** |
-| Collect market | `uv run matinal` | **hits Bloomberg, writes `saida/`** |
-| Collect without BQL | `uv run matinal --sem-calendario` | skips the calendar query only |
-| Triage | `uv run matinal triagem` | calls the model; minutes |
-| Draft | `uv run matinal redacao --temas-numeros "1,3,2"` | needs a triage on disk |
-| Revise | `uv run matinal revisao` | needs a draft on disk |
-| Build .docx | `uv run matinal --comentario saida/comentario_AAAAMMDD.md` | do **not** run as a test |
-| Check before e-mail | `uv run matinal conferir` | `.docx` vs `.md`, non-destructive |
-| Close the shift | `uv run matinal enviado` | destructive; archives, then wipes `fontes/` and `saida/` |
-| Publish manual | `uv run publica-wiki` | outside the shift |
+| Instalar | `uv sync` | cria o `.venv` e puxa o `blpapi` do índice da Bloomberg |
+| **Verificar (o padrão)** | `uv run pytest` | 167 testes, ~5 s, **sem Bloomberg** |
+| Coletar o mercado | `uv run matinal` | **chama a Bloomberg e grava em `saida/`** |
+| Coletar sem o BQL | `uv run matinal --sem-calendario` | pula só a consulta do calendário |
+| Triagem | `uv run matinal triagem` | chama o modelo; leva minutos |
+| Redação | `uv run matinal redacao --temas-numeros "1,3,2"` | exige a triagem em disco |
+| Revisão | `uv run matinal revisao` | exige a redação em disco |
+| Montar o .docx | `uv run matinal --comentario saida/comentario_AAAAMMDD.md` | **não** rodar como teste |
+| Conferir antes do e-mail | `uv run matinal conferir` | compara o `.docx` com o `.md`; não destrói nada |
+| Fechar o plantão | `uv run matinal enviado` | destrutivo; arquiva e depois esvazia `fontes/` e `saida/` |
+| Publicar o manual | `uv run publica-wiki` | fora do plantão |
 
-**Verification means `uv run pytest`.** Read this carefully: `dry_run` here does **not** mean "runs without Bloomberg". It means only that the wall clock is outside 07h00–09h00, in which case outputs are stamped `*** DRY RUN ***` and `enviado` refuses without `--forcar`. `uv run matinal` still calls Bloomberg and still writes files. There is no offline pipeline path. Therefore:
+**Verificar é rodar `uv run pytest`.** Ler com atenção: `dry_run` aqui **não** quer dizer "roda sem Bloomberg". Quer dizer apenas que o relógio está fora das 7h00–9h00, e nesse caso as saídas saem carimbadas com `*** DRY RUN ***` e o `enviado` recusa sem `--forcar`. O `uv run matinal` continua chamando a Bloomberg e continua gravando arquivo. Não existe caminho offline do pipeline. Portanto:
 
-- Verify changes with `uv run pytest`, never by running the pipeline.
-- Never run `uv run matinal --comentario …` as a test — that is a real document build.
-- Never run `uv run matinal enviado` unless asked. It asserts the comment was sent to the board, makes it tomorrow's "previous day" input, and wipes `fontes/` and `saida/` irreversibly.
-- Safe to run: `triagem`, `revisao`, `conferir`, `enviado` against an empty `saida/` — they fail cleanly without touching Bloomberg, and are the way to read a failure path.
+- Verificar alteração com `uv run pytest`, nunca rodando o pipeline.
+- Nunca rodar `uv run matinal --comentario …` como teste — isso monta um documento de verdade.
+- Nunca rodar `uv run matinal enviado` sem que peçam. Ele afirma que o comentário foi à diretoria, torna-o o "dia anterior" de amanhã e esvazia `fontes/` e `saida/` sem volta.
+- Seguro rodar: `triagem`, `revisao`, `conferir` e `enviado` contra uma `saida/` vazia — falham limpo, sem tocar a Bloomberg, e é assim que se lê um caminho de falha.
 
-**No lint gate exists.** `ruff` is not declared and not configured; `uvx ruff check .` currently reports 38 errors with 30 files unformatted. Do not "fix" that as a side quest and do not add a lint step unless asked. `pytest` is the gate.
+**Não existe portão de lint.** O `ruff` não é declarado nem configurado; hoje `uvx ruff check .` acusa 38 erros e `uvx ruff format --check .` diz que 30 arquivos seriam reformatados. Não "consertar" isso de passagem, e não acrescentar etapa de lint sem pedido. O portão é o `pytest`.
 
-`tests/test_documentacao.py` pins `docs/plantao/*.md` and `README.md` against the code — flags, subcommands, the window, folder names, anchors. **It does not cover this file.** Nothing verifies AGENTS.md, so check every path, flag and number here by hand before trusting it.
+O `tests/test_documentacao.py` prende o `docs/plantao/*.md` e o `README.md` contra o código — flags, subcomandos, a janela, nomes de pasta, âncoras. **Ele não cobre este arquivo.** Nada afere o AGENTS.md, então conferir à mão cada caminho, flag e número daqui antes de confiar.
 
-## 4. Pipeline architecture
+## 4. Arquitetura do pipeline
 
-Four prompt files, assembled into the model message by `etapas.py`. The style guide goes into **every** step's message, ahead of that step's prompt.
+Quatro prompts, montados na mensagem do modelo pelo `etapas.py`. O guia de estilo entra na mensagem de **todas** as etapas, à frente do prompt da etapa.
 
-1. `prompts/00_guia_de_estilo.md` — single source of editorial convention. Its header line carries the version (**1.4 — 17/08/2026**). No code reads it and no test asserts it; bump it by hand when you change the guide.
-2. `prompts/01_triagem.md` — step 1. Inventories and ranks candidate themes into a numbered table, flags temporal-status and alerts. Produces **no prose**; ends waiting for the author.
-3. `prompts/02_redacao.md` — step 2. Writes the commentary from the themes the author picked, plus a non-shipping audit block.
-4. `prompts/03_revisao.md` — step 3. Fact-checks, then enforces hard conformity, then suggests editorial changes — in that order.
+1. `prompts/00_guia_de_estilo.md` — fonte única das convenções editoriais. A versão está no cabeçalho (**1.4 — 17/08/2026**). Nenhum código a lê e nenhum teste a afere; subir a versão é trabalho manual, ao mudar o guia.
+2. `prompts/01_triagem.md` — etapa 1. Inventaria e ordena os temas candidatos numa tabela numerada, marca status temporal e alertas. Não produz prosa nenhuma; termina esperando o autor.
+3. `prompts/02_redacao.md` — etapa 2. Escreve o comentário a partir dos temas que o autor escolheu, mais um bloco de auditoria que não vai ao e-mail.
+4. `prompts/03_revisao.md` — etapa 3. Checa os fatos, depois cobra a conformidade dura, depois sugere mudanças editoriais — nessa ordem.
 
-Order is `triagem` → **human decision** → `redacao` → `revisao`. The human step is not optional: `redacao` without `--temas*` raises `SemTemas` deliberately. Steps chain through files in `saida/`: triage section C → draft alerts; draft text + audit → revision; the revision's fenced block → `comentario_AAAAMMDD.md`, which is what `--comentario` assembles.
+A ordem é `triagem` → **decisão humana** → `redacao` → `revisao`. O passo humano não é opcional: `redacao` sem `--temas*` levanta `SemTemas` de propósito. As etapas se encadeiam por arquivos em `saida/`: a seção C da triagem vira os alertas da redação; o texto da redação mais a auditoria vão à revisão; o bloco cercado da revisão vira o `comentario_AAAAMMDD.md`, que é o que o `--comentario` monta.
 
-`prompts/project_instructions.md` is the Claude Project alternate route, not part of the CLI.
+O `prompts/project_instructions.md` é o caminho alternativo, pelo Project do Claude, e não faz parte da CLI.
 
-**The prompt files are the source of truth for editorial behavior.** To change how the output reads, edit the style guide — and the step prompt only if the step's mechanics change. Never hardcode a style decision in Python. The two places Python does carry a style number (`MIN_MARCADORES, MAX_MARCADORES = 4, 5` in `documento.py`; the same range in `etapas.comentario_revisado`) mirror guide §3–§4: change the guide and you must change them too, or assembly will warn against the new rule.
+**Os prompts são a fonte de verdade do comportamento editorial.** Para mudar como o texto lê, editar o guia de estilo — e o prompt da etapa só se a mecânica da etapa mudar. Nunca fixar decisão de estilo no Python. Os dois lugares em que o Python carrega um número de estilo (`MIN_MARCADORES, MAX_MARCADORES = 4, 5`, no `documento.py`; a mesma faixa em `etapas.comentario_revisado`) espelham as §3–§4 do guia: mudar o guia obriga a mudar os dois, ou a montagem passa a avisar contra a regra nova.
 
-`plantao.py` is the core; `cli.py` and `notebooks/plantao.ipynb` are facades that implement nothing. New rules go in the core, which never says what to type next — it names the missing thing as a code (`REMEDIOS`) and each facade writes the sentence. `tests/test_notebook.py` fails if you add a step or a step parameter without either exercising it in the notebook or listing it with a written reason.
+O `plantao.py` é o núcleo; o `cli.py` e o `notebooks/plantao.ipynb` são fachadas e não implementam nada. Regra nova vai no núcleo, que nunca diz o que digitar em seguida: ele nomeia o que falta como um código (`REMEDIOS`), e cada fachada escreve a frase. O `tests/test_notebook.py` falha se um passo ou um parâmetro de passo for acrescentado sem ser exercitado no notebook ou listado ali com o motivo escrito.
 
-## 5. Editorial invariants
+## 5. Invariantes editoriais
 
-Load-bearing, restated from the guide. The guide wins if they ever drift.
+São de carga, e estão repetidos do guia. Se algum dia divergirem, o guia vence.
 
-- **Bullets, prose inside.** The commentary ships as bullets (`marcadores`), **4 or 5** of them, each one complete paragraph of articulated prose. Forbidden *inside* a bullet: telegraphic fragments, nominal sentences, semicolon-separated lists, "asset: direction" pairs (§3). It is not four unbulleted paragraphs.
-- **Length is a range, not a target near the ceiling.** 350–500 words absolute, **400–450 aimed**. Per bullet: 1 → 70–90; 2, 3, 4 → 95–115 each; 5 (optional) → 40–60. Ceilings rigid, floors indicative — a short bullet signals a badly chosen theme, and the fix is editorial and the author's, never padding (§4, §4.1).
-- **Tense follows the session, not one rule.** Asia closed → past. Europe in progress → present. US cash not open → futures only, named as futures (§5). A blanket present tense is an error the revision must catch.
-- **Register is formal and impersonal**, calibrated to readers with full macro command who are not microstructure specialists: never explain macro concepts, do explain non-trivial market mechanisms *en passant*, never use trading-desk slang (§2). No opinion, projection, recommendation or normative judgment by the division (§8). Not informal.
-- **No figures in the body — unconditionally.** No index, rate, FX or commodity levels; no bp, pp or percentage moves; no nominal issuance, revenue or volume. There is no "unless the figure is itself the news" exception. Allowed: qualitative direction and intensity, dates and tenors, relative references carrying no number ("highest yield in a quarter century"), qualitative probability (§6).
-- **Attribution is rationed, not blanket.** Observable market facts and widely reported consensus need *no* attribution formula (§7.1). Attribute once per thematic block, never per sentence; **at most three named attributions** in the whole text; vary the formulas (§7.2). Never write "as fontes" or any unnamed collective — the reader never receives the PDFs (§7.3). Removing that scaffolding, check the clause keeps a main verb.
-- **Coverage follows relevance and never covers everything.** §10 lists eight candidate areas and says explicitly: never all of them on one day. A theme with no reported market effect does not enter, however important elsewhere. The Treasuries/Bunds/Gilts/JGBs and equities/DXY/oil/gold groupings are *placeholder hints inside the .dotx*, replaced at assembly and never shipped — not a mandated checklist.
-- **Prior-day events** enter only as the reported explanation of a current-session move, and only marked as such ("na véspera", "ontem"). Yesterday's reaction to yesterday's news never enters (§5.2).
-- **Writing time is the end of collection** — the panel's timestamp, not the clock and not the nominal shift hour. Sources published after it are ineligible (§5.1); `roda_etapa` enforces this by reading the stamp out of the panel text.
+- **Marcadores, com prosa dentro.** O comentário sai em marcadores, **4 ou 5**, cada um um parágrafo completo de prosa articulada. Proibido *dentro* do marcador: fragmento telegráfico, frase nominal, enumeração separada por ponto e vírgula, par "ativo: direção" (§3). Não são quatro parágrafos sem marcador.
+- **A extensão é faixa, não alvo colado no teto.** De 350 a 500 palavras no absoluto, **400 a 450** como alvo. Por marcador: 1 → 70–90; 2, 3 e 4 → 95–115 cada; 5 (opcional) → 40–60. Os tetos são rígidos e os pisos indicativos — marcador curto sinaliza tema mal escolhido, e a correção é editorial e do autor, nunca enchimento (§4, §4.1).
+- **O tempo verbal segue a sessão, e não uma regra só.** Ásia fechada → passado. Europa em curso → presente. Bolsa americana ainda sem abrir → só futuros, nomeados como futuros (§5). Presente para tudo é erro que a revisão tem de pegar.
+- **O registro é formal e impessoal**, calibrado para leitores com domínio macro pleno que não são especialistas em microestrutura: nunca explicar conceito macro, explicar *en passant* mecanismo de mercado não trivial, nunca usar gíria de mesa (§2). Nenhuma opinião, projeção, recomendação ou juízo normativo da divisão (§8). Não é informal.
+- **Nenhum número no corpo — sem exceção.** Nem nível de índice, taxa, câmbio ou commodity; nem variação em pontos-base, pontos percentuais ou porcentagem; nem valor nominal de emissão, receita ou volume. Não existe a exceção "salvo quando o número é a própria notícia". Permitido: direção e intensidade qualitativa, datas e prazos, referência relativa sem número ("maior rendimento em um quarto de século"), probabilidade qualitativa (§6).
+- **A atribuição é racionada, não geral.** Fato de mercado observável e consenso amplamente reportado dispensam fórmula de atribuição (§7.1). Atribuir uma vez por bloco temático, nunca por frase; **no máximo três atribuições nominais** no texto inteiro; variar as fórmulas (§7.2). Nunca escrever "as fontes" nem qualquer coletivo sem nome — o leitor não recebe os PDFs (§7.3). Ao remover esse andaime, conferir se a oração continua com verbo principal.
+- **A cobertura segue a relevância e nunca cobre tudo.** A §10 lista oito áreas candidatas e diz explicitamente: nunca todas no mesmo dia. Tema sem efeito de mercado reportado não entra, por mais relevante que seja noutra dimensão. Os agrupamentos Treasuries/Bunds/Gilts/JGBs e bolsas/DXY/petróleo/ouro são *dicas de preenchimento dentro do .dotx*, substituídas na montagem e nunca enviadas — não são lista obrigatória.
+- **Evento da véspera** só entra como explicação reportada de um movimento da sessão corrente, e marcado como tal ("na véspera", "ontem"). Reação de ontem à notícia de ontem nunca entra (§5.2).
+- **O horário de redação é o fim da coleta** — o carimbo do painel, não o relógio e não a hora nominal do plantão. Fonte publicada depois dele é inelegível (§5.1); o `roda_etapa` cobra isso lendo o carimbo no texto do painel.
 
-## 6. Lexical standard
+## 6. Padrão lexical
 
-**Section 9 of the style guide governs. Read §9.1–§9.5 before touching wording; do not work from memory or from this summary.**
+**Vale a seção 9 do guia. Ler §9.1–§9.5 antes de mexer em qualquer palavra; não trabalhar de memória nem por este resumo.**
 
-- §9.1 — English kept, in italics: *term premium*, *soft landing*, *hyperscalers*, *funding*, *valuation*, *hawkish*, *dovish*, ***risk-on***, ***risk-off***, and the rest of that list. Note *risk-on* is kept, not translated.
-- §9.2 — must be localized: *yields* → taxas/rendimentos/juros (always, not "in most contexts"), *duration* → duração, *breadth* → amplitude, *bonds* → títulos, *equities* → ações/bolsas, and the rest.
-- §9.3 fixes instrument and central-bank names and curve vocabulary; §9.4 spelling and punctuation; §9.5 the standard temporal expressions.
+- §9.1 — inglês preservado, em itálico: *term premium*, *soft landing*, *hyperscalers*, *funding*, *valuation*, *hawkish*, *dovish*, ***risk-on***, ***risk-off*** e o resto da lista. Reparar que *risk-on* se preserva, não se traduz.
+- §9.2 — obrigatoriamente localizados: *yields* → taxas/rendimentos/juros (sempre, não "na maioria dos contextos"), *duration* → duração, *breadth* → amplitude, *bonds* → títulos, *equities* → ações/bolsas, e o resto.
+- §9.3 fixa nomes de instrumentos, de bancos centrais e o vocabulário de curva; §9.4, ortografia e pontuação; §9.5, as expressões temporais padronizadas.
 
-Italics reach Word as `*single asterisks*` in the revised markdown.
+O itálico chega ao Word como `*asterisco simples*` no markdown revisado.
 
-## 7. Fact-checking discipline
+## 7. Disciplina de checagem factual
 
-The revision step's **primary function is factual correction against the attached sources** — Block 1, ahead of conformity and ahead of any editorial polish. Revision without sources, panel and calendar is not revision; the prompt says to stop and ask for them.
+A **função primeira** da etapa de revisão é a correção factual contra as fontes anexadas — Bloco 1, antes da conformidade e antes de qualquer polimento editorial. Revisão sem as fontes, o painel e o calendário não é revisão; o prompt manda parar e pedi-los.
 
-- **Never invent a number, a quote, an attribution, or a market move.** Not to smooth a sentence, not to fill a word budget, not to complete a parallel construction.
-- Every claim is classified `SUPORTADA` / `PARCIALMENTE SUPORTADA` / `NÃO LOCALIZADA` / `CONTRADITA`. If a claim cannot be traced to a source in context, **remove it or flag it — never soften it into something vaguer that survives**.
-- Mandatory checks: release status against the calendar (a datum whose release time is later than the writing time, with `ATUAL` empty, may not appear as fact); directional agreement with the panel; tense and session coherence; attribution accuracy; temporal eligibility; consistency with the previous day.
-- Filling a word budget by enumerating what the sources do *not* say is forbidden — denying an absent subject introduces it (§4).
-- These rules bind you as well when you edit prompts or review output. Same standard.
+- **Nunca inventar número, citação, atribuição ou movimento de mercado.** Nem para alisar uma frase, nem para completar um orçamento de palavras, nem para fechar um paralelismo.
+- Toda afirmação é classificada como `SUPORTADA` / `PARCIALMENTE SUPORTADA` / `NÃO LOCALIZADA` / `CONTRADITA`. Afirmação que não se rastreia até uma fonte em contexto **sai, ou é sinalizada — nunca se suaviza até virar algo mais vago que sobreviva**.
+- Checagens obrigatórias: status de divulgação contra o calendário (dado cujo horário de divulgação é posterior ao horário de redação, com `ATUAL` vazio, não pode aparecer como fato); acordo direcional com o painel; tempo verbal e coerência de sessão; exatidão da atribuição; elegibilidade temporal; consistência com o dia anterior.
+- Encher orçamento enumerando o que as fontes *não* dizem é proibido — negar assunto ausente é introduzi-lo (§4).
+- Estas regras valem para você também, ao editar prompt ou revisar saída. Mesmo padrão.
 
-## 8. Word assembly
+## 8. Montagem do Word
 
-`documento.py` builds the `.docx` from `templates/comentario.dotx`. **The template is the formatting authority**: paper, margins, fonts, bullet numbering and the two header/footer images all come from it. Do not apply direct formatting the template already defines — the code clears each paragraph's children while preserving its `pPr` precisely so style, bullet and justification keep coming from the template.
+O `documento.py` monta o `.docx` a partir do `templates/comentario.dotx`. **A autoridade de formatação é o template**: papel, margens, fontes, numeração dos marcadores e as duas imagens de cabeçalho e rodapé vêm todos dele. Não aplicar formatação direta sobre o que o template já define — o código limpa os filhos de cada parágrafo preservando o `pPr` justamente para que estilo, marcador e justificação continuem vindo do template.
 
-| Template paragraph | Style | Receives |
+| Parágrafo do template | Estilo | Recebe |
 |---|---|---|
 | `[Inserir a tabela de fechamento dos mercados]` | Normal | `painel_AAAAMMDD.png` |
-| `[Parágrafo 1 – …]` … `[Parágrafo 5 – …]` | List Paragraph | one bullet each, in order |
+| `[Parágrafo 1 – …]` … `[Parágrafo 5 – …]` | List Paragraph | um marcador cada, na ordem |
 | `[Gráfico do dia]` | Normal | `calendario_AAAAMMDD.png` |
-| `Atenciosamente,` / `Mesa de Investimentos` | Normal | untouched — the sign-off is the template's |
+| `Atenciosamente,` / `Mesa de Investimentos` | Normal | nada — o fecho é do template |
 
-Unused `[Parágrafo N]` slots are deleted with their spacer; a sixth bullet clones the last slot plus its spacer. Images enter at `LARGURA_UTIL = 5.906"` (A4 less the 1.18" side margins). Runs carry `FONTE = "Aptos"` explicitly, because the document default is Times New Roman and a bare run would clash. A sign-off written by the author is dropped with a warning rather than duplicated. The `.dotx` opens by rewriting one content-type string in the zip; the rest of the package is preserved untouched.
+Os `[Parágrafo N]` não usados são apagados junto com o espaçador; um sexto marcador clona o último com o espaçador dele. As imagens entram com `LARGURA_UTIL = 5,906"` (o A4 menos as margens laterais de 1,18"). Os runs carregam `FONTE = "Aptos"` explicitamente, porque o padrão do documento é Times New Roman e um run sem fonte destoaria. Fecho escrito pelo autor é descartado com aviso, em vez de sair duplicado. O `.dotx` é aberto pela troca de uma string de content type dentro do zip; o resto do pacote fica intacto.
 
-## 9. Do not touch
+## 9. Não mexer
 
-- **`fontes/`** — the day's source PDFs (Bloomberg, FT, WSJ, sell-side). Gitignored, governed by Bloomberg terms of use. Never commit, never reproduce at length, never quote beyond a short phrase.
-- **`saida/`** — the day's outputs, including the un-sent commentary. Gitignored.
-- **`*.pdf`, `*.docx`** — gitignored everywhere. The versioned artifact is the `.md`.
-- **`.env`, `.env.*`, credentials** — gitignored. No code reads a `.env` today; do not add one without asking.
-- **`arquivo/AAAA/MM/AAAAMMDD.md`** — sent commentaries, institutional record, written only by `matinal enviado`. Never hand-edit and never rename: the filename *is* the sent date, and the previous-day lookup reads it.
-- **`exemplos/aprovados/`, `exemplos/rejeitados/`** — human working material; nothing in `src/` reads them. They influence output only once someone promotes a case into §12 of the guide by hand.
-- Never paste source content, panel figures or draft commentary into commit messages, issues, or anything that leaves the machine. The repo is private and holds material sent to the board.
+- **`fontes/`** — os PDFs do dia (Bloomberg, FT, WSJ, sell-side). Fora do git, sujeitos aos termos de uso da Bloomberg. Nunca comitar, nunca reproduzir em extensão, nunca citar além de um trecho curto.
+- **`saida/`** — as saídas do dia, inclusive o comentário ainda não enviado. Fora do git.
+- **`*.pdf`, `*.docx`** — fora do git em qualquer lugar. O artefato versionado é o `.md`.
+- **`.env`, `.env.*`, credenciais** — fora do git. Hoje nenhum código lê `.env`; não acrescentar sem perguntar.
+- **`arquivo/AAAA/MM/AAAAMMDD.md`** — os comentários enviados, registro institucional, escritos só pelo `matinal enviado`. Nunca editar à mão e nunca renomear: o nome do arquivo *é* a data de envio, e é ele que a busca pelo dia anterior lê.
+- **`exemplos/aprovados/`, `exemplos/rejeitados/`** — material humano de trabalho; nada em `src/` os lê. Só influenciam a saída quando alguém promove um caso à §12 do guia, à mão.
+- Nunca colar conteúdo de fonte, número do painel ou minuta do comentário em mensagem de commit, issue, ou qualquer coisa que saia da máquina. O repositório é privado e guarda material que vai à diretoria.
 
-## 10. Working agreement
+## 10. Acordo de trabalho
 
-- **Plan first** for anything non-trivial: say what you will change and why, then do it.
-- **Smallest change that works.** This codebase comments the *reason* for each decision — read the comment before changing the line, and update it in the same edit if the reason changed.
-- **Run `uv run pytest` before saying anything is done**, and quote the result. Do not claim a pipeline behaviour works unless a test covers it; you cannot run the pipeline as a test.
-- **Never commit or push unless explicitly asked.** When asked to commit, commit directly on `main` — this repo does not branch for routine work. Show the diff and the message and wait before pushing. Never resolve a divergence between local and remote on your own judgment: name it and ask.
-- Commit style, from `git log`: Portuguese, third-person present, one line, ≤72 chars, no prefix or scope, no trailing period ("Arquiva o comentário de 18 de agosto"; "Fecha a última lacuna do manual: a convenção de assunto"). Bodies are Portuguese prose explaining *why*, often several paragraphs. Keep the `Co-Authored-By:` and `Claude-Session:` trailers — the history uses them.
-- **When the style guide and the code disagree, the style guide wins — and you stop and flag the conflict rather than silently reconciling it.** The same holds when an instruction contradicts the guide: say so before acting.
-- Adding a step or a step parameter to `plantao.py` obliges you to update `notebooks/plantao.ipynb`, or to add the parameter to the exception list in `tests/test_notebook.py` *with a written reason*. The test will tell you.
-- Touching `docs/plantao/` or `README.md` obliges a `uv run pytest` run — the documentation tests check flags, folders, anchors and the window against the code.
+- **Planejar antes** de qualquer coisa não trivial: dizer o que vai mudar e por quê, e então fazer.
+- **A menor alteração que resolve.** Este código comenta o *motivo* de cada decisão — ler o comentário antes de mudar a linha, e atualizá-lo na mesma edição se o motivo mudou.
+- **Rodar `uv run pytest` antes de dizer que algo está pronto**, e citar o resultado. Não afirmar que um comportamento do pipeline funciona sem teste que o cubra; o pipeline não se roda como teste.
+- **Nunca comitar nem empurrar sem que peçam.** Quando pedirem, comitar direto na `main` — este repositório não cria ramo para trabalho de rotina. Mostrar o diff e a mensagem e esperar antes de empurrar. Nunca resolver por conta própria uma divergência entre local e remoto: apontá-la e perguntar.
+- Estilo de commit, tirado do `git log`: português, terceira pessoa do presente, uma linha de até 72 caracteres, sem prefixo nem escopo, sem ponto final ("Arquiva o comentário de 18 de agosto"; "Fecha a última lacuna do manual: a convenção de assunto"). O corpo é prosa portuguesa explicando *por quê*, muitas vezes em vários parágrafos. Manter os trailers `Co-Authored-By:` e `Claude-Session:` — o histórico os usa.
+- **Quando o guia de estilo e o código discordarem, o guia vence — e você para e aponta o conflito, em vez de reconciliar em silêncio.** Vale igual quando uma instrução contradiz o guia: dizer antes de agir.
+- Acrescentar passo ou parâmetro de passo ao `plantao.py` obriga a atualizar o `notebooks/plantao.ipynb`, ou a pôr o parâmetro na lista de exceções do `tests/test_notebook.py` *com o motivo escrito*. O teste avisa.
+- Mexer em `docs/plantao/` ou no `README.md` obriga a rodar `uv run pytest` — os testes de documentação conferem flags, pastas, âncoras e a janela contra o código.
 
-## Open questions
+## Questões em aberto
 
-- **`prompts/03_revisao.md` v1.0 predates guide v1.4.** All three step prompts are dated 14/08/2026; the guide is 17/08/2026 and grew §7.3 after them. The prompts do cite §7.3, so it looks intentional, but nothing enforces the relationship. Should step-prompt versions track guide versions?
-- **§12.7 "Exemplo positivo — Pendente"** is still empty, so §12 is negative examples only, each shaped *Rejeitado* blockquote → **Motivo** → *Corrigido* blockquote. Should a positive example land before the next guide revision, and who judges that a comment qualifies?
-- **`exemplos/aprovados/` and `exemplos/rejeitados/` are empty** (`.gitkeep` only). Is the promotion-to-§12 path in use, or is §12 maintained directly?
-- **No lint configuration.** Should `ruff` become a declared dev dependency with a config and a clean baseline, or is its absence deliberate?
-- **This file is in English** while all other prose in the repo is pt-BR. Confirm that is the right call for agent-facing instructions.
+- **O `prompts/03_revisao.md` v1.0 é anterior ao guia v1.4.** Os três prompts de etapa são de 14/08/2026; o guia é de 17/08/2026 e ganhou a §7.3 depois deles. O prompt da revisão cita a §7.3, então parece intencional, mas nada prende essa relação — e os prompts da triagem e da redação não a citam. As versões dos prompts deveriam acompanhar as do guia?
+- **A §12.7, "Exemplo positivo", segue "Pendente"**, então a §12 só tem exemplos negativos, cada um no formato citação *Rejeitado* → **Motivo** → citação *Corrigido*. Um exemplo positivo deveria entrar antes da próxima revisão do guia, e quem julga que um comentário qualifica?
+- **`exemplos/aprovados/` e `exemplos/rejeitados/` estão vazios** (só `.gitkeep`). O caminho de promoção à §12 está em uso, ou a §12 é mantida diretamente?
+- **Não há configuração de lint.** O `ruff` deveria virar dependência de desenvolvimento, com configuração e uma linha de base limpa, ou a ausência é deliberada?
