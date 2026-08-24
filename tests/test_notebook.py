@@ -337,3 +337,41 @@ def test_o_notebook_tem_frase_para_todo_codigo_do_nucleo():
         "de frase nas duas fachadas — ou de entrada em CODIGOS_FORA_DO_NOTEBOOK, "
         "com o motivo, como as recusas do fechamento têm."
     )
+
+
+def test_o_passo_3_para_o_run_all():
+    """A única decisão humana do processo não pode ser atravessada por um Run All.
+
+    O terminal tem a parada de graça: `matinal triagem` e `matinal redacao` são
+    dois comandos, e entre eles há necessariamente uma pessoa. O notebook não tem
+    essa fronteira — "executar tudo" é um item de menu —, e sem uma parada
+    explícita a redação sairia sobre a lista que ficou na célula desde ontem, com
+    minutos de modelo gastos antes de alguém notar.
+
+    A parada vem ANTES da célula do `ESCOLHA`, e é por isso que a ordem é aferida
+    aqui: depois dela, o `TEMAS` já teria sido montado com a escolha velha, e o
+    Passo 4 rodado sozinho o consumiria sem que nada tivesse sido decidido.
+    """
+    celulas = _celulas_de_codigo()
+    # A célula que *chama* a parada, não a que a define: o bootstrap escreve
+    # `def parada(` e não é ele que interrompe coisa alguma.
+    n_parada = next((n for n, fonte in celulas
+                     if "parada(" in fonte and "def parada(" not in fonte), None)
+    n_escolha = next((n for n, fonte in celulas
+                      if "temas_da_triagem" in fonte), None)
+
+    assert n_parada is not None, (
+        "Nenhuma célula interrompe o notebook antes do Passo 3. Sem ela, um Run "
+        "All atravessa a escolha dos temas — a única decisão que o processo não "
+        "toma sozinho — e redige sobre a lista que estava na célula."
+    )
+    assert n_escolha is not None, (
+        "Nenhuma célula monta os temas com `temas_da_triagem`. Se o Passo 3 mudou "
+        "de forma, este teste precisa mudar junto."
+    )
+    assert n_parada < n_escolha, (
+        f"A parada (célula {n_parada}) ficou depois do `ESCOLHA` (célula "
+        f"{n_escolha}). Nessa ordem o `TEMAS` já existe no kernel montado com a "
+        "escolha anterior, e parar ali deixa de proteger o que a parada existe "
+        "para proteger."
+    )

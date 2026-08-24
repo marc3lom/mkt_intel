@@ -16,6 +16,12 @@ precisa ler primeiro hoje, e isso o modelo não tem como saber. Se o comando ace
 sugestão em silêncio, o plantão em que ninguém leu a triagem seria indistinguível do
 plantão em que alguém a leu e concordou.
 
+No notebook não há dois comandos separando os passos, e "executar tudo" é um item de
+menu. A recusa aparece ali de outra forma: a célula anterior à do `ESCOLHA` interrompe
+a execução de propósito, e um **Run All** para nela — antes de a escolha ser usada, e
+antes de a redação gastar minutos de modelo sobre ela. A faixa âmbar que aparece não é
+erro. Editar o `ESCOLHA` e seguir da célula dele para baixo.
+
 A interface junta duas coisas que você precisa separar:
 
 **Os números são mecânicos.** `--temas-numeros "1,3,2"` diz quais linhas da tabela de
