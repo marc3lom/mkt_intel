@@ -15,13 +15,14 @@ Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, 
 - Instalação: `uv sync` e depois `uv run nbstripout --install` (o filtro de saída dos notebooks, ligado pelo `.gitattributes`).
 - Template: `templates/comentario.dotx` (`TEMPLATE_PADRAO` no `config.py`; todo caminho do repositório deriva do `RAIZ`, que está lá).
 - A única variável de ambiente que o código lê é `COMENTARIO_MATINAL_BACKEND` (padrão `claude-code`). As etapas de IA chamam o executável `claude`, que precisa estar no PATH.
+- **A autenticação do backend é a sessão do Claude Code**, não chave de API. O `modelo.py` roda o `claude` com `--safe-mode` — que desliga CLAUDE.md, hooks, skills, plugins, MCP e agentes do ambiente de quem está de plantão, para a etapa render o mesmo em qualquer máquina — e retira `ANTHROPIC_API_KEY` do ambiente do subprocesso, porque uma chave esquecida ali tem precedência e uma chave sem saldo derruba a etapa com código 1. Rodar por chave de API é escrever outro backend, não mexer neste.
 
 ## 3. Comandos
 
 | Para quê | Comando | Observação |
 |---|---|---|
 | Instalar | `uv sync` | cria o `.venv` e puxa o `blpapi` do índice da Bloomberg |
-| **Verificar (o padrão)** | `uv run pytest` | 169 testes, ~7 s, **sem Bloomberg** |
+| **Verificar (o padrão)** | `uv run pytest` | 176 testes, ~7 s, **sem Bloomberg** |
 | Coletar o mercado | `uv run matinal` | **chama a Bloomberg e grava em `saida/`** |
 | Coletar sem o BQL | `uv run matinal --sem-calendario` | pula só a consulta do calendário |
 | Triagem | `uv run matinal triagem` | chama o modelo; leva minutos |

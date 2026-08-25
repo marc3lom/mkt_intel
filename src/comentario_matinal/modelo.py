@@ -81,10 +81,14 @@ class ClaudeCode:
 
         bloqueadas = [f for f in FERRAMENTAS_BLOQUEADAS
                       if not (web and f in FERRAMENTAS_WEB)]
-        # --bare pula descoberta de CLAUDE.md, hooks e skills do ambiente do
-        # usuário: a etapa tem de render o mesmo resultado em qualquer máquina,
-        # e não herdar a configuração de quem está de plantão.
-        comando = [executavel, "-p", "--bare",
+        # --safe-mode pula descoberta de CLAUDE.md, hooks, skills, plugins, MCP
+        # e agentes do ambiente do usuário: a etapa tem de render o mesmo
+        # resultado em qualquer máquina, e não herdar a configuração de quem
+        # está de plantão. Aqui era --bare, que desliga a mesma lista mas
+        # também restringe a autenticação a ANTHROPIC_API_KEY ou apiKeyHelper —
+        # a sessão do Claude Code nunca é lida, e numa máquina autenticada por
+        # assinatura toda etapa morre com código 1 antes de chegar ao modelo.
+        comando = [executavel, "-p", "--safe-mode",
                    "--system-prompt", SYSTEM_PROMPT,
                    "--disallowed-tools", *bloqueadas]
         # Sem --model, vale a configuração da CLI do usuário: fixar o modelo aqui
@@ -92,10 +96,19 @@ class ClaudeCode:
         if modelo:
             comando += ["--model", modelo]
 
+        # O plantão autentica pela sessão do Claude Code. Uma chave de API
+        # esquecida no ambiente tem precedência sobre ela, então uma chave
+        # antiga, de conta sem saldo ou de outra organização, sombreia em
+        # silêncio uma assinatura válida e derruba a etapa. Quem quiser rodar
+        # por chave escreve outro backend, que é para isso que a fábrica existe.
+        ambiente = {k: v for k, v in os.environ.items()
+                    if k != "ANTHROPIC_API_KEY"}
+
         try:
             r = subprocess.run(
                 comando, input=mensagem, capture_output=True, text=True,
                 encoding="utf-8", errors="replace", timeout=TEMPO_LIMITE,
+                env=ambiente,
             )
         except subprocess.TimeoutExpired:
             raise ErroDoModelo(
@@ -103,10 +116,17 @@ class ClaudeCode:
             ) from None
 
         if r.returncode != 0:
-            erro = (r.stderr or "").strip()[-600:]
-            raise ErroDoModelo(f"`claude` saiu com código {r.returncode}. {erro}")
+            # Ao falhar, a CLI escreve o motivo no stdout — "Credit balance is
+            # too low", "Not logged in" — e deixa o stderr vazio. Ler só o
+            # stderr, como se fazia aqui, produzia "saiu com código 1" sem
+            # motivo nenhum: às sete da manhã isso custa a reprodução à mão de
+            # algo que o processo já tinha na tela.
+            erro = " ".join(t for t in ((r.stderr or "").strip(),
+                                        (r.stdout or "").strip()) if t)
+            raise ErroDoModelo(
+                f"`claude` saiu com código {r.returncode}. {erro[-600:]}")
 
-        # O stdout traz só a resposta; avisos da CLI saem por stderr.
+        # Fora do caminho de erro, o stdout traz só a resposta.
         saida = (r.stdout or "").strip()
         if not saida:
             raise ErroDoModelo(f"A etapa {etapa} devolveu resposta vazia.")
