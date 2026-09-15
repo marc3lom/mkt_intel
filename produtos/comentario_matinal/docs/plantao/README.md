@@ -14,5 +14,5 @@ Leia as páginas na ordem no primeiro dia. Depois disso, o runbook basta.
 | [04 — O que é seu decidir](04-decisoes.md) | Os quatro pontos em que o processo depende de você |
 | [05 — Quando dá errado](05-quando-da-errado.md) | O sintoma exato na tela, a causa e a saída |
 
-Quem mexe no código lê o [`README.md`](../../README.md) da raiz: o que o repositório é,
+Quem mexe no código lê o [`README.md`](../../README.md) do produto: o que o repositório é,
 como está organizado e as decisões de projeto.

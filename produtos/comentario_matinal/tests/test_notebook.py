@@ -277,8 +277,11 @@ def _notebook_no_indice():
     import nbformat
 
     try:
+        # `:./caminho`, não `:caminho`: o produto mora numa subpasta do
+        # repositório, e o `:caminho` puro do git resolve a partir do topo do
+        # repositório, não do cwd — aqui apontaria para fora de `RAIZ`.
         bruto = subprocess.run(
-            ["git", "show", ":notebooks/plantao.ipynb"],
+            ["git", "show", ":./notebooks/plantao.ipynb"],
             capture_output=True, cwd=RAIZ, check=True,
         ).stdout.decode("utf-8")
     except (OSError, subprocess.CalledProcessError) as e:

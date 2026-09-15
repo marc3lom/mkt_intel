@@ -48,7 +48,7 @@ autenticação fica gravada na máquina e não se repete a cada plantão. Confer
 `claude --version`, e conferir que ele responde: `claude -p "responda ok"`.
 
 O acesso ao modelo está hoje em assinatura pessoal — ver as notas do
-[`README.md`](../../README.md) da raiz sobre a migração para o ambiente corporativo.
+[`README.md`](../../README.md) do produto sobre a migração para o ambiente corporativo.
 
 **5. O Word.** O Passo 7 monta um `.docx` a partir de `templates/comentario.dotx`, e é
 no Word que você insere o gráfico do dia — opcional, colado à mão, e nunca gerado pelo
@@ -67,18 +67,23 @@ concede **acesso de colaborador** a quem na divisão quiser, e é esse acesso qu
 clone possível. Não há processo além de pedir.
 
 ```
-gh repo clone marc3lom/comentario_matinal
+gh repo clone marc3lom/disseminacao
 ```
 
 Sem o GitHub CLI, o equivalente é
-`git clone https://github.com/marc3lom/comentario_matinal.git`.
+`git clone https://github.com/marc3lom/disseminacao.git`.
 
 **Este endereço é provisório.** O destino é um espelho no GitHub corporativo da
 instituição, e a URL muda quando ele existir. Se o comando acima falhar por endereço
 inválido num dia futuro, a explicação mais provável é essa, e não um erro seu — procure
 o endereço novo antes de tratar o caso como problema de acesso.
 
-Os comandos abaixo rodam **de dentro da pasta clonada**.
+O repositório reúne vários produtos da divisão, cada um na sua pasta. O comentário
+matinal é um deles, e **todos os comandos abaixo rodam de dentro da pasta dele**:
+
+```
+cd disseminacao\produtos\comentario_matinal
+```
 
 ## A instalação
 
@@ -111,10 +116,11 @@ propósito: uma guarda os PDFs da Bloomberg, que não entram no repositório, e 
 guarda as saídas do dia, que são refeitas toda manhã.
 
 Isso importa porque o Passo 1 manda salvar os PDFs do dia **dentro de `fontes/`**, e a
-pasta não está lá. Criá-la à mão, na raiz do repositório — não dentro de `notebooks/`,
-que é o engano fácil de quem roda pelo notebook: os caminhos padrão são ancorados na
-raiz, e uma `fontes/` no lugar errado faz a etapa avisar que não aproveitou PDF algum,
-sem dizer por quê. A `saida/` o próprio comando cria.
+pasta não está lá. Criá-la à mão, na pasta do produto — ao lado de `prompts/` — não
+dentro de `notebooks/`, que é o engano fácil de quem roda pelo notebook: os caminhos
+padrão são ancorados na pasta do produto, e uma `fontes/` no lugar errado faz a etapa
+avisar que não aproveitou PDF algum, sem dizer por quê. A `saida/` o próprio comando
+cria.
 
 ## O ensaio que fecha a instalação
 
@@ -153,12 +159,12 @@ também. Não editar convenções nos prompts de etapa — eles apenas referenci
 
 Só quem publica o manual precisa disto — não é parte da instalação de quem só roda o
 plantão. `uv run publica-wiki` copia `docs/plantao/` para o Wiki do GitHub, mas o
-GitHub só cria o repositório `comentario_matinal.wiki.git` **depois que a primeira
+GitHub só cria o repositório `disseminacao.wiki.git` **depois que a primeira
 página nasce pela interface web**. Antes disso, `git clone` (e portanto o publicador)
 responde que o repositório não existe — verificado em 17/08.
 
 Para destravar: abrir a aba **Wiki** do repositório no GitHub, clicar em **Create the
-first page**, salvar qualquer conteúdo. A partir daí `comentario_matinal.wiki.git`
+first page**, salvar qualquer conteúdo. A partir daí `disseminacao.wiki.git`
 existe, e `uv run publica-wiki` funciona — é ele que sobrescreve essa primeira página
 com o manual de verdade.
 

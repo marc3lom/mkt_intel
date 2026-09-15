@@ -9,6 +9,9 @@ origem, e a reescrita de link — sobretudo a âncora com hífen duplo, que uma
 reescrita "arrumadinha" colapsaria sem avisar ninguém.
 """
 
+import subprocess
+from pathlib import Path
+
 import pytest
 
 from comentario_matinal import wiki
@@ -174,3 +177,15 @@ def test_monta_com_sha_diferente_muda_a_primeira_linha(tmp_path):
     wiki.monta(tmp_path, "2222222")
     linha_dois = (tmp_path / "Home.md").read_text(encoding="utf-8").splitlines()[0]
     assert linha_um != linha_dois
+
+
+def test_o_clone_do_wiki_mora_fora_do_repositorio():
+    """O wiki é outro repositório git. Clonado aqui dentro, viraria repositório
+    embutido no `git status` de todo mundo, a um `git add -A` de ser comitado."""
+    from comentario_matinal.wiki import DESTINO_PADRAO, RAIZ
+
+    topo = Path(subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True, check=True, cwd=RAIZ, text=True,
+    ).stdout.strip())
+    assert not DESTINO_PADRAO.resolve().is_relative_to(topo.resolve())
