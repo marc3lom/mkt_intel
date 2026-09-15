@@ -49,8 +49,8 @@ EQUIVALENTE = {
 PARAMETROS_FORA_DO_NOTEBOOK = {
     "saida": "as saídas do dia vão para a pasta padrão do repositório; apontar "
              "outra é reprocessar um dia antigo sem misturá-lo com o de hoje",
-    "fontes": "os PDFs da manhã ficam em `fontes/`, na raiz — a célula do Passo 1 "
-              "diz isso, e apontar outra pasta é caso de teste",
+    "fontes": "os PDFs da manhã ficam em `fontes/`, na pasta do produto — a célula "
+              "do Passo 1 diz isso, e apontar outra pasta é caso de teste",
     "arquivo": "o comentário do dia anterior sai de `arquivo/`, que é onde o "
                "`uv run matinal enviado` o grava; não há o que escolher aqui",
     "config": "a lista de ativos do painel é canônica e única — `config/painel.toml`",

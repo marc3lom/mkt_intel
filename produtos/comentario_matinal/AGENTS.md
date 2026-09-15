@@ -113,7 +113,7 @@ Os `[Parágrafo N]` não usados são apagados junto com o espaçador; um sexto m
 - **`fontes/`** — os PDFs do dia (Bloomberg, FT, WSJ, sell-side). Fora do git, sujeitos aos termos de uso da Bloomberg. Nunca comitar, nunca reproduzir em extensão, nunca citar além de um trecho curto.
 - **`saida/`** — as saídas do dia, inclusive o comentário ainda não enviado. Fora do git.
 - **`*.pdf`, `*.docx`** — fora do git em qualquer lugar. O artefato versionado é o `.md`.
-- **`.env`, `.env.*`, credenciais** — fora do git. Hoje nenhum código lê `.env`; não acrescentar sem perguntar.
+- **`.env`, `.env.*`, credenciais** — fora do git. Hoje nenhum código deste produto lê `.env`; não acrescentar sem perguntar.
 - **`arquivo/AAAA/MM/AAAAMMDD.md`** — os comentários enviados, registro institucional, escritos só pelo `matinal enviado`. Nunca editar à mão e nunca renomear: o nome do arquivo *é* a data de envio, e é ele que a busca pelo dia anterior lê.
 - **`exemplos/aprovados/`, `exemplos/rejeitados/`** — material humano de trabalho; nada em `src/` os lê. Só influenciam a saída quando alguém promove um caso à §12 do guia, à mão.
 - Nunca colar conteúdo de fonte, número do painel ou minuta do comentário em mensagem de commit, issue, ou qualquer coisa que saia da máquina. O repositório é privado e guarda material que vai à diretoria.

@@ -21,4 +21,4 @@ roda o plantão do matinal está em `produtos/comentario_matinal/docs/plantao/`.
 2. Produto de outra natureza → pasta nova `produtos/<nome>/`, com `uv init`, `.python-version` 3.14, `pyproject.toml` com o índice explícito da Bloomberg se usar `blpapi`, `tests/`, `AGENTS.md` e `CLAUDE.md` com `@AGENTS.md`.
 3. Dados de trabalho e segredos ficam fora do git: `.gitignore` do produto com `input/`, `output/`, `saida/` ou o que couber.
 4. Linha nova na tabela acima.
-5. Código compartilhado só nasce quando um segundo produto precisar dele de verdade.
+5. Um `produtos/_comum/` só nasce quando um terceiro produto precisar do mesmo código.

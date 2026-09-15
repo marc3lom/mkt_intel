@@ -2,6 +2,7 @@
 
 > Trecho de `.techdoc/doc-py-bcb.md` do py-bcb, trazido na migração de setembro de 2026.
 > Os caminhos citados (`src/reports/…`) são relativos a esta pasta.
+
 # py-bcb — diário técnico
 
 ## 2026-06-17 — Grid intraday de reação de mercado do FOMC (estilo COPOM)

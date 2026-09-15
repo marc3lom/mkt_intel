@@ -116,9 +116,9 @@ def test_link_para_ancora_da_propria_pagina_nao_e_tocado():
 
 
 def test_link_para_fora_do_manual_nao_e_tocado():
-    """`../../README.md` sai do manual e vai para a raiz do repositório — não
+    """`../../README.md` sai do manual e vai para a pasta do produto — não
     é página do wiki, e reescrevê-lo produziria um link que não existe ali."""
-    texto = "Ver [`README.md`](../../README.md) da raiz."
+    texto = "Ver [`README.md`](../../README.md) da pasta do produto."
     assert _reescreve_links(texto, _PAGINAS) == texto
 
 
@@ -184,8 +184,11 @@ def test_o_clone_do_wiki_mora_fora_do_repositorio():
     embutido no `git status` de todo mundo, a um `git add -A` de ser comitado."""
     from comentario_matinal.wiki import DESTINO_PADRAO, RAIZ
 
-    topo = Path(subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"],
-        capture_output=True, check=True, cwd=RAIZ, text=True,
-    ).stdout.strip())
+    try:
+        topo = Path(subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True, check=True, cwd=RAIZ, text=True,
+        ).stdout.strip())
+    except (OSError, subprocess.CalledProcessError) as e:
+        pytest.skip(f"não consegui achar o topo do git: {e}")
     assert not DESTINO_PADRAO.resolve().is_relative_to(topo.resolve())

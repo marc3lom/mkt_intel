@@ -6,7 +6,8 @@ readme = "README.md"
 authors = [{ name = "Marcelo Martinelli", email = "mmartinelli@gmail.com" }]
 requires-python = ">=3.14"
 dependencies = [
-    # pandas 2.2 e numpy <2.5 são as versões com que os informes rodavam no py-bcb.
+    # pandas 2.x e numpy <2.5: a linha em que os informes rodavam no py-bcb (lá
+    # pandas 2.2.3; aqui o lock resolveu 2.3.3).
     # Subir para pandas 3 é tarefa própria, com a caracterização como rede.
     "pandas>=2.2,<3",
     "numpy>=2.0,<2.5",
@@ -25,9 +26,9 @@ dependencies = [
 ]
 
 [tool.uv]
-# Mesmo motivo do py-bcb: pandas 2.2.x compila do fonte no cp314, e um numpy de
-# build mais novo que o de runtime quebra a ABI de datetime (segfault no import).
-# Trocar as duas travas juntas, ou nenhuma.
+# Salvaguarda herdada do py-bcb: se o pandas 2.x compilar do fonte no cp314, um
+# numpy de build mais novo que o de runtime quebra a ABI de datetime (segfault
+# no import). Trocar as duas travas juntas, ou nenhuma.
 build-constraint-dependencies = ["numpy<2.5"]
 
 [tool.uv.sources]

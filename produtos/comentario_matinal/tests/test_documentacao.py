@@ -80,7 +80,7 @@ EXECUTAVEIS_DE_TERCEIROS = {
 # é ensaio ou teste — não é o plantão.
 BANDEIRAS_FORA_DO_MANUAL = {
     "--saida": "as saídas do dia vão para `saida/`; apontar outra é reprocessar",
-    "--fontes": "os PDFs da manhã ficam em `fontes/`, na raiz",
+    "--fontes": "os PDFs da manhã ficam em `fontes/`, na pasta do produto",
     "--arquivo": "o comentário do dia anterior sai de `arquivo/`, onde o "
                  "`enviado` o grava",
     "--config": "a lista de ativos do painel é única — `config/painel.toml`",

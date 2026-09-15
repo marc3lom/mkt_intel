@@ -22,9 +22,9 @@ Tudo roda de dentro desta pasta.
 ## Código
 
 - Identificadores, mensagens de log e de erro em inglês; docstrings, comentários, rótulos de gráfico e commits em pt-BR. Docstrings antigas em inglês ficam como estão.
-- `reports/_bloomberg.py` e `reports/_style.py` são cópias do `py-bcb`. Nunca importar `classes.*` — `tests/test_independence.py` falha.
+- `src/reports/_bloomberg.py` e `src/reports/_style.py` são cópias do `py-bcb`. Nunca importar `classes.*` — `tests/test_independence.py` falha.
 - Todo caminho se ancora na raiz deste produto: `input/`, `output/`, `etc/` aqui, e `src/reports/fomc/input/` para os documentos do Fed. `TestProjectRootAnchors` prende isso.
-- xbbg 1.0: `abdib` aceita um ticker por chamada e devolve o horário (UTC) numa **coluna** `time`; chamadas sync travam no Jupyter — usar sempre `_run_async`.
+- xbbg 1.x: `abdib` aceita um ticker por chamada e devolve o horário (UTC) numa **coluna** `time`; chamadas sync travam no Jupyter — usar sempre `_run_async`.
 - Fusos: horários do FOMC e do payroll são âncoras em ET (`America/New_York`); exibição em `America/Sao_Paulo`; tirar o fuso só imediatamente antes de plotar.
 - `COPOM[4]` (vermelho) é reservado às linhas de evento no grid.
 
