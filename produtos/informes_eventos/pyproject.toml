@@ -1,0 +1,77 @@
+[project]
+name = "informes-eventos"
+version = "0.1.0"
+description = "Informes de inteligência de mercado pós-evento (FOMC, payroll) da Mesa de Investimentos"
+readme = "README.md"
+authors = [{ name = "Marcelo Martinelli", email = "mmartinelli@gmail.com" }]
+requires-python = ">=3.14"
+dependencies = [
+    # pandas 2.2 e numpy <2.5 são as versões com que os informes rodavam no py-bcb.
+    # Subir para pandas 3 é tarefa própria, com a caracterização como rede.
+    "pandas>=2.2,<3",
+    "numpy>=2.0,<2.5",
+    "matplotlib>=3.10",
+    "fonttools>=4.0",  # _style.outline_font: Calibri sem bitmaps embutidos
+    "python-docx>=1.2.0",
+    "pdfplumber>=0.11",
+    "requests>=2.32",
+    "openpyxl>=3.1.5",
+    "fredapi>=0.5.2",
+    "python-dotenv>=1.0",
+    "xbbg>=1.4",
+    "blpapi>=3.24",
+    "nest-asyncio>=1.6",  # _bloomberg.run_async dentro do Jupyter
+    "narwhals>=2.0",  # fomc.core.data_loader normaliza o retorno do abdib
+]
+
+[tool.uv]
+# Mesmo motivo do py-bcb: pandas 2.2.x compila do fonte no cp314, e um numpy de
+# build mais novo que o de runtime quebra a ABI de datetime (segfault no import).
+# Trocar as duas travas juntas, ou nenhuma.
+build-constraint-dependencies = ["numpy<2.5"]
+
+[tool.uv.sources]
+blpapi = { index = "bloomberg" }
+
+# blpapi não é publicado no PyPI. Explicit: nenhuma outra dependência sai daqui.
+[[tool.uv.index]]
+name = "bloomberg"
+url = "https://blpapi.bloomberg.com/repository/releases/python/simple/"
+explicit = true
+
+[build-system]
+requires = ["uv_build>=0.12.4,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = "src"
+module-name = "reports"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1",
+    "ruff>=0.16.4",
+    "nbstripout>=0.9",
+    "jupyter>=1.0.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+extend-exclude = ["*.ipynb", ".venv", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "F403", "I001"]
+"tests/**/*.py" = ["F841"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"

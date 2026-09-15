@@ -207,7 +207,7 @@ def fetch_market_reaction(
 
     import narwhals as nw
 
-    from classes.functions.bloomberg import _run_async
+    from reports._bloomberg import run_async as _run_async
 
     # xbbg 1.0 (backend rust): abdib() aceita 1 ticker por vez e devolve colunas
     # [ticker, time, open, high, low, close, volume, ...] com RangeIndex; o
@@ -465,7 +465,7 @@ def load_dots_history(
 
     logger.info(f"Fetching DOTS history from {start_date} to {end_date}")
 
-    from classes.functions.bloomberg import _run_async
+    from reports._bloomberg import run_async as _run_async
 
     try:
         data = _run_async(

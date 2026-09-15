@@ -1,0 +1,10 @@
+# Dados de trabalho dos informes: a estrutura existe no disco, o conteúdo fica
+# fora do git. input/ guarda PDFs do Fed, planilhas de e-mail e o grid1.xlsx;
+# output/, tudo o que se gera. Sem âncora: vale também para src/reports/*/input/.
+input/
+output/
+
+# Segredos: só o template com referências do 1Password é versionado. Esta
+# negação vence o `.env.*` da raiz, porque .gitignore mais fundo tem precedência.
+etc/*
+!etc/.env.tpl

@@ -279,7 +279,7 @@ def create_unemployment_u6_chart(
         output_path: Path to save the chart.
         plot_start_date: Optional start date to filter the chart.
     """
-    from classes.config import COPOM, clean_axes
+    from reports._style import COPOM, clean_axes
 
     merged = data[["Unemployment"]].join(u6_data[["U6"]], how="inner")
     if plot_start_date:
@@ -332,7 +332,7 @@ def create_beveridge_curve(
         output_path: Path to save the chart.
         plot_start_date: Optional start date to filter.
     """
-    from classes.config import COPOM, clean_axes
+    from reports._style import COPOM, clean_axes
 
     merged = pd.DataFrame({"Unemployment": unemployment, "JOLTS": jolts}).dropna()
     if plot_start_date:

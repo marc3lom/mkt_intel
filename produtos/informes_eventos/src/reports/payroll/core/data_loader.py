@@ -81,7 +81,7 @@ def _fetch_from_bloomberg(
     blp = _get_bloomberg_client()
     tickers = list(PAYROLL_TICKERS.values())
 
-    from classes.functions.bloomberg import _run_async
+    from reports._bloomberg import run_async as _run_async
 
     data = _run_async(
         blp.abdh(
@@ -231,7 +231,7 @@ def get_latest_release() -> dict[str, dict[str, Any]]:
 
     logger.info("Fetching latest release data")
 
-    from classes.functions.bloomberg import _run_async
+    from reports._bloomberg import run_async as _run_async
 
     try:
         data = _run_async(blp.abdp(tickers=tickers, flds=RELEASE_FIELDS, backend="pandas"))
