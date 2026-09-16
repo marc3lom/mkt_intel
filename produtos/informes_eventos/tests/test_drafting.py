@@ -278,3 +278,20 @@ class TestRunStage:
         monkeypatch.setenv("INFORMES_EVENTOS_BACKEND", "nao-existe")
         with pytest.raises(DraftingError, match="nao-existe"):
             run_stage("resumo", "m", tmp_path / "x.md")
+
+
+class TestPromptFiles:
+    @pytest.mark.parametrize(
+        "name", ["00_guia_de_estilo.md", "01_resumo.md", "02_bancos.md", "03_revisao.md"]
+    )
+    def test_prompt_exists_and_has_version_header(self, name):
+        path = drafting.PROMPTS_DIR / name
+        assert path.is_file(), path
+        text = path.read_text(encoding="utf-8")
+        assert text.lstrip().startswith("# ")
+        assert "Versão" in text.splitlines()[2]
+
+    def test_stage_prompts_demand_fenced_block(self):
+        for name in ["01_resumo.md", "02_bancos.md", "03_revisao.md"]:
+            text = (drafting.PROMPTS_DIR / name).read_text(encoding="utf-8")
+            assert "bloco cercado" in text, name
