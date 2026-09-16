@@ -9,6 +9,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 import pytest
+from docx import Document
 
 from reports.fomc.core import data_loader, word_export
 from reports.fomc.core.calculations import calculate_surprise, classify_change_direction
@@ -23,6 +24,7 @@ from reports.fomc.core.word_export import (
     _to_naive_brt,
     create_market_reaction_grid,
 )
+from reports.fomc.core.word_report import _add_marked_text, _add_summary
 
 STATEMENT = (
     "Inflation remains somewhat elevated. The Committee decided to maintain the target "
@@ -232,3 +234,27 @@ class TestProjectRootAnchors:
     def test_module_path_is_fomc_package(self):
         """Os documentos do Fed moram em <pacote fomc>/input/."""
         assert data_loader._get_module_path().name == "fomc"
+
+
+class TestMarkedText:
+    def test_italic_bold_and_plain_runs(self):
+        """`*x*` vira itálico, `**y**` negrito, o resto fica normal."""
+        doc = Document()
+        para = doc.add_paragraph()
+        _add_marked_text(para, "leitura *hawkish* e **firme** hoje")
+        runs = [(r.text, bool(r.italic), bool(r.bold)) for r in para.runs]
+        assert runs == [
+            ("leitura ", False, False),
+            ("hawkish", True, False),
+            (" e ", False, False),
+            ("firme", False, True),
+            (" hoje", False, False),
+        ]
+
+    def test_summary_paragraphs_keep_italics(self):
+        """O resumo separa parágrafos por linha em branco e aplica a marcação em cada um."""
+        doc = Document()
+        _add_summary(doc, "Primeiro *dots*.\n\nSegundo.")
+        paras = doc.paragraphs
+        assert [p.text for p in paras] == ["Primeiro dots.", "Segundo."]
+        assert any(r.italic for r in paras[0].runs)

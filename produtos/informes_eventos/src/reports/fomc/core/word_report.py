@@ -7,6 +7,7 @@ limpa o conteúdo e preenche programaticamente.
 """
 
 import logging
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -149,8 +150,7 @@ def _add_summary(doc: Document, summary_text: str) -> None:
             continue
         para = doc.add_paragraph()
         para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-        run = para.add_run(paragraph_text)
-        _set_run_font(run, size=BODY_SIZE)
+        _add_marked_text(para, paragraph_text)
 
 
 def _add_headlines(doc: Document, headlines: list[dict]) -> None:
@@ -500,22 +500,31 @@ def _add_bank_comments(doc: Document, comments: dict[str, str]) -> None:
         run_name = para.add_run(f"{bank_name}: ")
         _set_run_font(run_name, size=BODY_SIZE, bold=True)
 
-        # Processar texto com **bold** inline
-        _add_text_with_bold(para, comment_text)
+        # Processar texto com **bold** e *itálico* inline
+        _add_marked_text(para, comment_text)
 
 
-def _add_text_with_bold(para, text: str) -> None:
-    """Adiciona texto ao parágrafo processando marcadores **bold**."""
-    import re
+_INLINE_MARK = re.compile(r"(\*\*[^*]+\*\*|\*[^*]+\*)")
 
-    parts = re.split(r"(\*\*[^*]+\*\*)", text)
-    for part in parts:
-        if part.startswith("**") and part.endswith("**"):
+
+def _add_marked_text(para, text: str, size=None) -> None:
+    """Adiciona texto ao parágrafo processando `**negrito**` e `*itálico*`.
+
+    O negrito é testado antes do itálico para `**x**` não virar dois itálicos.
+    """
+    size = size or BODY_SIZE
+    for part in _INLINE_MARK.split(text):
+        if not part:
+            continue
+        if part.startswith("**") and part.endswith("**") and len(part) > 4:
             run = para.add_run(part[2:-2])
-            _set_run_font(run, size=BODY_SIZE, bold=True)
+            _set_run_font(run, size=size, bold=True)
+        elif part.startswith("*") and part.endswith("*") and len(part) > 2:
+            run = para.add_run(part[1:-1])
+            _set_run_font(run, size=size, italic=True)
         else:
             run = para.add_run(part)
-            _set_run_font(run, size=BODY_SIZE)
+            _set_run_font(run, size=size)
 
 
 def _add_footer_text(doc: Document, mesa_comment: str = "") -> None:
