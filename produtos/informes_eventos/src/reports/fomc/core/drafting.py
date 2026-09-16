@@ -13,6 +13,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+import pandas as pd
+
 # Raiz do produto: a pasta com o pyproject.toml. TestProjectRootAnchors prende.
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 PROMPTS_DIR = PROJECT_ROOT / "prompts"
@@ -119,3 +121,90 @@ def read_bank_pdfs(folder: Path) -> tuple[list[BankSource], list[str]]:
             continue
         sources.append(BankSource(pdf.stem.replace("_", " "), text))
     return sources, ignored
+
+
+# --- reação de mercado ----------------------------------------------------------
+
+# Como cada painel expressa variação: taxas em pontos-base (diferença × 100),
+# inclinação em pontos-base (já está em bps), índices em %, VIX em pontos.
+_CHANGE_KIND = {
+    "UST_2Y": "rate_bp",
+    "UST_10Y": "rate_bp",
+    "OIS_1Y1Y": "rate_bp",
+    "SPREAD_2S10S": "bp",
+    "NASDAQ": "pct",
+    "SPX": "pct",
+    "RUSSELL": "pct",
+    "DXY": "pct",
+    "VIX": "pts",
+}
+
+
+@dataclass(frozen=True)
+class PanelSnapshot:
+    key: str
+    label: str
+    at_decision: str
+    last: str
+    change: str
+
+
+@dataclass(frozen=True)
+class MarketSnapshot:
+    panels: list[PanelSnapshot]
+    last_time: str  # HH:MM em Brasília
+
+
+def _pt(number: str) -> str:
+    """Notação brasileira: ponto de milhar e vírgula decimal; menos tipográfico."""
+    return number.replace(",", "\x00").replace(".", ",").replace("\x00", ".").replace("-", "−")
+
+
+def _change(kind: str, before: float, after: float) -> str:
+    """Variação já em notação brasileira; `_pt` só no número, nunca no sufixo literal."""
+    if kind == "rate_bp":
+        return f"{_pt(f'{(after - before) * 100:+.1f}')} p.b."
+    if kind == "bp":
+        return f"{_pt(f'{after - before:+.1f}')} p.b."
+    if kind == "pct":
+        return f"{_pt(f'{(after / before - 1) * 100:+.1f}')}%"
+    return f"{_pt(f'{after - before:+.2f}')} pts"
+
+
+def market_snapshot(market_data: pd.DataFrame, decision_time: pd.Timestamp) -> MarketSnapshot:
+    """Nível na decisão, último nível e variação por painel, já formatados."""
+    from reports.fomc.core.word_export import MARKET_REACTION_PANELS
+
+    if market_data is None or market_data.empty:
+        raise DraftingError("No market data to summarize")
+    panels: list[PanelSnapshot] = []
+    for key, label, fmt, _pos in MARKET_REACTION_PANELS:
+        if key not in market_data.columns:
+            continue
+        series = market_data[key].dropna()
+        if series.empty:
+            continue
+        before_series = series[series.index <= decision_time]
+        before = float(before_series.iloc[-1]) if not before_series.empty else float(series.iloc[0])
+        after = float(series.iloc[-1])
+        panels.append(
+            PanelSnapshot(
+                key=key,
+                label=label,
+                at_decision=_pt(fmt.format(before)),
+                last=_pt(fmt.format(after)),
+                change=_change(_CHANGE_KIND.get(key, "pts"), before, after),
+            )
+        )
+    if not panels:
+        raise DraftingError("No market panel available to summarize")
+    last_time = market_data.dropna(how="all").index[-1].strftime("%H:%M")
+    return MarketSnapshot(panels=panels, last_time=last_time)
+
+
+def format_market(snapshot: MarketSnapshot) -> str:
+    """Uma linha por painel, para o bloco REAÇÃO DE MERCADO da mensagem."""
+    lines = [f"Último dado: {snapshot.last_time} (Brasília)"]
+    for p in snapshot.panels:
+        lines.append(f"{p.label}: {p.last} (na decisão {p.at_decision}; {p.change})")
+    return "\n".join(lines)

@@ -1,13 +1,17 @@
 """As etapas de modelo do informe do FOMC, sem rede, sem Bloomberg e sem `claude`."""
 
+import pandas as pd
 import pytest
 
 from reports.fomc.core import drafting
+from reports.fomc.core.data_loader import _TZ_BRT
 from reports.fomc.core.drafting import (
     BankSource,
     DraftingError,
     Headline,
+    format_market,
     headlines_for_report,
+    market_snapshot,
     read_bank_pdfs,
     read_headlines,
 )
@@ -71,3 +75,48 @@ class TestReadBankPdfs:
             read_bank_pdfs(tmp_path)
         with pytest.raises(DraftingError, match="bancos"):
             read_bank_pdfs(tmp_path / "nao-existe")
+
+
+def _intraday() -> pd.DataFrame:
+    idx = pd.date_range("2026-09-16 14:00", "2026-09-16 16:00", freq="30min", tz=_TZ_BRT)
+    # 5 pontos: 14:00, 14:30, 15:00, 15:30, 16:00
+    return pd.DataFrame(
+        {
+            "SPX": [6000.0, 6000.0, 6000.0, 5970.0, 5940.0],
+            "UST_2Y": [4.000, 4.000, 4.000, 4.100, 4.130],
+            "UST_10Y": [4.400, 4.400, 4.400, 4.430, 4.440],
+            "SPREAD_2S10S": [40.0, 40.0, 40.0, 33.0, 31.0],
+            "DXY": [100.0, 100.0, 100.0, 100.3, 100.6],
+            "VIX": [15.0, 15.0, 15.0, 16.5, 17.0],
+        },
+        index=idx,
+    )
+
+
+class TestMarketSnapshot:
+    def test_levels_and_changes_by_panel_kind(self):
+        """Nível na decisão (último ≤ 15:00), último nível e variação no tipo de cada painel."""
+        decision = pd.Timestamp("2026-09-16 15:00", tz=_TZ_BRT)
+        snap = market_snapshot(_intraday(), decision)
+        by_key = {p.key: p for p in snap.panels}
+        assert snap.last_time == "16:00"
+        assert by_key["SPX"].at_decision == "6.000" and by_key["SPX"].last == "5.940"
+        assert by_key["SPX"].change == "−1,0%"
+        assert by_key["UST_2Y"].change == "+13,0 p.b."
+        assert by_key["UST_10Y"].change == "+4,0 p.b."
+        assert by_key["SPREAD_2S10S"].change == "−9,0 p.b."
+        assert by_key["DXY"].change == "+0,6%"
+        assert by_key["VIX"].change == "+2,00 pts"
+        assert set(by_key) == {"SPX", "UST_2Y", "UST_10Y", "SPREAD_2S10S", "DXY", "VIX"}
+
+    def test_format_market_is_one_line_per_panel_with_comma_decimals(self):
+        decision = pd.Timestamp("2026-09-16 15:00", tz=_TZ_BRT)
+        text = format_market(market_snapshot(_intraday(), decision))
+        assert text.splitlines()[0] == "Último dado: 16:00 (Brasília)"
+        assert "UST 2 Anos (%): 4,130 (na decisão 4,000; +13,0 p.b.)" in text
+        assert "4.130" not in text
+
+    def test_empty_frame_raises(self):
+        decision = pd.Timestamp("2026-09-16 15:00", tz=_TZ_BRT)
+        with pytest.raises(DraftingError, match="market"):
+            market_snapshot(pd.DataFrame(), decision)
