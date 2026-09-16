@@ -51,7 +51,7 @@ from comentario_matinal.plantao import (  # noqa: E402
 )
 
 # Os subcomandos que o plantão expõe, na ordem do runbook.
-SUBCOMANDOS = ("triagem", "redacao", "revisao", "conferir", "enviado")
+SUBCOMANDOS = ("imagens", "triagem", "redacao", "revisao", "conferir", "enviado")
 
 # O núcleo diz o que falta e para aí; a frase que ensina a suprir é de quem foi
 # chamado. Estas são as do terminal — falam em `uv run matinal` e em flags, que
@@ -139,12 +139,14 @@ def main() -> int:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("comando", nargs="?", default=None,
                         choices=SUBCOMANDOS,
-                        help="Etapa a executar. `conferir` compara o .docx com "
-                             "o .md, sem arquivar nem limpar — para rodar entre "
-                             "o Word e o e-mail. `enviado` fecha o plantão: "
-                             "arquiva o comentário e limpa fontes/ e saida/. "
-                             "Sem argumento, coleta o mercado e gera painel, "
-                             "calendário e texto.")
+                        help="Etapa a executar. `imagens` coleta o mercado e "
+                             "grava só o painel e o calendário, para quem "
+                             "escreve o texto por fora. `conferir` compara o "
+                             ".docx com o .md, sem arquivar nem limpar — para "
+                             "rodar entre o Word e o e-mail. `enviado` fecha o "
+                             "plantão: arquiva o comentário e limpa fontes/ e "
+                             "saida/. Sem argumento, coleta o mercado e gera "
+                             "painel, calendário e texto.")
     parser.add_argument("--forcar", action="store_true",
                         help="Só para `enviado`: contorna as três recusas — "
                              "fora da janela, divergência entre .docx e .md, e "
@@ -252,12 +254,40 @@ def _despacha(args, voz: _Voz) -> int:
     if args.comando == "enviado":
         return _enviado(args, ctx, voz)
 
+    if args.comando == "imagens":
+        return _imagens(args, ctx, voz)
+
     # As etapas de IA consomem o material já gerado pela coleta; nenhuma delas
     # toca no Bloomberg.
     if args.comando:
         return _etapa(args, ctx, voz)
 
     return _coleta(args, ctx, voz)
+
+
+def _imagens(args, ctx: Contexto, voz: _Voz) -> int:
+    """Só o painel e o calendário, para quem escreve o texto por fora.
+
+    Para antes do bloco direcional de propósito: ele é insumo das etapas de IA
+    — é dele que a revisão tira a direção de cada ativo para cobrar acordo com o
+    texto —, e quem não vai rodar etapa alguma não tem o que fazer com um
+    arquivo a mais em `saida/`. Foi este o caminho que o repositório `daily`
+    servia, com outro código e as mesmas duas imagens.
+    """
+    mercado = plantao.coleta_mercado(ctx, progresso=voz)
+
+    painel = plantao.desenha_painel(ctx, mercado)
+    print(f"Painel:     {painel.caminho}")
+
+    if not args.sem_calendario:
+        calendario = plantao.prepara_calendario(ctx, progresso=voz)
+        for aviso in calendario.avisos:
+            _erra(aviso)
+        if calendario.caminho_png:
+            print(f"Calendário: {calendario.caminho_png}")
+        print(f"Calendário: {calendario.caminho_md}")
+
+    return 0
 
 
 def _coleta(args, ctx: Contexto, voz: _Voz) -> int:

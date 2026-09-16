@@ -20,7 +20,7 @@ o `AGENTS.md` não detalha.
 
 ## Escolher quais testes rodar
 
-`uv run pytest` é o portão inteiro — 177 testes, ~7 s, sem Bloomberg e sem rede.
+`uv run pytest` é o portão inteiro — 179 testes, ~7 s, sem Bloomberg e sem rede.
 Enquanto se itera, dá para estreitar:
 
 - Um arquivo: `uv run pytest tests/test_temas.py -q`

@@ -40,6 +40,11 @@ Uma execução, uma consulta de mercado, quatro arquivos em `saida/`:
 | `painel_AAAAMMDD.txt` | bloco direcional, insumo das etapas de IA |
 | `calendario_AAAAMMDD.md` | o mesmo calendário em texto, idem |
 
+Quem quer **só as duas imagens** — porque vai escrever o texto por fora, sem as etapas
+de IA — roda `uv run matinal imagens`, ou o `notebooks/imagens.ipynb`. Sai o mesmo painel
+e o mesmo calendário, e não sai o bloco direcional, que só serve de insumo às etapas.
+Não é o caminho do plantão: o comentário que vai à diretoria nasce do `uv run matinal`.
+
 Os quatro saem do mesmo conjunto de dados. O texto não recalcula direção nenhuma: ele lê
 os mesmos números que cada tile da imagem renderizou. Por construção, a imagem enviada à
 diretoria e o texto usado na conferência não podem discordar sobre a direção de um ativo.

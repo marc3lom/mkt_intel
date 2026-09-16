@@ -35,6 +35,11 @@ CODIGOS_FORA_DO_NOTEBOOK = {
 # a correspondência entre as duas fachadas — o lugar onde elas podem divergir
 # sem que nada mais perceba.
 EQUIVALENTE = {
+    # `imagens` para antes do bloco direcional, e no notebook do plantão isso é
+    # parar antes da célula dele — daí a equivalência ser o passo do painel, e
+    # não um nome próprio. Quem quer só as duas imagens tem fachada dedicada em
+    # `notebooks/imagens.ipynb`, que o teste do ponto de parada prende.
+    "imagens": "plantao.desenha_painel",
     "triagem": '"triagem"',
     "redacao": '"redacao"',
     "revisao": '"revisao"',
@@ -223,6 +228,45 @@ def test_o_mapa_de_equivalencia_cobre_todo_subcomando():
         f"{faltando} entrou no terminal sem entrada em EQUIVALENTE. Decidir se "
         "o notebook o cobre e por qual chamada — ou listá-lo como deliberadamente "
         "fora, com o motivo."
+    )
+
+
+def test_o_notebook_das_imagens_para_onde_o_subcomando_para():
+    """`imagens.ipynb` é a fachada de notebook do `uv run matinal imagens`.
+
+    O que as duas fachadas não podem divergir é o ponto de parada: as duas
+    imagens saem, o bloco direcional não. Um `monta_bloco` acrescentado aqui
+    transformaria este notebook no Passo 1 do plantão com outro nome — e quem o
+    rodasse acharia que gerou só imagens, deixando em `saida/` um texto que
+    ninguém escreveu.
+    """
+    import json
+
+    caminho = RAIZ / "notebooks" / "imagens.ipynb"
+    assert caminho.is_file(), (
+        "O `uv run matinal imagens` existe no terminal e está sem fachada de "
+        "notebook. Ou o notebook nasce, ou o subcomando sai."
+    )
+
+    codigo = "\n".join(
+        "".join(celula["source"])
+        for celula in json.loads(caminho.read_text(encoding="utf-8"))["cells"]
+        if celula["cell_type"] == "code"
+    )
+
+    faltando = sorted(
+        passo for passo in ("contexto", "coleta_mercado", "desenha_painel",
+                            "prepara_calendario")
+        if f"plantao.{passo}" not in codigo
+    )
+    assert not faltando, (
+        f"O notebook das imagens não chama {faltando}, que o subcomando chama. "
+        "As duas fachadas deixariam de produzir o mesmo."
+    )
+
+    assert "monta_bloco" not in codigo, (
+        "O notebook das imagens monta o bloco direcional, e o subcomando para "
+        "antes dele."
     )
 
 

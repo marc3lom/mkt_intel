@@ -57,7 +57,8 @@ comentario_matinal/
 │   ├── wiki.py                 fora do plantão — publica `docs/plantao/` no Wiki
 │   └── render/                 painel, tabelas do calendário e o que elas precisam
 ├── notebooks/
-│   └── plantao.ipynb           fachada de notebook — as mesmas funções, em células
+│   ├── plantao.ipynb           fachada de notebook — as mesmas funções, em células
+│   └── imagens.ipynb           só o painel e o calendário, sem o bloco direcional
 ├── fontes/                     PDFs do dia (fora do repositório)
 ├── saida/                      saídas do dia (fora do repositório)
 ├── config/
@@ -85,6 +86,12 @@ divergir no que fazem. O que poderia divergir é a **sequência** — ela existe
 vezes, no argparse e nas células —, e é isso que `tests/test_notebook.py` prende:
 passo novo no núcleo, subcomando novo no terminal ou célula fora da ordem de
 `plantao.PASSOS` derrubam o teste até que o notebook seja atualizado junto.
+
+Há um caminho mais curto, com as duas fachadas também: `uv run matinal imagens` e
+`notebooks/imagens.ipynb` param depois do painel e do calendário, sem montar o bloco
+direcional. Serve a quem quer só as imagens da manhã e escreve o texto por fora — era o
+que o repositório `daily` fazia, e ele foi aposentado quando este caminho nasceu. O
+ponto de parada é o que as duas fachadas não podem divergir, e é o que o teste prende.
 
 **Parâmetro novo num passo também.** Ou uma célula o exercita, ou ele entra na lista de
 exceções do teste com o motivo escrito ao lado. Não ter contrapartida no notebook é

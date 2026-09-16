@@ -116,6 +116,28 @@ def test_coleta_produz_os_quatro_arquivos(bloomberg_falsa, monkeypatch, tmp_path
     assert "ECB's Lane Speaks in Dublin" in md
 
 
+def test_imagens_para_nas_duas_imagens(bloomberg_falsa, monkeypatch, tmp_path):
+    """O caminho de quem escreve o texto por fora — o que o `daily` fazia.
+
+    O bloco direcional existe para as etapas de IA: é dele que a revisão tira a
+    direção de cada ativo para cobrar acordo com o texto. Quem não vai rodar
+    etapa alguma não o quer, e gerá-lo assim mesmo deixaria em `saida/` um
+    arquivo que ninguém escreveu e ninguém lê.
+    """
+    from comentario_matinal.cli import main
+
+    monkeypatch.setattr(
+        "sys.argv",
+        ["matinal", "imagens", "--asof", "2026-08-17T07:40", "--saida", str(tmp_path)],
+    )
+    assert main() == 0
+
+    assert (tmp_path / f"painel_{MARCA}.png").stat().st_size > 10_000
+    assert (tmp_path / f"calendario_{MARCA}.png").stat().st_size > 10_000
+    assert (tmp_path / f"calendario_{MARCA}.md").exists()
+    assert not (tmp_path / f"painel_{MARCA}.txt").exists()
+
+
 def test_bloco_direcional_lista_todo_ativo_do_painel(bloomberg_falsa, monkeypatch,
                                                      tmp_path):
     """O bloco é o que as três etapas de IA leem como estado do mercado.
