@@ -13,6 +13,8 @@ from reports.fomc.core.drafting import (
     MeetingInputs,
     block,
     build_message,
+    draft_bank_comments,
+    draft_summary,
     extract_fenced_block,
     format_market,
     format_sep_table,
@@ -22,6 +24,8 @@ from reports.fomc.core.drafting import (
     parse_bank_sections,
     read_bank_pdfs,
     read_headlines,
+    read_presser,
+    review_report,
     run_stage,
 )
 
@@ -295,3 +299,128 @@ class TestPromptFiles:
         for name in ["01_resumo.md", "02_bancos.md", "03_revisao.md"]:
             text = (drafting.PROMPTS_DIR / name).read_text(encoding="utf-8")
             assert "bloco cercado" in text, name
+
+
+def _inputs(is_sep=True) -> MeetingInputs:
+    cur = pd.DataFrame({"Variable": ["PCE inflation"], "2026": [3.6]})
+    prior = pd.DataFrame({"Variable": ["PCE inflation"], "2026": [2.7]})
+    return MeetingInputs(
+        meeting_date="20260916",
+        statement_text="STATEMENT TEXT",
+        statement={
+            "decision": "hold",
+            "target_rate_low": 3.5,
+            "target_rate_high": 3.75,
+            "unanimous": True,
+            "dissenters": [],
+            "key_phrases": [],
+        },
+        is_sep=is_sep,
+        sep_medians=cur if is_sep else None,
+        sep_prior=prior if is_sep else None,
+        prior_label="June projection" if is_sep else None,
+        headlines=[Headline("Fed holds", True)],
+        market=None,
+    )
+
+
+@pytest.fixture
+def out(tmp_path, monkeypatch):
+    monkeypatch.setattr(drafting, "PROJECT_ROOT", tmp_path)
+    return tmp_path / "output" / "reports" / "fomc" / "20260916"
+
+
+class TestDraftSummary:
+    def test_decision_stage_message_and_output(self, prompts, model, out):
+        state = model("## Auditoria\nok\n```\nParágrafo 1.\n\nParágrafo 2.\n```")
+        text = draft_summary(_inputs())
+        assert text == "Parágrafo 1.\n\nParágrafo 2."
+        assert (out / "resumo_decisao.md").is_file()
+        stage, msg = state["messages"][0]
+        assert stage == "resumo"
+        assert "=== MOMENTO ===\ndecisão" in msg
+        assert "=== STATEMENT ===\nSTATEMENT TEXT" in msg
+        assert "=== DECISÃO (parse) ===" in msg
+        assert "=== SEP: MEDIANAS ATUAIS vs ANTERIORES (June projection) ===" in msg
+        assert "| PCE inflation | 3,6 (2,7) |" in msg
+        assert "=== HEADLINES BLOOMBERG ===\n*** Fed holds" in msg
+        assert "=== REAÇÃO DE MERCADO === (ausente)" in msg
+        assert "RESUMO DA DECISÃO" not in msg
+
+    def test_no_sep_meeting_has_no_sep_block(self, prompts, model, out):
+        state = model("```\nx\n```")
+        draft_summary(_inputs(is_sep=False))
+        assert "=== SEP" not in state["messages"][0][1]
+
+    def test_presser_stage_requires_previous_and_presser(self, prompts, model, out):
+        model("```\nx\n```")
+        with pytest.raises(DraftingError, match="previous"):
+            draft_summary(_inputs(), stage="presser", presser_headlines=[Headline("a", False)])
+        with pytest.raises(DraftingError, match="coletiva"):
+            draft_summary(_inputs(), stage="presser", previous="texto")
+
+    def test_presser_stage_message_and_output(self, prompts, model, out):
+        state = model("```\nnovo\n```")
+        text = draft_summary(
+            _inputs(),
+            stage="presser",
+            previous="RESUMO ANTERIOR",
+            presser_headlines=[Headline("Warsh says", False)],
+        )
+        assert text == "novo"
+        assert (out / "resumo_coletiva.md").is_file()
+        msg = state["messages"][0][1]
+        assert "=== MOMENTO ===\ncoletiva" in msg
+        assert "=== RESUMO DA DECISÃO ===\nRESUMO ANTERIOR" in msg
+        assert "=== HEADLINES DA COLETIVA ===\nWarsh says" in msg
+
+    def test_unknown_stage_raises(self, prompts, model, out):
+        with pytest.raises(DraftingError, match="stage"):
+            draft_summary(_inputs(), stage="outro")
+
+
+class TestReadPresser:
+    def test_none_when_missing_list_when_present(self, tmp_path):
+        assert read_presser(tmp_path) is None
+        (tmp_path / "coletiva.txt").write_text("*** A\nB\n", encoding="utf-8")
+        assert read_presser(tmp_path) == [Headline("A", True), Headline("B", False)]
+
+
+class TestDraftBankComments:
+    def test_one_block_per_source_and_dict_out(self, prompts, model, out):
+        state = model("## Auditoria\n```\n## Goldman Sachs\nGS diz.\n\n## JPM\nJPM diz.\n```")
+        result = draft_bank_comments(
+            _inputs(), [BankSource("Goldman Sachs", "texto gs"), BankSource("JPM", "texto jpm")]
+        )
+        assert result == {"Goldman Sachs": "GS diz.", "JPM": "JPM diz."}
+        assert (out / "bancos.md").is_file()
+        msg = state["messages"][0][1]
+        assert state["messages"][0][0] == "bancos"
+        assert "=== RESEARCH: Goldman Sachs ===\ntexto gs" in msg
+        assert msg.index("RESEARCH: Goldman Sachs") < msg.index("RESEARCH: JPM")
+
+    def test_no_sources_raises_before_model(self, prompts, model, out):
+        state = model("```\n## X\ny\n```")
+        with pytest.raises(DraftingError, match="research"):
+            draft_bank_comments(_inputs(), [])
+        assert state["messages"] == []
+
+
+class TestReviewReport:
+    def test_message_has_text_banks_and_facts(self, prompts, model, out):
+        state = model("## Bloco 1\n[SUPORTADA] x\n```\ntexto corrigido\n```")
+        text = review_report(
+            _inputs(), "TEXTO", {"JPM": "JPM diz."}, presser_headlines=[Headline("W", False)]
+        )
+        assert text == "texto corrigido"
+        assert (out / "revisao.md").is_file()
+        stage, msg = state["messages"][0]
+        assert stage == "revisao"
+        assert "=== TEXTO PARA REVISÃO ===\nTEXTO" in msg
+        assert "=== COMENTÁRIOS DOS BANCOS ===\n## JPM\nJPM diz." in msg
+        assert "=== HEADLINES DA COLETIVA ===\nW" in msg
+        assert "=== DECISÃO (parse) ===" in msg
+
+    def test_empty_summary_raises(self, prompts, model, out):
+        with pytest.raises(DraftingError, match="summary"):
+            review_report(_inputs(), "  ")

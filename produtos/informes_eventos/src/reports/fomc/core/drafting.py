@@ -364,3 +364,115 @@ def run_stage(stage: str, message: str, destination: Path) -> str:
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(response + "\n", encoding="utf-8")
     return text
+
+
+# --- as etapas -----------------------------------------------------------------
+
+STAGE_DECISION = "decision"
+STAGE_PRESSER = "presser"
+
+
+def read_presser(folder: Path) -> list[Headline] | None:
+    """coletiva.txt da pasta do dia, ou None se ainda não existir."""
+    path = folder / PRESSER_FILE
+    return read_headlines(path) if path.is_file() else None
+
+
+def _fact_blocks(inputs: MeetingInputs) -> list[tuple[str, str | None]]:
+    """Os blocos factuais comuns à redação e à revisão, na mesma ordem."""
+    blocks: list[tuple[str, str | None]] = [
+        ("STATEMENT", inputs.statement_text),
+        ("DECISÃO (parse)", format_statement(inputs.statement) if inputs.statement else None),
+    ]
+    if inputs.is_sep:
+        label = inputs.prior_label or "Prior projection"
+        table = None
+        if inputs.sep_medians is not None and not inputs.sep_medians.empty:
+            table = format_sep_table(inputs.sep_medians, inputs.sep_prior, inputs.prior_label)
+        blocks.append((f"SEP: MEDIANAS ATUAIS vs ANTERIORES ({label})", table))
+    blocks.append(("HEADLINES BLOOMBERG", format_headlines(inputs.headlines) or None))
+    return blocks
+
+
+def _market_block(inputs: MeetingInputs) -> tuple[str, str | None]:
+    return ("REAÇÃO DE MERCADO", format_market(inputs.market) if inputs.market else None)
+
+
+def draft_summary(
+    inputs: MeetingInputs,
+    *,
+    stage: str = STAGE_DECISION,
+    previous: str | None = None,
+    presser_headlines: list[Headline] | None = None,
+) -> str:
+    """Resumo em parágrafos. `decision` escreve tudo; `presser` reescreve o que a coletiva muda."""
+    if stage not in (STAGE_DECISION, STAGE_PRESSER):
+        raise DraftingError(f"Unknown stage: {stage!r} (expected 'decision' or 'presser')")
+    blocks: list[tuple[str, str | None]] = [
+        ("MOMENTO", "decisão" if stage == STAGE_DECISION else "coletiva")
+    ]
+    if stage == STAGE_PRESSER:
+        if not (previous or "").strip():
+            raise DraftingError("Presser stage needs the decision summary as `previous`")
+        if not presser_headlines:
+            raise DraftingError(f"Presser stage needs {PRESSER_FILE} in the day folder")
+        blocks.append(("RESUMO DA DECISÃO", previous))
+        blocks.append(("HEADLINES DA COLETIVA", format_headlines(presser_headlines)))
+    blocks += _fact_blocks(inputs)
+    blocks.append(_market_block(inputs))
+    message = build_message(PROMPT_SUMMARY, blocks)
+    name = OUT_SUMMARY_DECISION if stage == STAGE_DECISION else OUT_SUMMARY_PRESSER
+    return run_stage("resumo", message, output_folder(inputs.meeting_date) / name)
+
+
+def draft_bank_comments(inputs: MeetingInputs, sources: list[BankSource]) -> dict[str, str]:
+    """Um parágrafo por banco, atribuído pelo nome; devolve {banco: parágrafo}."""
+    if not sources:
+        raise DraftingError("No bank research to summarize (empty 'bancos/')")
+    blocks: list[tuple[str, str | None]] = [
+        ("DECISÃO (parse)", format_statement(inputs.statement) if inputs.statement else None),
+    ]
+    if inputs.is_sep and inputs.sep_medians is not None and not inputs.sep_medians.empty:
+        blocks.append(
+            (
+                "SEP: MEDIANAS ATUAIS vs ANTERIORES",
+                format_sep_table(inputs.sep_medians, inputs.sep_prior, inputs.prior_label),
+            )
+        )
+    blocks += [(f"RESEARCH: {s.name}", s.text) for s in sources]
+    message = build_message(PROMPT_BANKS, blocks)
+    text = run_stage("bancos", message, output_folder(inputs.meeting_date) / OUT_BANKS)
+    sections = parse_bank_sections(text)
+    if not sections:
+        raise DraftingError("Bank stage returned no '## Bank' section")
+    return sections
+
+
+def review_report(
+    inputs: MeetingInputs,
+    summary: str,
+    bank_comments: dict[str, str] | None = None,
+    presser_headlines: list[Headline] | None = None,
+) -> str:
+    """Checagem factual, conformidade e sugestões; devolve o texto corrigido."""
+    if not (summary or "").strip():
+        raise DraftingError("Nothing to review: empty summary")
+    banks = (
+        "\n\n".join(f"## {name}\n{text}" for name, text in bank_comments.items())
+        if bank_comments
+        else None
+    )
+    blocks: list[tuple[str, str | None]] = [
+        ("TEXTO PARA REVISÃO", summary),
+        ("COMENTÁRIOS DOS BANCOS", banks),
+    ]
+    blocks += _fact_blocks(inputs)
+    blocks.append(
+        (
+            "HEADLINES DA COLETIVA",
+            format_headlines(presser_headlines) if presser_headlines else None,
+        )
+    )
+    blocks.append(_market_block(inputs))
+    message = build_message(PROMPT_REVIEW, blocks)
+    return run_stage("revisao", message, output_folder(inputs.meeting_date) / OUT_REVIEW)
