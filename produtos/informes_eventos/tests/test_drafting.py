@@ -3,17 +3,26 @@
 import pandas as pd
 import pytest
 
+from reports import _modelo
 from reports.fomc.core import drafting
 from reports.fomc.core.data_loader import _TZ_BRT
 from reports.fomc.core.drafting import (
     BankSource,
     DraftingError,
     Headline,
+    MeetingInputs,
+    block,
+    build_message,
+    extract_fenced_block,
     format_market,
+    format_sep_table,
+    format_statement,
     headlines_for_report,
     market_snapshot,
+    parse_bank_sections,
     read_bank_pdfs,
     read_headlines,
+    run_stage,
 )
 
 
@@ -120,3 +129,137 @@ class TestMarketSnapshot:
         decision = pd.Timestamp("2026-09-16 15:00", tz=_TZ_BRT)
         with pytest.raises(DraftingError, match="market"):
             market_snapshot(pd.DataFrame(), decision)
+
+
+@pytest.fixture
+def prompts(tmp_path, monkeypatch):
+    """Guia e prompts sintéticos, para a montagem não depender dos reais."""
+    d = tmp_path / "prompts"
+    d.mkdir()
+    (d / "00_guia_de_estilo.md").write_text("GUIA", encoding="utf-8")
+    (d / "01_resumo.md").write_text("PROMPT RESUMO", encoding="utf-8")
+    (d / "02_bancos.md").write_text("PROMPT BANCOS", encoding="utf-8")
+    (d / "03_revisao.md").write_text("PROMPT REVISAO", encoding="utf-8")
+    monkeypatch.setattr(drafting, "PROMPTS_DIR", d)
+    return d
+
+
+@pytest.fixture
+def model(monkeypatch):
+    """Dublê do backend: devolve a resposta escolhida e guarda a mensagem recebida."""
+    state = {"messages": []}
+
+    def install(response: str):
+        class Fake:
+            name = "fake"
+
+            def run(self, message, *, stage, model):
+                state["messages"].append((stage, message))
+                return response
+
+        monkeypatch.setitem(_modelo.BACKENDS, "fake", Fake)
+        monkeypatch.setenv("INFORMES_EVENTOS_BACKEND", "fake")
+        return state
+
+    return install
+
+
+class TestMeetingInputs:
+    def test_defaults_are_independent_per_instance(self):
+        """`field(default_factory=list)`: uma instância não compartilha a lista da outra."""
+        a = MeetingInputs(meeting_date="20260916")
+        b = MeetingInputs(meeting_date="20260917")
+        a.headlines.append(Headline("x", False))
+        assert a.headlines == [Headline("x", False)]
+        assert b.headlines == []
+        assert a.is_sep is False
+        assert a.statement is None
+        assert a.market is None
+
+
+class TestBlocks:
+    def test_block_marks_missing(self):
+        assert block("STATEMENT", "texto") == "=== STATEMENT ===\ntexto"
+        assert block("STATEMENT", None) == "=== STATEMENT === (ausente)"
+        assert block("STATEMENT", "  ") == "=== STATEMENT === (ausente)"
+
+    def test_format_statement_in_portuguese_with_comma(self):
+        s = {
+            "decision": "hold",
+            "target_rate_low": 3.5,
+            "target_rate_high": 3.75,
+            "unanimous": False,
+            "dissenters": ["Stephen Miran"],
+            "key_phrases": ["Inflation remains elevated"],
+        }
+        text = format_statement(s)
+        assert "decisão: manutenção" in text
+        assert "faixa: 3,50%–3,75%" in text
+        assert "unânime: não; dissidentes: Stephen Miran" in text
+        assert "Inflation remains elevated" in text
+
+    def test_format_sep_table_with_prior_and_missing_year(self):
+        cur = pd.DataFrame(
+            {"Variable": ["Change in real GDP"], "2026": [1.8], "2029": [2.0], "Longer run": [1.8]}
+        )
+        prior = pd.DataFrame(
+            {
+                "Variable": ["Change in real GDP"],
+                "2026": [1.4],
+                "2029": [float("nan")],
+                "Longer run": [1.8],
+            }
+        )
+        text = format_sep_table(cur, prior, "June projection")
+        assert text.splitlines()[0] == "| Variável | 2026 | 2029 | Longer run |"
+        assert "| Change in real GDP | 1,8 (1,4) | 2,0 (—) | 1,8 (1,8) |" in text
+        assert "June projection" in text
+
+    def test_build_message_order_guide_prompt_blocks(self, prompts):
+        msg = build_message("01_resumo.md", [("A", "1"), ("B", None)])
+        assert msg.index("GUIA") < msg.index("PROMPT RESUMO") < msg.index("=== A ===")
+        assert "=== B === (ausente)" in msg
+
+
+class TestResponses:
+    def test_last_fenced_block(self):
+        r = "auditoria\n```\nprimeiro\n```\nmais\n```markdown\nsegundo\nlinha\n```\n"
+        assert extract_fenced_block(r) == "segundo\nlinha"
+
+    def test_no_block_raises(self):
+        with pytest.raises(DraftingError, match="fenced"):
+            extract_fenced_block("sem bloco")
+
+    def test_bank_sections_in_order(self):
+        text = "## Goldman Sachs\nParágrafo GS.\n\n## JPM\nParágrafo JPM.\n"
+        assert parse_bank_sections(text) == {
+            "Goldman Sachs": "Parágrafo GS.",
+            "JPM": "Parágrafo JPM.",
+        }
+
+
+class TestRunStage:
+    def test_writes_full_response_and_returns_block(self, model, tmp_path):
+        model("audit\n```\ntexto final\n```")
+        dest = tmp_path / "out" / "resumo_decisao.md"
+        assert run_stage("resumo", "mensagem", dest) == "texto final"
+        assert dest.read_text(encoding="utf-8").startswith("audit")
+
+    def test_missing_input_mark_raises_and_writes_nothing(self, model, tmp_path):
+        model(f"{_modelo.MISSING_INPUT_MARK}: headlines\n```\nx\n```")
+        dest = tmp_path / "resumo_decisao.md"
+        with pytest.raises(DraftingError, match="headlines"):
+            run_stage("resumo", "m", dest)
+        assert not dest.exists()
+
+    def test_no_fenced_block_raises_and_writes_nothing(self, model, tmp_path):
+        model("só auditoria")
+        dest = tmp_path / "resumo_decisao.md"
+        with pytest.raises(DraftingError):
+            run_stage("resumo", "m", dest)
+        assert not dest.exists()
+
+    def test_model_error_becomes_drafting_error(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("INFORMES_EVENTOS_BACKEND", "nao-existe")
+        with pytest.raises(DraftingError, match="nao-existe"):
+            run_stage("resumo", "m", tmp_path / "x.md")
