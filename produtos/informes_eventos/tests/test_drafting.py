@@ -1,6 +1,8 @@
 """As etapas de modelo do informe do FOMC, sem rede, sem Bloomberg e sem `claude`."""
 
+import os
 import re
+import time
 
 import pandas as pd
 import pytest
@@ -137,6 +139,23 @@ class TestMarketSnapshot:
         with pytest.raises(DraftingError, match="market"):
             market_snapshot(pd.DataFrame(), decision)
 
+    def test_all_panels_starting_after_decision_raises(self):
+        """Sem tick antes da decisão em painel nenhum, o erro de painel ausente dispara."""
+        decision = pd.Timestamp("2026-09-16 13:00", tz=_TZ_BRT)  # antes de todos os ticks
+        with pytest.raises(DraftingError, match="panel"):
+            market_snapshot(_intraday(), decision)
+
+    def test_panel_missing_before_tick_is_skipped_others_unaffected(self):
+        """Painel sem tick antes da decisão some do snapshot — não pega o 1º tick pós."""
+        data = _intraday()
+        # VIX só passa a existir depois da decisão (15:00).
+        data.loc[data.index <= pd.Timestamp("2026-09-16 14:30", tz=_TZ_BRT), "VIX"] = float("nan")
+        decision = pd.Timestamp("2026-09-16 14:00", tz=_TZ_BRT)
+        snap = market_snapshot(data, decision)
+        by_key = {p.key: p for p in snap.panels}
+        assert "VIX" not in by_key
+        assert "SPX" in by_key
+
 
 @pytest.fixture
 def prompts(tmp_path, monkeypatch):
@@ -245,6 +264,11 @@ class TestResponses:
         with pytest.raises(DraftingError, match="empty"):
             extract_fenced_block("auditoria\n```\n\n```\n")
 
+    def test_inline_fence_in_audit_does_not_fool_the_anchor(self):
+        """Um ``` no meio de uma linha da auditoria não conta como fronteira de bloco."""
+        r = "## Bloco 1\n[SUPORTADA] o texto diz ```3,50%```\nfim\n```\ntexto final\n```\n"
+        assert extract_fenced_block(r) == "texto final"
+
     def test_bank_sections_in_order(self):
         text = "## Goldman Sachs\nParágrafo GS.\n\n## JPM\nParágrafo JPM.\n"
         assert parse_bank_sections(text) == {
@@ -262,6 +286,14 @@ class TestRunStage:
 
     def test_missing_input_mark_raises_and_writes_nothing(self, model, tmp_path):
         model(f"{_modelo.MISSING_INPUT_MARK}: headlines\n```\nx\n```")
+        dest = tmp_path / "resumo_decisao.md"
+        with pytest.raises(DraftingError, match="headlines"):
+            run_stage("resumo", "m", dest)
+        assert not dest.exists()
+
+    def test_missing_input_mark_after_heading_line_is_still_detected(self, model, tmp_path):
+        """A marca não precisa abrir a resposta — só estar perto do início."""
+        model(f"## Auditoria\n{_modelo.MISSING_INPUT_MARK}: headlines\n```\nx\n```")
         dest = tmp_path / "resumo_decisao.md"
         with pytest.raises(DraftingError, match="headlines"):
             run_stage("resumo", "m", dest)
@@ -381,6 +413,14 @@ class TestDraftSummary:
         with pytest.raises(DraftingError, match="stage"):
             draft_summary(_inputs(), stage="outro")
 
+    def test_decision_stage_without_headlines_refuses_before_model(self, prompts, model, out):
+        state = model("```\nx\n```")
+        inputs = _inputs()
+        inputs.headlines = []
+        with pytest.raises(DraftingError, match="headlines.txt"):
+            draft_summary(inputs)
+        assert state["messages"] == []
+
 
 class TestReadPresser:
     def test_none_when_missing_list_when_present(self, tmp_path):
@@ -408,6 +448,20 @@ class TestDraftBankComments:
             draft_bank_comments(_inputs(), [])
         assert state["messages"] == []
 
+    def test_bank_missing_from_response_raises_naming_it(self, prompts, model, out):
+        model("## Auditoria\n```\n## Goldman Sachs\nGS diz.\n```")
+        with pytest.raises(DraftingError, match="JPM"):
+            draft_bank_comments(
+                _inputs(),
+                [BankSource("Goldman Sachs", "texto gs"), BankSource("JPM", "texto jpm")],
+            )
+        assert (out / "bancos.md").is_file()
+
+    def test_no_section_at_all_raises(self, prompts, model, out):
+        model("## Auditoria\n```\nsem seções aqui\n```")
+        with pytest.raises(DraftingError, match="no '## Bank' section"):
+            draft_bank_comments(_inputs(), [BankSource("Goldman Sachs", "texto gs")])
+
 
 class TestReviewReport:
     def test_message_has_text_banks_and_facts(self, prompts, model, out):
@@ -431,11 +485,12 @@ class TestReviewReport:
 
 class TestPickSummary:
     def test_auto_prefers_review_then_presser_then_decision(self, tmp_path):
-        (tmp_path / "revisao.md").write_text("texto\n```\nREVISAO\n```\n", encoding="utf-8")
+        """Escritas na ordem real: decisão, coletiva, revisão — a última é sempre a mais nova."""
+        (tmp_path / "resumo_decisao.md").write_text("texto\n```\nDECISAO\n```\n", encoding="utf-8")
         (tmp_path / "resumo_coletiva.md").write_text(
             "texto\n```\nCOLETIVA\n```\n", encoding="utf-8"
         )
-        (tmp_path / "resumo_decisao.md").write_text("texto\n```\nDECISAO\n```\n", encoding="utf-8")
+        (tmp_path / "revisao.md").write_text("texto\n```\nREVISAO\n```\n", encoding="utf-8")
         text, path = pick_summary(tmp_path, "auto")
         assert text == "REVISAO"
         assert path == tmp_path / "revisao.md"
@@ -454,3 +509,63 @@ class TestPickSummary:
     def test_missing_file_raises_mentioning_folder(self, tmp_path):
         with pytest.raises(DraftingError, match=re.escape(str(tmp_path))):
             pick_summary(tmp_path, "decisao")
+
+    def test_auto_raises_when_lower_priority_file_is_newer(self, tmp_path):
+        """resumo_decisao.md mais novo que revisao.md indica revisão desatualizada."""
+        revisao = tmp_path / "revisao.md"
+        decisao = tmp_path / "resumo_decisao.md"
+        revisao.write_text("```\nREVISAO\n```\n", encoding="utf-8")
+        decisao.write_text("```\nDECISAO\n```\n", encoding="utf-8")
+        now = time.time()
+        os.utime(revisao, (now, now))
+        os.utime(decisao, (now + 10, now + 10))
+        with pytest.raises(DraftingError, match="revisao.md") as exc:
+            pick_summary(tmp_path, "auto")
+        assert "resumo_decisao.md" in str(exc.value)
+
+    def test_auto_passes_with_normal_order(self, tmp_path):
+        """Arquivo escolhido mais novo que os de prioridade menor: sem alerta."""
+        revisao = tmp_path / "revisao.md"
+        decisao = tmp_path / "resumo_decisao.md"
+        decisao.write_text("```\nDECISAO\n```\n", encoding="utf-8")
+        now = time.time()
+        os.utime(decisao, (now, now))
+        revisao.write_text("```\nREVISAO\n```\n", encoding="utf-8")
+        os.utime(revisao, (now + 10, now + 10))
+        text, path = pick_summary(tmp_path, "auto")
+        assert text == "REVISAO"
+        assert path == revisao
+
+    def test_explicit_source_never_checks_staleness(self, tmp_path):
+        revisao = tmp_path / "revisao.md"
+        decisao = tmp_path / "resumo_decisao.md"
+        revisao.write_text("```\nREVISAO\n```\n", encoding="utf-8")
+        decisao.write_text("```\nDECISAO\n```\n", encoding="utf-8")
+        now = time.time()
+        os.utime(revisao, (now, now))
+        os.utime(decisao, (now + 10, now + 10))
+        text, path = pick_summary(tmp_path, "revisao")
+        assert text == "REVISAO"
+        assert path == revisao
+
+
+class TestReviewSource:
+    def test_explicit_coletiva_and_decisao_pass_through(self, tmp_path):
+        assert drafting.review_source(tmp_path, "coletiva") == "coletiva"
+        assert drafting.review_source(tmp_path, "decisao") == "decisao"
+
+    def test_auto_prefers_coletiva_when_present(self, tmp_path):
+        (tmp_path / "resumo_coletiva.md").write_text("x", encoding="utf-8")
+        assert drafting.review_source(tmp_path, "auto") == "coletiva"
+
+    def test_auto_falls_back_to_decisao_when_absent(self, tmp_path):
+        assert drafting.review_source(tmp_path, "auto") == "decisao"
+
+    def test_revisao_behaves_like_auto(self, tmp_path):
+        assert drafting.review_source(tmp_path, "revisao") == "decisao"
+        (tmp_path / "resumo_coletiva.md").write_text("x", encoding="utf-8")
+        assert drafting.review_source(tmp_path, "revisao") == "coletiva"
+
+    def test_unknown_source_raises(self, tmp_path):
+        with pytest.raises(DraftingError, match="SUMMARY_SOURCE"):
+            drafting.review_source(tmp_path, "bogus")

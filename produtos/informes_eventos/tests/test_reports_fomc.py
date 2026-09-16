@@ -259,6 +259,19 @@ class TestMarkedText:
             (" hoje", False, False),
         ]
 
+    def test_nested_italic_inside_bold(self):
+        """`**muito *hawkish* firme**`: um nível de itálico dentro do negrito."""
+        doc = Document()
+        para = doc.add_paragraph()
+        _add_marked_text(para, "leitura **muito *hawkish*** hoje")
+        runs = [(r.text, bool(r.italic), bool(r.bold)) for r in para.runs]
+        assert runs == [
+            ("leitura ", False, False),
+            ("muito ", False, True),
+            ("hawkish", True, True),
+            (" hoje", False, False),
+        ]
+
     def test_summary_paragraphs_keep_italics(self):
         """O resumo separa parágrafos por linha em branco e aplica a marcação em cada um."""
         doc = Document()

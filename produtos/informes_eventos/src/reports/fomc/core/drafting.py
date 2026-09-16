@@ -187,7 +187,9 @@ def market_snapshot(market_data: pd.DataFrame, decision_time: pd.Timestamp) -> M
         if series.empty:
             continue
         before_series = series[series.index <= decision_time]
-        before = float(before_series.iloc[-1]) if not before_series.empty else float(series.iloc[0])
+        if before_series.empty:
+            continue
+        before = float(before_series.iloc[-1])
         after = float(series.iloc[-1])
         panels.append(
             PanelSnapshot(
@@ -315,7 +317,7 @@ def build_message(prompt_file: str, blocks: list[tuple[str, str | None]]) -> str
 
 # --- resposta e execução -------------------------------------------------------
 
-_FENCED = re.compile(r"```[^\n]*\n(.*?)\n```", re.DOTALL)
+_FENCED = re.compile(r"^```[^\n]*\n(.*?)\n^```[ \t]*$", re.DOTALL | re.MULTILINE)
 
 
 def extract_fenced_block(response: str) -> str:
@@ -357,9 +359,12 @@ def run_stage(stage: str, message: str, destination: Path) -> str:
         response = _modelo.run(message, stage=stage)
     except _modelo.ModelError as e:
         raise DraftingError(str(e)) from e
-    if response.lstrip().startswith(_modelo.MISSING_INPUT_MARK):
-        first = response.strip().splitlines()[0]
-        raise DraftingError(f"Stage {stage} refused: {first}")
+    if _modelo.MISSING_INPUT_MARK in response[:400]:
+        first = next(
+            (line for line in response.splitlines() if _modelo.MISSING_INPUT_MARK in line),
+            response.strip().splitlines()[0],
+        )
+        raise DraftingError(f"Stage {stage} refused: {first.strip()}")
     text = extract_fenced_block(response)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(response + "\n", encoding="utf-8")
@@ -408,6 +413,8 @@ def draft_summary(
     """Resumo em parágrafos. `decision` escreve tudo; `presser` reescreve o que a coletiva muda."""
     if stage not in (STAGE_DECISION, STAGE_PRESSER):
         raise DraftingError(f"Unknown stage: {stage!r} (expected 'decision' or 'presser')")
+    if stage == STAGE_DECISION and not inputs.headlines:
+        raise DraftingError(f"Decision stage needs {HEADLINES_FILE} in the day folder")
     blocks: list[tuple[str, str | None]] = [
         ("MOMENTO", "decisão" if stage == STAGE_DECISION else "coletiva")
     ]
@@ -445,6 +452,9 @@ def draft_bank_comments(inputs: MeetingInputs, sources: list[BankSource]) -> dic
     sections = parse_bank_sections(text)
     if not sections:
         raise DraftingError("Bank stage returned no '## Bank' section")
+    missing = [s.name for s in sources if s.name not in sections]
+    if missing:
+        raise DraftingError(f"Bank stage returned no section for: {', '.join(missing)}")
     return sections
 
 
@@ -457,16 +467,44 @@ SUMMARY_SOURCES = {
 
 
 def pick_summary(out_folder: Path, source: str) -> tuple[str, Path]:
-    """O resumo que vai ao Word: o bloco cercado do arquivo escolhido, e de qual arquivo veio."""
+    """O resumo que vai ao Word: o bloco cercado do arquivo escolhido, e de qual arquivo veio.
+
+    Em `"auto"`, um candidato de prioridade menor mais novo que o escolhido é
+    sinal de etapa reexecutada sem rerodar a de cima (ex.: novo `resumo_decisao.md`
+    sob uma `revisao.md` antiga) — erro, para não publicar uma escolha obsoleta.
+    Fontes explícitas nunca checam, porque o autor pediu aquele arquivo mesmo.
+    """
     if source not in SUMMARY_SOURCES:
         raise DraftingError(
             f"Unknown SUMMARY_SOURCE: {source!r} (expected {', '.join(SUMMARY_SOURCES)})"
         )
-    for name in SUMMARY_SOURCES[source]:
+    names = SUMMARY_SOURCES[source]
+    for i, name in enumerate(names):
         path = out_folder / name
-        if path.is_file():
-            return extract_fenced_block(path.read_text(encoding="utf-8")), path
+        if not path.is_file():
+            continue
+        if source == "auto":
+            chosen_mtime = path.stat().st_mtime
+            for lower_name in names[i + 1 :]:
+                lower_path = out_folder / lower_name
+                if lower_path.is_file() and lower_path.stat().st_mtime > chosen_mtime:
+                    raise DraftingError(
+                        f"{lower_path.name} is newer than {path.name}: rerun the later "
+                        "stage or set SUMMARY_SOURCE explicitly"
+                    )
+        return extract_fenced_block(path.read_text(encoding="utf-8")), path
     raise DraftingError(f"No summary found for SUMMARY_SOURCE={source!r} in {out_folder}")
+
+
+def review_source(out_folder: Path, source: str) -> str:
+    """Qual resumo a revisão lê: nunca a própria revisão; explícito vence."""
+    if source in ("coletiva", "decisao"):
+        return source
+    if source not in SUMMARY_SOURCES:
+        raise DraftingError(
+            f"Unknown SUMMARY_SOURCE: {source!r} (expected {', '.join(SUMMARY_SOURCES)})"
+        )
+    return "coletiva" if (out_folder / OUT_SUMMARY_PRESSER).is_file() else "decisao"
 
 
 def review_report(

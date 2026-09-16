@@ -504,27 +504,44 @@ def _add_bank_comments(doc: Document, comments: dict[str, str]) -> None:
         _add_marked_text(para, comment_text)
 
 
-_INLINE_MARK = re.compile(r"(\*\*[^*]+\*\*|\*[^*]+\*)")
+_BOLD = re.compile(r"(\*\*.+?\*\*(?!\*))")
+_ITALIC = re.compile(r"(\*[^*]+\*)")
 
 
 def _add_marked_text(para, text: str, size=None) -> None:
     """Adiciona texto ao parágrafo processando `**negrito**` e `*itálico*`.
 
-    O negrito é testado antes do itálico para `**x**` não virar dois itálicos.
+    O negrito é dividido primeiro; a marca de fechamento não pode ser seguida de
+    outro `*`, para `**muito *hawkish***` fechar no par certo (os dois últimos
+    asteriscos da sequência de três, não os dois primeiros). Dentro do negrito,
+    `*itálico*` vira negrito+itálico — um nível de aninhamento. Fora do negrito,
+    `*itálico*` funciona como antes.
     """
     size = size or BODY_SIZE
-    for part in _INLINE_MARK.split(text):
+    for part in _BOLD.split(text):
         if not part:
             continue
-        if part.startswith("**") and part.endswith("**") and len(part) > 4:
-            run = para.add_run(part[2:-2])
-            _set_run_font(run, size=size, bold=True)
-        elif part.startswith("*") and part.endswith("*") and len(part) > 2:
-            run = para.add_run(part[1:-1])
-            _set_run_font(run, size=size, italic=True)
+        if part.startswith("**") and part.endswith("**"):
+            inner = part[2:-2]
+            for sub in _ITALIC.split(inner):
+                if not sub:
+                    continue
+                if sub.startswith("*") and sub.endswith("*"):
+                    run = para.add_run(sub[1:-1])
+                    _set_run_font(run, size=size, bold=True, italic=True)
+                else:
+                    run = para.add_run(sub)
+                    _set_run_font(run, size=size, bold=True)
         else:
-            run = para.add_run(part)
-            _set_run_font(run, size=size)
+            for sub in _ITALIC.split(part):
+                if not sub:
+                    continue
+                if sub.startswith("*") and sub.endswith("*"):
+                    run = para.add_run(sub[1:-1])
+                    _set_run_font(run, size=size, italic=True)
+                else:
+                    run = para.add_run(sub)
+                    _set_run_font(run, size=size)
 
 
 def _add_footer_text(doc: Document, mesa_comment: str = "") -> None:
