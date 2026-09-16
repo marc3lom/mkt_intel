@@ -1,6 +1,6 @@
 # PROMPT 2 — COMENTÁRIOS DOS BANCOS
 
-Versão 1.0 — 16/09/2026
+Versão 1.1 — 16/09/2026
 Etapa de síntese do research recebido após a decisão do FOMC.
 
 ---
@@ -35,4 +35,5 @@ resposta com `ENTRADA OBRIGATÓRIA AUSENTE: RESEARCH` e pare.
 Primeiro, `## Auditoria`: para cada banco, de que parte do research saiu o parágrafo e
 o que ficou de fora. Depois, um único bloco cercado por três crases contendo, para
 cada banco, uma linha `## Nome do banco` seguida do parágrafo, na ordem em que os
-blocos RESEARCH apareceram. O bloco cercado é a única parte que vai ao documento.
+blocos RESEARCH apareceram, com o nome exatamente como está no rótulo do bloco
+(pode corrigir caixa: "jpmorgan" → "JPMorgan"), sem abreviar nem trocar por sigla. O bloco cercado é a única parte que vai ao documento.

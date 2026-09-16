@@ -411,7 +411,7 @@ def parse_bank_sections(text: str) -> dict[str, str]:
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
         body = text[m.end() : end].strip()
         if body:
-            result[m.group(1)] = body
+            result[" ".join(m.group(1).split())] = body
     return result
 
 
@@ -564,10 +564,18 @@ def draft_bank_comments(inputs: MeetingInputs, sources: list[BankSource]) -> dic
     sections = parse_bank_sections(text)
     if not sections:
         raise DraftingError("Bank stage returned no '## Bank' section")
-    missing = [s.name for s in sources if s.name not in sections]
+    # O autor digita o nome como quiser ("jpmorgan abaixo:"); o modelo costuma
+    # normalizar ("## JPMorgan"). Compara sem caixa nem espaços; a seção fica com
+    # o nome como o modelo escreveu, que é o que vai ao Word.
+    keys = {_bank_key(name): name for name in sections}
+    missing = [s.name for s in sources if _bank_key(s.name) not in keys]
     if missing:
         raise DraftingError(f"Bank stage returned no section for: {', '.join(missing)}")
     return sections
+
+
+def _bank_key(name: str) -> str:
+    return "".join(name.casefold().split())
 
 
 SUMMARY_SOURCES = {

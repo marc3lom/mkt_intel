@@ -486,6 +486,14 @@ class TestDraftBankComments:
             )
         assert (out / "bancos.md").is_file()
 
+    def test_section_names_match_ignoring_case_and_spaces(self, prompts, model, out):
+        """O autor digita 'jpmorgan abaixo:'; o modelo devolve '## JPMorgan'. É o mesmo banco."""
+        model("## Auditoria\n```\n## JPMorgan\nJPM diz.\n\n##  Deutsche  Bank\nDB diz.\n```")
+        result = draft_bank_comments(
+            _inputs(), [BankSource("jpmorgan", "t1"), BankSource("Deutsche Bank", "t2")]
+        )
+        assert result == {"JPMorgan": "JPM diz.", "Deutsche Bank": "DB diz."}
+
     def test_no_section_at_all_raises(self, prompts, model, out):
         model("## Auditoria\n```\nsem seções aqui\n```")
         with pytest.raises(DraftingError, match="no '## Bank' section"):
