@@ -295,6 +295,14 @@ class TestFomcNotebook:
             assert name not in joined, name
         assert "SUMMARY_SOURCE" in joined
 
+    def test_every_code_cell_compiles(self):
+        """Nenhuma célula com erro de sintaxe: o portão não executa o notebook, mas compila."""
+        nb = json.loads(self.NB.read_text(encoding="utf-8"))
+        for i, cell in enumerate(nb["cells"]):
+            if cell["cell_type"] != "code":
+                continue
+            compile("".join(cell["source"]), f"cell {i}", "exec")
+
     def test_every_stage_has_a_cell(self):
         joined = "\n".join(self._sources())
         for call in (
