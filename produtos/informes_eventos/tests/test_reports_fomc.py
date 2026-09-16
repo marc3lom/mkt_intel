@@ -13,7 +13,11 @@ import pytest
 from reports.fomc.core import data_loader, word_export
 from reports.fomc.core.calculations import calculate_surprise, classify_change_direction
 from reports.fomc.core.data_loader import _TZ_BRT, _TZ_ET, is_sep_meeting
-from reports.fomc.core.pdf_parser import _parse_rate_fraction, _parse_statement_text
+from reports.fomc.core.pdf_parser import (
+    _parse_rate_fraction,
+    _parse_statement_text,
+    _parse_variable_tokens,
+)
 from reports.fomc.core.word_export import (
     MARKET_REACTION_PANELS,
     _to_naive_brt,
@@ -90,6 +94,68 @@ class TestParseRateFraction:
     def test_fraction(self, text, expected):
         """Frações do statement viram decimal."""
         assert _parse_rate_fraction(text) == expected
+
+
+class TestParseVariableTokens:
+    """Em setembro o SEP ganha um ano; a linha da projeção anterior tem um a menos."""
+
+    def test_prior_line_with_one_year_fewer_keeps_longer_run_aligned(self):
+        """12 tokens numa tabela de 4 anos + LR: três medianas, LR na 4ª, sem 2029."""
+        tokens = [
+            "1.1",
+            "1.2",
+            "1.3",
+            "1.9",
+            "1.0–1.2",
+            "1.1–1.3",
+            "1.2–1.4",
+            "1.8–2.0",
+            "0.9–1.3",
+            "1.0–1.4",
+            "1.1–1.5",
+            "1.7–2.1",
+        ]
+        parsed = _parse_variable_tokens(tokens, n_years=4, has_longer_run=True)
+        assert parsed["medians"] == {0: 1.1, 1: 1.2, 2: 1.3, "lr": 1.9}
+        assert parsed["ct"] == {0: "1.0–1.2", 1: "1.1–1.3", 2: "1.2–1.4", "lr": "1.8–2.0"}
+        assert parsed["range"] == {0: "0.9–1.3", 1: "1.0–1.4", 2: "1.1–1.5", "lr": "1.7–2.1"}
+
+    def test_prior_line_without_longer_run(self):
+        """Core PCE: 9 tokens numa tabela de 4 anos sem LR ficam nos três primeiros anos."""
+        tokens = [
+            "2.1",
+            "2.2",
+            "2.3",
+            "2.0–2.2",
+            "2.1–2.3",
+            "2.2–2.4",
+            "1.9–2.3",
+            "2.0–2.4",
+            "2.1–2.5",
+        ]
+        parsed = _parse_variable_tokens(tokens, n_years=4, has_longer_run=False)
+        assert parsed["medians"] == {0: 2.1, 1: 2.2, 2: 2.3}
+        assert parsed["ct"] == {0: "2.0–2.2", 1: "2.1–2.3", 2: "2.2–2.4"}
+
+    def test_full_line_unchanged(self):
+        """Linha completa de 3 anos + LR continua como antes."""
+        tokens = [
+            "1.1",
+            "1.2",
+            "1.3",
+            "1.9",
+            "a–b",
+            "c–d",
+            "e–f",
+            "g–h",
+            "i–j",
+            "k–l",
+            "m–n",
+            "o–p",
+        ]
+        parsed = _parse_variable_tokens(tokens, n_years=3, has_longer_run=True)
+        assert parsed["medians"] == {0: 1.1, 1: 1.2, 2: 1.3, "lr": 1.9}
+        assert parsed["range"] == {0: "i–j", 1: "k–l", 2: "m–n", "lr": "o–p"}
 
 
 class TestParseStatementText:

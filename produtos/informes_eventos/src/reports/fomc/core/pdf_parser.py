@@ -298,21 +298,19 @@ def _parse_variable_tokens(
     if not tokens:
         return empty
 
-    # Classify tokens as numeric (median) or range
-    # Medians come first, then CT, then Range
-    # We know n_years + (1 if LR) per section
+    # Medianas vêm primeiro, depois CT, depois Range; cada seção tem
+    # n_years + (1 se Longer run) tokens.
     section_size = n_years + (1 if has_longer_run else 0)
 
-    # For Core PCE, there's no Longer run for medians but layout differs:
-    # Core PCE has no LR for any section
-    # The total expected tokens = section_size * 3 (median + ct + range)
-
-    # However, some cells might be a single value instead of range (e.g., "2.0" in CT)
-    # We need to split based on whether token contains dash
-
-    # Strategy: first section_size tokens are medians (always plain numbers)
-    # Next section_size are CT (may be ranges or single values)
-    # Remaining are Range
+    # Em setembro o SEP ganha um ano, e a linha da projeção anterior traz um ano
+    # a menos que o cabeçalho (a coluna nova fica em branco). Quando a linha
+    # fecha em três seções menores que o esperado, o tamanho da seção vem da
+    # própria linha; os anos presentes são os primeiros, e o Longer run continua
+    # no fim da seção. Sem isso, o LR anterior cai na coluna do ano novo e a
+    # primeira CT cai no LR como texto.
+    if 0 < len(tokens) < section_size * 3 and len(tokens) % 3 == 0:
+        section_size = len(tokens) // 3
+        n_years = section_size - (1 if has_longer_run else 0)
 
     if len(tokens) < section_size:
         # Not enough tokens even for medians
