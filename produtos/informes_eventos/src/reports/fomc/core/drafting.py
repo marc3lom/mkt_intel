@@ -448,6 +448,27 @@ def draft_bank_comments(inputs: MeetingInputs, sources: list[BankSource]) -> dic
     return sections
 
 
+SUMMARY_SOURCES = {
+    "revisao": [OUT_REVIEW],
+    "coletiva": [OUT_SUMMARY_PRESSER],
+    "decisao": [OUT_SUMMARY_DECISION],
+    "auto": [OUT_REVIEW, OUT_SUMMARY_PRESSER, OUT_SUMMARY_DECISION],
+}
+
+
+def pick_summary(out_folder: Path, source: str) -> tuple[str, Path]:
+    """O resumo que vai ao Word: o bloco cercado do arquivo escolhido, e de qual arquivo veio."""
+    if source not in SUMMARY_SOURCES:
+        raise DraftingError(
+            f"Unknown SUMMARY_SOURCE: {source!r} (expected {', '.join(SUMMARY_SOURCES)})"
+        )
+    for name in SUMMARY_SOURCES[source]:
+        path = out_folder / name
+        if path.is_file():
+            return extract_fenced_block(path.read_text(encoding="utf-8")), path
+    raise DraftingError(f"No summary found for SUMMARY_SOURCE={source!r} in {out_folder}")
+
+
 def review_report(
     inputs: MeetingInputs,
     summary: str,

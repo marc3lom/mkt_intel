@@ -4,6 +4,7 @@ Fixam o comportamento atual antes de o pacote migrar para o repositório
 mkt_intelligence; lá, os mesmos testes provam que a mudança de casa não mudou nada.
 """
 
+import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -265,3 +266,28 @@ class TestMarkedText:
         paras = doc.paragraphs
         assert [p.text for p in paras] == ["Primeiro dots.", "Segundo."]
         assert any(r.italic for r in paras[0].runs)
+
+
+class TestFomcNotebook:
+    NB = Path(__file__).resolve().parents[1] / "src/reports/fomc/notebooks/fomc_analysis.ipynb"
+
+    def _sources(self) -> list[str]:
+        nb = json.loads(self.NB.read_text(encoding="utf-8"))
+        return ["".join(c["source"]) for c in nb["cells"] if c["cell_type"] == "code"]
+
+    def test_text_fields_left_the_notebook(self):
+        """Resumo, headlines e bancos vêm das etapas e da pasta do dia, não da célula."""
+        joined = "\n".join(self._sources())
+        for name in ("SUMMARY_TEXT =", "HEADLINES =", "PRESSER_HEADLINES =", "BANK_COMMENTS ="):
+            assert name not in joined, name
+        assert "SUMMARY_SOURCE" in joined
+
+    def test_every_stage_has_a_cell(self):
+        joined = "\n".join(self._sources())
+        for call in (
+            "draft_summary(",
+            "draft_bank_comments(",
+            "review_report(",
+            "market_snapshot(",
+        ):
+            assert call in joined, call

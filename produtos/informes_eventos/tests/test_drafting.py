@@ -1,5 +1,7 @@
 """As etapas de modelo do informe do FOMC, sem rede, sem Bloomberg e sem `claude`."""
 
+import re
+
 import pandas as pd
 import pytest
 
@@ -22,6 +24,7 @@ from reports.fomc.core.drafting import (
     headlines_for_report,
     market_snapshot,
     parse_bank_sections,
+    pick_summary,
     read_bank_pdfs,
     read_headlines,
     read_presser,
@@ -424,3 +427,30 @@ class TestReviewReport:
     def test_empty_summary_raises(self, prompts, model, out):
         with pytest.raises(DraftingError, match="summary"):
             review_report(_inputs(), "  ")
+
+
+class TestPickSummary:
+    def test_auto_prefers_review_then_presser_then_decision(self, tmp_path):
+        (tmp_path / "revisao.md").write_text("texto\n```\nREVISAO\n```\n", encoding="utf-8")
+        (tmp_path / "resumo_coletiva.md").write_text(
+            "texto\n```\nCOLETIVA\n```\n", encoding="utf-8"
+        )
+        (tmp_path / "resumo_decisao.md").write_text("texto\n```\nDECISAO\n```\n", encoding="utf-8")
+        text, path = pick_summary(tmp_path, "auto")
+        assert text == "REVISAO"
+        assert path == tmp_path / "revisao.md"
+
+    def test_explicit_source_reads_only_its_file(self, tmp_path):
+        (tmp_path / "revisao.md").write_text("```\nREVISAO\n```\n", encoding="utf-8")
+        (tmp_path / "resumo_decisao.md").write_text("```\nDECISAO\n```\n", encoding="utf-8")
+        text, path = pick_summary(tmp_path, "decisao")
+        assert text == "DECISAO"
+        assert path == tmp_path / "resumo_decisao.md"
+
+    def test_unknown_source_raises(self, tmp_path):
+        with pytest.raises(DraftingError, match="SUMMARY_SOURCE"):
+            pick_summary(tmp_path, "bogus")
+
+    def test_missing_file_raises_mentioning_folder(self, tmp_path):
+        with pytest.raises(DraftingError, match=re.escape(str(tmp_path))):
+            pick_summary(tmp_path, "decisao")
