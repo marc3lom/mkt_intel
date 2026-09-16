@@ -36,9 +36,29 @@ Tudo roda de dentro desta pasta.
 | `fomc/core/data_loader.py` | inclinação 2s10s | `(10Y − 2Y) × 100` → bps |
 | `fomc/core/calculations.py` | surpresa | atual − pesquisa |
 
+## Etapas de modelo do FOMC
+
+Resumo, comentários dos bancos e revisão de coerência são etapas de modelo em
+`fomc/core/drafting.py`, disparadas por células do `fomc_analysis.ipynb`. O backend é
+`src/reports/_modelo.py`, **cópia** do `modelo.py` do comentário matinal — nunca
+importar `comentario_matinal`; `tests/test_independence.py` falha.
+
+- Chama `claude -p --safe-mode` sem ferramentas, mensagem pela stdin, autenticação
+  pela sessão do Claude Code; `ANTHROPIC_API_KEY` sai do ambiente do subprocesso.
+  Variável: `INFORMES_EVENTOS_BACKEND` (padrão `claude-code`).
+- **Os prompts em `prompts/` são a fonte de verdade editorial.** Para mudar como o
+  texto lê, editar `00_guia_de_estilo.md`; o prompt da etapa só quando a mecânica
+  mudar. Nada de estilo fixo no Python.
+- Pasta do dia: `input/fomc/<AAAAMMDD>/` com `headlines.txt` (linha com `***` é
+  destaque), `coletiva.txt` e `bancos/*.pdf` (nome do arquivo = nome do banco).
+  Saídas em `output/reports/fomc/<AAAAMMDD>/`. Tudo fora do git e sob a regra de
+  sigilo abaixo.
+- Nenhum teste chama o `claude`: `subprocess.run` e o registro `BACKENDS` recebem
+  dublês.
+
 ## Não mexer
 
-Nunca ler, imprimir, comitar ou resumir `etc/.env`, `input/`, `src/reports/*/input/` (PDFs do Fed, `email_info/`, `grid1.xlsx`, `emailPayroll.xlsx`), `output/`. Referir por caminho apenas.
+Nunca ler, imprimir, comitar ou resumir `etc/.env`, `input/`, `input/fomc/`, `src/reports/*/input/` (PDFs do Fed, `email_info/`, `grid1.xlsx`, `emailPayroll.xlsx`), `output/`, `output/reports/fomc/<data>/`. Referir por caminho apenas. As respostas do modelo gravadas ali são minuta de informe: nunca ler nem resumir na conversa.
 
 ## Questões em aberto
 
