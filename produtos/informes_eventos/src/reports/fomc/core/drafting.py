@@ -315,15 +315,22 @@ def build_message(prompt_file: str, blocks: list[tuple[str, str | None]]) -> str
 
 # --- resposta e execução -------------------------------------------------------
 
-_FENCED = re.compile(r"```[a-zA-Z]*\n(.*?)\n```", re.DOTALL)
+_FENCED = re.compile(r"```[^\n]*\n(.*?)\n```", re.DOTALL)
 
 
 def extract_fenced_block(response: str) -> str:
-    """O último bloco cercado da resposta é o que o notebook consome."""
+    """O último bloco cercado da resposta é o que o notebook consome.
+
+    Bloco vazio é erro, não string vazia: a etapa seguinte leria isso como
+    saída válida e a falha passaria em silêncio.
+    """
     blocks = _FENCED.findall(response)
     if not blocks:
         raise DraftingError("Model response has no fenced block")
-    return blocks[-1].strip()
+    text = blocks[-1].strip()
+    if not text:
+        raise DraftingError("Model response has an empty fenced block")
+    return text
 
 
 _BANK_HEADING = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)

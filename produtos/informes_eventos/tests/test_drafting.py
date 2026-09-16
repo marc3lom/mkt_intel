@@ -230,6 +230,14 @@ class TestResponses:
         with pytest.raises(DraftingError, match="fenced"):
             extract_fenced_block("sem bloco")
 
+    def test_fenced_block_with_digits_and_hyphen_in_tag(self):
+        r = "auditoria\n```md-2\ntexto final\n```\n"
+        assert extract_fenced_block(r) == "texto final"
+
+    def test_empty_fenced_block_raises(self):
+        with pytest.raises(DraftingError, match="empty"):
+            extract_fenced_block("auditoria\n```\n\n```\n")
+
     def test_bank_sections_in_order(self):
         text = "## Goldman Sachs\nParágrafo GS.\n\n## JPM\nParágrafo JPM.\n"
         assert parse_bank_sections(text) == {
@@ -256,6 +264,13 @@ class TestRunStage:
         model("só auditoria")
         dest = tmp_path / "resumo_decisao.md"
         with pytest.raises(DraftingError):
+            run_stage("resumo", "m", dest)
+        assert not dest.exists()
+
+    def test_empty_fenced_block_raises_and_writes_nothing(self, model, tmp_path):
+        model("audit\n```\n\n```")
+        dest = tmp_path / "resumo_decisao.md"
+        with pytest.raises(DraftingError, match="empty"):
             run_stage("resumo", "m", dest)
         assert not dest.exists()
 
