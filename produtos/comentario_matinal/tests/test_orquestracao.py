@@ -138,6 +138,50 @@ def test_imagens_para_nas_duas_imagens(bloomberg_falsa, monkeypatch, tmp_path):
     assert not (tmp_path / f"painel_{MARCA}.txt").exists()
 
 
+def test_imagens_nao_avisa_sobre_a_janela(bloomberg_falsa, monkeypatch, capsys,
+                                          tmp_path):
+    """Quem quer só as imagens não está de plantão, e a janela não é assunto dele.
+
+    O aviso continua nascendo no núcleo — é o mesmo contexto —, mas esta fachada
+    não o mostra, e o `notebooks/imagens.ipynb` também não. As duas dizendo
+    coisas diferentes sobre o mesmo passo seria exatamente a divergência entre
+    fachadas que o resto da suíte existe para impedir.
+
+    A janela é forçada aqui: sem isso o teste passaria por acaso entre 7h e 9h,
+    que é justamente quando ele não pode passar por acaso.
+    """
+    from comentario_matinal.cli import main
+
+    monkeypatch.setattr("comentario_matinal.plantao.na_janela", lambda _: False)
+    monkeypatch.setattr(
+        "sys.argv",
+        ["matinal", "imagens", "--asof", "2026-08-17T07:40", "--saida", str(tmp_path)],
+    )
+    assert main() == 0
+
+    assert "DRY RUN" not in capsys.readouterr().err
+
+
+def test_a_coleta_continua_avisando_sobre_a_janela(bloomberg_falsa, monkeypatch,
+                                                   capsys, tmp_path):
+    """A rede do teste acima: o silêncio é do `imagens`, não do comando inteiro.
+
+    Sem esta contraparte, tirar o banner de todos os caminhos passaria verde — e
+    o plantão perderia o aviso que existe para impedir que um ensaio das 15h
+    seja enviado à diretoria.
+    """
+    from comentario_matinal.cli import main
+
+    monkeypatch.setattr("comentario_matinal.plantao.na_janela", lambda _: False)
+    monkeypatch.setattr(
+        "sys.argv",
+        ["matinal", "--asof", "2026-08-17T07:40", "--saida", str(tmp_path)],
+    )
+    assert main() == 0
+
+    assert "DRY RUN" in capsys.readouterr().err
+
+
 def test_bloco_direcional_lista_todo_ativo_do_painel(bloomberg_falsa, monkeypatch,
                                                      tmp_path):
     """O bloco é o que as três etapas de IA leem como estado do mercado.

@@ -245,7 +245,16 @@ def _falha(e: ErroDePlantao, voz: _Voz, mensagem: str) -> int:
 def _despacha(args, voz: _Voz) -> int:
     ctx = plantao.contexto(asof=args.asof, saida=args.saida, fontes=args.fontes,
                            arquivo=args.arquivo, config=args.config)
+
+    # O `imagens` não produz o comentário que vai à diretoria e roda a qualquer
+    # hora: ali o banner de dry run seria aviso sobre outra coisa. O
+    # `notebooks/imagens.ipynb` cala o mesmo aviso, pelo mesmo motivo — as duas
+    # fachadas não podem dizer coisas diferentes sobre o mesmo passo. Nos demais
+    # caminhos ele continua, e é o que impede um ensaio das 15h de virar e-mail.
+    silencia_dry_run = args.comando == "imagens"
     for aviso in ctx.avisos:
+        if silencia_dry_run and getattr(aviso, "codigo", None) == plantao.DRY_RUN:
+            continue
         _erra(aviso)
 
     if args.comando == "conferir":
