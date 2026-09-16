@@ -10,12 +10,12 @@ Tudo roda de dentro desta pasta.
 
 | Para quê | Comando |
 |---|---|
-| Instalar | `uv sync` |
+| Instalar | `uv sync --all-packages`, na raiz do repositório |
 | Verificar (o portão) | `uv run pytest` — sem Bloomberg, sem rede |
 | Lint | `uv run ruff check .` e `uv run ruff format --check .` |
 | Notebooks (a interface) | `uv run jupyter notebook` |
 
-- pandas `<3` e numpy `<2.5`, com `build-constraint-dependencies = ["numpy<2.5"]`. Trocar as duas travas juntas, ou nenhuma.
+- pandas 3 e numpy 2.5, as mesmas versões do comentário matinal: o workspace resolve um lock só, e os dois produtos andam juntos. O teto `<3` herdado do py-bcb caiu em 15/09, aferido pela caracterização antes de sair.
 - `is_bloomberg_available()` não existe aqui; chamada real à Bloomberg só com Windows e o terminal logado.
 - A chave do FRED (fallback do payroll) é lida de `etc/.env`, gerado do `etc/.env.tpl` com `op inject -i etc/.env.tpl -o etc/.env`.
 

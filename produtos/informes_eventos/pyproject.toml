@@ -23,15 +23,6 @@ dependencies = [
     "narwhals>=2.0",  # fomc.core.data_loader normaliza o retorno do abdib
 ]
 
-[tool.uv.sources]
-blpapi = { index = "bloomberg" }
-
-# blpapi não é publicado no PyPI. Explicit: nenhuma outra dependência sai daqui.
-[[tool.uv.index]]
-name = "bloomberg"
-url = "https://blpapi.bloomberg.com/repository/releases/python/simple/"
-explicit = true
-
 [build-system]
 requires = ["uv_build>=0.12.4,<0.13.0"]
 build-backend = "uv_build"

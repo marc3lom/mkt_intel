@@ -94,7 +94,7 @@ alternativo — ver [O Project do Claude](#o-project-do-claude), mais abaixo.
 
 Três comandos:
 
-1. Instalar as dependências: `uv sync`.
+1. Instalar as dependências, **da raiz do clone**: `uv sync --all-packages`.
 2. Instalar o filtro de notebook: `uv run nbstripout --install`.
 3. Criar a pasta das fontes: `mkdir fontes` (ver abaixo por que ela não vem no clone).
 
@@ -104,7 +104,8 @@ sido enviado. O filtro tira as saídas no `git add`, sem tocar no arquivo aberto
 tela. Sem ele nada avisa na hora: quem percebe é o `tests/test_notebook.py`, que
 existe como rede para o clone em que o passo foi esquecido.
 
-O `uv sync` cria o `.venv` e instala tudo, inclusive o `blpapi`, que não vem do PyPI —
+O `uv sync --all-packages` cria a `.venv` — uma só, na raiz, para os dois produtos — e
+instala tudo, inclusive o `blpapi`, que não vem do PyPI —
 o `pyproject.toml` já aponta para o índice da Bloomberg. Rodar sempre do Windows nativo,
 nunca do WSL: o `blpapi` conversa com o terminal por IPC local. A instalação não exige
 terminal aberto; a execução do comando, sim.

@@ -22,16 +22,6 @@ dependencies = [
     "pyarrow>=25.0.1",
 ]
 
-[tool.uv.sources]
-blpapi = { index = "bloomberg" }
-
-# blpapi não é publicado no PyPI. Vem do índice da própria Bloomberg, declarado
-# como explicit para que nenhuma outra dependência seja resolvida a partir dele.
-[[tool.uv.index]]
-name = "bloomberg"
-url = "https://blpapi.bloomberg.com/repository/releases/python/simple/"
-explicit = true
-
 [project.scripts]
 matinal = "comentario_matinal.cli:main"
 publica-wiki = "comentario_matinal.wiki:main"

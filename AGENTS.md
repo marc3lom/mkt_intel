@@ -5,7 +5,8 @@ pasta dele, e prevalecem no que for específico. Antes de mexer num produto, ler
 
 ## Estrutura
 
-- Cada produto mora em `produtos/<nome>/` e é um projeto uv autônomo. Não há workspace, lock ou pacote comuns. Rodar `uv` sempre de dentro da pasta do produto.
+- Cada produto mora em `produtos/<nome>/` e é um membro do workspace uv declarado na raiz: um `uv.lock` e uma `.venv`, as duas na raiz. O `uv run` funciona de dentro da pasta do produto e usa esse ambiente.
+- **Instalar é `uv sync --all-packages`, na raiz.** `uv sync` de dentro de um produto poda a `.venv` para as dependências só dele, desinstalando as do outro — não quebra nada em definitivo, mas reinstala a cada troca.
 - Mudança num produto não mexe noutro. Se mexer, é sinal de acoplamento — parar e perguntar.
 - O portão de cada produto é o `uv run pytest` dele. Não há portão na raiz.
 

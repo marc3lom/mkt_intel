@@ -11,8 +11,8 @@ Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, 
 ## 2. Ambiente
 
 - **Só uv.** Nunca `pip install`. Dependência entra com `uv add`, execução é `uv run`. O `uv.lock` é versionado de propósito — não colocar no gitignore. O piso do Python é **3.14**.
-- **Bloomberg**: `xbbg` e `blpapi` exigem Windows com o terminal aberto e logado. O `blpapi` não está no PyPI; vem do índice explícito da Bloomberg declarado no `pyproject.toml`, e por isso o `uv sync` precisa de rede até ele.
-- Instalação: `uv sync` e depois `uv run nbstripout --install` (o filtro de saída dos notebooks, ligado pelo `.gitattributes`).
+- **Bloomberg**: `xbbg` e `blpapi` exigem Windows com o terminal aberto e logado. O `blpapi` não está no PyPI; vem do índice explícito da Bloomberg, declarado no `pyproject.toml` da raiz do workspace — num workspace o uv só respeita o do raiz —, e por isso o `uv sync` precisa de rede até ele.
+- Instalação: `uv sync --all-packages` na raiz do repositório e depois `uv run nbstripout --install` (o filtro de saída dos notebooks, ligado pelo `.gitattributes`).
 - Template: `templates/comentario.dotx` (`TEMPLATE_PADRAO` no `config.py`; todo caminho do repositório deriva do `RAIZ`, que está lá).
 - A única variável de ambiente que o código lê é `COMENTARIO_MATINAL_BACKEND` (padrão `claude-code`). As etapas de IA chamam o executável `claude`, que precisa estar no PATH.
 - **A autenticação do backend é a sessão do Claude Code**, não chave de API. O `modelo.py` roda o `claude` com `--safe-mode` — que desliga CLAUDE.md, hooks, skills, plugins, MCP e agentes do ambiente de quem está de plantão, para a etapa render o mesmo em qualquer máquina — e retira `ANTHROPIC_API_KEY` do ambiente do subprocesso, porque uma chave esquecida ali tem precedência e uma chave sem saldo derruba a etapa com código 1. Rodar por chave de API é escrever outro backend, não mexer neste.
@@ -21,7 +21,7 @@ Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, 
 
 | Para quê | Comando | Observação |
 |---|---|---|
-| Instalar | `uv sync` | cria o `.venv` e puxa o `blpapi` do índice da Bloomberg |
+| Instalar | `uv sync --all-packages`, na raiz | cria a `.venv` única e puxa o `blpapi` do índice da Bloomberg |
 | **Verificar (o padrão)** | `uv run pytest` | 181 testes, ~7 s, **sem Bloomberg** |
 | Coletar o mercado | `uv run matinal` | **chama a Bloomberg e grava em `saida/`** |
 | Coletar sem o BQL | `uv run matinal --sem-calendario` | pula só a consulta do calendário |

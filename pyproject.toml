@@ -1,0 +1,15 @@
+# Raiz virtual do workspace: não é um projeto, só declara os produtos e o que
+# vale para todos. O índice da Bloomberg e a fonte do `blpapi` moram aqui
+# porque, num workspace, o uv só respeita os do raiz — declará-los no membro
+# não dá erro, é pior: passa despercebido.
+[tool.uv.workspace]
+members = ["produtos/*"]
+
+[tool.uv.sources]
+blpapi = { index = "bloomberg" }
+
+# blpapi não é publicado no PyPI. Explicit: nenhuma outra dependência sai daqui.
+[[tool.uv.index]]
+name = "bloomberg"
+url = "https://blpapi.bloomberg.com/repository/releases/python/simple/"
+explicit = true
