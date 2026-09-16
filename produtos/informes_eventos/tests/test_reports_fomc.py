@@ -1,7 +1,7 @@
 """Testes de caracterização de reports.fomc.
 
 Fixam o comportamento atual antes de o pacote migrar para o repositório
-disseminacao; lá, os mesmos testes provam que a mudança de casa não mudou nada.
+mkt_intelligence; lá, os mesmos testes provam que a mudança de casa não mudou nada.
 """
 
 from pathlib import Path

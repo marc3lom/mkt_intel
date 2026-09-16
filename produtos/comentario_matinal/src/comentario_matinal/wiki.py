@@ -20,12 +20,12 @@ MANUAL = RAIZ / "docs" / "plantao"
 # que um teste possa trocá-lo por um `git init --bare` descartável sem tocar
 # em linha de comando alguma — nenhuma bandeira nova, nenhuma superfície a
 # mais para quem só quer publicar.
-URL_WIKI = "git@github.com:marc3lom/disseminacao.wiki.git"
+URL_WIKI = "git@github.com:marc3lom/mkt_intelligence.wiki.git"
 
 # O clone do wiki fica ao lado do repositório, nunca dentro: é outro repositório
 # git. `RAIZ` é a pasta do produto, `produtos/comentario_matinal`; o topo do
 # repositório está dois níveis acima, e o clone vai para a pasta que o contém.
-DESTINO_PADRAO = RAIZ.parents[1].parent / "disseminacao.wiki"
+DESTINO_PADRAO = RAIZ.parents[1].parent / "mkt_intelligence.wiki"
 
 FAIXA = (
     "> Gerado a partir de `docs/plantao/{origem}` no commit `{sha}`.\n"
@@ -116,7 +116,7 @@ def _clona_ou_atualiza(destino: Path) -> None:
                        check=True, capture_output=True)
     except subprocess.CalledProcessError as erro:
         raise RuntimeError(
-            "Não consegui clonar o Wiki. Se `disseminacao.wiki.git` ainda "
+            "Não consegui clonar o Wiki. Se `mkt_intelligence.wiki.git` ainda "
             "não existe, crie a primeira página pela aba Wiki no GitHub — ver "
             "a seção do Wiki em docs/plantao/02-instalacao.md."
         ) from erro

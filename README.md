@@ -1,4 +1,4 @@
-# disseminacao
+# mkt_intelligence
 
 Ferramentas de apoio à disseminação de informação e inteligência da Mesa de
 Investimentos (DEPIN/DIRIN — Banco Central do Brasil). Repositório privado: guarda

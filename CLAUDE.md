@@ -1,4 +1,4 @@
-# CLAUDE.md — disseminacao
+# CLAUDE.md — mkt_intelligence
 
 @AGENTS.md
 

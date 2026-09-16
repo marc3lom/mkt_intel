@@ -1,4 +1,4 @@
-# AGENTS.md — disseminacao
+# AGENTS.md — mkt_intelligence
 
 Regras que valem para todos os produtos. As de cada produto estão no `AGENTS.md` da
 pasta dele, e prevalecem no que for específico. Antes de mexer num produto, ler o dele.
