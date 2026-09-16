@@ -1,6 +1,6 @@
 # PROMPT 3 — REVISÃO DE COERÊNCIA DO INFORME DO FOMC
 
-Versão 1.0 — 16/09/2026
+Versão 1.1 — 16/09/2026
 Etapa final, antes de gerar o Word. Executada sobre o resumo escolhido pelo autor.
 
 ---
@@ -15,9 +15,12 @@ escolhas do autor; discordância se sinaliza, não se impõe.
 ## ENTRADAS
 
 TEXTO PARA REVISÃO (obrigatório), COMENTÁRIOS DOS BANCOS (opcional), e os insumos
-factuais: STATEMENT, DECISÃO (parse), SEP, HEADLINES BLOOMBERG, HEADLINES DA
-COLETIVA, REAÇÃO DE MERCADO. Revisão sem STATEMENT e sem DECISÃO não é revisão: abra
-com `ENTRADA OBRIGATÓRIA AUSENTE:` e pare.
+factuais: STATEMENT, DECISÃO (parse), SEP, HEADLINES BLOOMBERG, RESEARCH (um bloco
+por casa; é contra eles que se checa cada atribuição a banco), COLETIVA
+(transcrição), HEADLINES DA COLETIVA, REAÇÃO DE MERCADO. Revisão sem STATEMENT e sem
+DECISÃO não é revisão: abra com `ENTRADA OBRIGATÓRIA AUSENTE:` e pare. Fala atribuída
+ao presidente é checada contra COLETIVA (transcrição) quando ela existir; sem ela,
+contra HEADLINES DA COLETIVA.
 
 ## BLOCO 1 — CHECAGEM FACTUAL
 
@@ -35,9 +38,12 @@ Afirmação sem rastro nunca é suavizada: ou é marcada, ou sai no texto corrig
 ## BLOCO 2 — CONFORMIDADE
 
 Vírgula decimal em todos os números; termos em inglês em *itálico*; "Fed Funds" com
-s; extensão entre quatro e seis parágrafos; parágrafo do SEP só em reunião com SEP;
-nenhuma opinião ou recomendação da divisão; atribuição de inferência presente.
-Listar cada desvio com o trecho.
+s; extensão entre 1000 e 1750 palavras, em seis a oito parágrafos, e informar a
+contagem; parágrafo do SEP só em reunião com SEP; nenhuma opinião ou recomendação da
+divisão; atribuição de inferência presente; research atribuído à instituição e
+nunca a pessoa — qualquer nome de economista ou estrategista vindo dos blocos
+RESEARCH que apareça no texto é desvio; leitura de casa nunca redigida como se fosse
+da Mesa. Listar cada desvio com o trecho.
 
 ## BLOCO 3 — SUGESTÕES EDITORIAIS
 

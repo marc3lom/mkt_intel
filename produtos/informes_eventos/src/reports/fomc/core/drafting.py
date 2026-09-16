@@ -29,6 +29,7 @@ PROMPT_REVIEW = "03_revisao.md"
 HEADLINES_FILE = "headlines.txt"
 PRESSER_FILE = "coletiva.txt"
 BANKS_DIR = "bancos"
+BANKS_FILE = "bancos.txt"
 
 OUT_SUMMARY_DECISION = "resumo_decisao.md"
 OUT_SUMMARY_PRESSER = "resumo_coletiva.md"
@@ -122,6 +123,70 @@ def read_bank_pdfs(folder: Path) -> tuple[list[BankSource], list[str]]:
             ignored.append(f"{pdf.name} (no extractable text)")
             continue
         sources.append(BankSource(pdf.stem.replace("_", " "), text))
+    return sources, ignored
+
+
+# Uma linha "Casa abaixo:" abre cada bloco — é como o autor cola os comentários
+# dos chats da Bloomberg. O nome do economista fica dentro do bloco; o prompt
+# manda atribuir à casa, nunca à pessoa.
+_BANK_HEADER = re.compile(r"^\s*(?P<name>.+?)\s+abaixo\s*:?\s*$", re.IGNORECASE)
+
+
+def read_bank_text(path: Path) -> list[BankSource]:
+    """bancos.txt: blocos abertos por 'Casa abaixo:'; bloco vazio é ignorado."""
+    sources: list[BankSource] = []
+    name: str | None = None
+    lines: list[str] = []
+
+    def flush() -> None:
+        if name is not None:
+            text = "\n".join(lines).strip()
+            if text:
+                sources.append(BankSource(name, text))
+
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        m = _BANK_HEADER.match(raw)
+        if m:
+            flush()
+            name, lines = m.group("name").strip(), []
+        elif name is not None:
+            lines.append(raw.rstrip())
+    flush()
+    if name is None:
+        raise DraftingError(
+            f"No 'Casa abaixo:' header in {path}: each bank block must start with one"
+        )
+    return sources
+
+
+def read_bank_sources(day_folder: Path) -> tuple[list[BankSource], list[str]]:
+    """Todo o research do dia: bancos.txt, depois bancos/*.pdf e bancos/*.txt.
+
+    Bancos são opcionais: sem nada, devolve listas vazias e não reclama.
+    """
+    sources: list[BankSource] = []
+    ignored: list[str] = []
+    text_file = day_folder / BANKS_FILE
+    if text_file.is_file():
+        sources += read_bank_text(text_file)
+    folder = day_folder / BANKS_DIR
+    if folder.is_dir():
+        for f in sorted(x for x in folder.iterdir() if x.is_file()):
+            suffix = f.suffix.lower()
+            if suffix == ".pdf":
+                text = _pdf_text(f)
+                if not text:
+                    ignored.append(f"{f.name} (no extractable text)")
+                    continue
+                sources.append(BankSource(f.stem.replace("_", " "), text))
+            elif suffix == ".txt":
+                text = f.read_text(encoding="utf-8").strip()
+                if not text:
+                    ignored.append(f"{f.name} (empty)")
+                    continue
+                sources.append(BankSource(f.stem.replace("_", " "), text))
+            else:
+                ignored.append(f.name)
     return sources, ignored
 
 
@@ -383,6 +448,20 @@ def read_presser(folder: Path) -> list[Headline] | None:
     return read_headlines(path) if path.is_file() else None
 
 
+def read_presser_transcript(path: Path | None) -> str | None:
+    """A transcrição da coletiva publicada pelo Fed (FOMCpresconf<data>.pdf), ou None.
+
+    O caminho vem de get_meeting_documents(...)["presser"]; a célula 3 baixa o
+    PDF quando o Fed o publica. Texto vazio é erro, não coletiva vazia.
+    """
+    if path is None or not Path(path).is_file():
+        return None
+    text = _pdf_text(Path(path))
+    if not text.strip():
+        raise DraftingError(f"Press conference PDF has no extractable text: {path}")
+    return text
+
+
 def _fact_blocks(inputs: MeetingInputs) -> list[tuple[str, str | None]]:
     """Os blocos factuais comuns à redação e à revisão, na mesma ordem."""
     blocks: list[tuple[str, str | None]] = [
@@ -403,29 +482,62 @@ def _market_block(inputs: MeetingInputs) -> tuple[str, str | None]:
     return ("REAÇÃO DE MERCADO", format_market(inputs.market) if inputs.market else None)
 
 
+def _research_blocks(bank_sources: list[BankSource] | None) -> list[tuple[str, str | None]]:
+    """Um bloco RESEARCH por casa, na ordem recebida; nenhum quando não há research."""
+    return [(f"RESEARCH: {b.name}", b.text) for b in (bank_sources or [])]
+
+
+def _presser_blocks(
+    presser_headlines: list[Headline] | None,
+    presser_transcript: str | None,
+) -> list[tuple[str, str | None]]:
+    """Os dois blocos da coletiva, sempre nesta ordem; o que faltar sai (ausente)."""
+    return [
+        ("COLETIVA (transcrição)", presser_transcript),
+        (
+            "HEADLINES DA COLETIVA",
+            format_headlines(presser_headlines) if presser_headlines else None,
+        ),
+    ]
+
+
 def draft_summary(
     inputs: MeetingInputs,
     *,
     stage: str = STAGE_DECISION,
     previous: str | None = None,
     presser_headlines: list[Headline] | None = None,
+    presser_transcript: str | None = None,
+    bank_sources: list[BankSource] | None = None,
 ) -> str:
-    """Resumo em parágrafos. `decision` escreve tudo; `presser` reescreve o que a coletiva muda."""
+    """Resumo em parágrafos. `decision` escreve tudo; `presser` reescreve o que a coletiva muda.
+
+    O research dos bancos alimenta o texto principal, atribuído à casa. Os
+    headlines são opcionais: o autor os cola no Word.
+
+    No momento `presser` basta uma das duas fontes da coletiva: a transcrição do
+    Fed ou os headlines de coletiva.txt. Com as duas, o prompt trata a transcrição
+    como fonte das falas e os headlines como leitura de mercado.
+    """
     if stage not in (STAGE_DECISION, STAGE_PRESSER):
         raise DraftingError(f"Unknown stage: {stage!r} (expected 'decision' or 'presser')")
-    if stage == STAGE_DECISION and not inputs.headlines:
-        raise DraftingError(f"Decision stage needs {HEADLINES_FILE} in the day folder")
+    if stage == STAGE_DECISION and not (inputs.statement_text or "").strip():
+        raise DraftingError("Decision stage needs the statement text (documents['statement'])")
     blocks: list[tuple[str, str | None]] = [
         ("MOMENTO", "decisão" if stage == STAGE_DECISION else "coletiva")
     ]
     if stage == STAGE_PRESSER:
         if not (previous or "").strip():
             raise DraftingError("Presser stage needs the decision summary as `previous`")
-        if not presser_headlines:
-            raise DraftingError(f"Presser stage needs {PRESSER_FILE} in the day folder")
+        if not presser_headlines and not (presser_transcript or "").strip():
+            raise DraftingError(
+                f"Presser stage needs {PRESSER_FILE} in the day folder or the "
+                "FOMCpresconf PDF among the meeting documents"
+            )
         blocks.append(("RESUMO DA DECISÃO", previous))
-        blocks.append(("HEADLINES DA COLETIVA", format_headlines(presser_headlines)))
+        blocks += _presser_blocks(presser_headlines, presser_transcript)
     blocks += _fact_blocks(inputs)
+    blocks += _research_blocks(bank_sources)
     blocks.append(_market_block(inputs))
     message = build_message(PROMPT_SUMMARY, blocks)
     name = OUT_SUMMARY_DECISION if stage == STAGE_DECISION else OUT_SUMMARY_PRESSER
@@ -512,6 +624,8 @@ def review_report(
     summary: str,
     bank_comments: dict[str, str] | None = None,
     presser_headlines: list[Headline] | None = None,
+    presser_transcript: str | None = None,
+    bank_sources: list[BankSource] | None = None,
 ) -> str:
     """Checagem factual, conformidade e sugestões; devolve o texto corrigido."""
     if not (summary or "").strip():
@@ -526,12 +640,8 @@ def review_report(
         ("COMENTÁRIOS DOS BANCOS", banks),
     ]
     blocks += _fact_blocks(inputs)
-    blocks.append(
-        (
-            "HEADLINES DA COLETIVA",
-            format_headlines(presser_headlines) if presser_headlines else None,
-        )
-    )
+    blocks += _research_blocks(bank_sources)
+    blocks += _presser_blocks(presser_headlines, presser_transcript)
     blocks.append(_market_block(inputs))
     message = build_message(PROMPT_REVIEW, blocks)
     return run_stage("revisao", message, output_folder(inputs.meeting_date) / OUT_REVIEW)

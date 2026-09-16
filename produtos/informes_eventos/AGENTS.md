@@ -49,10 +49,17 @@ importar `comentario_matinal`; `tests/test_independence.py` falha.
 - **Os prompts em `prompts/` são a fonte de verdade editorial.** Para mudar como o
   texto lê, editar `00_guia_de_estilo.md`; o prompt da etapa só quando a mecânica
   mudar. Nada de estilo fixo no Python.
-- Pasta do dia: `input/fomc/<AAAAMMDD>/` com `headlines.txt` (linha com `***` é
-  destaque), `coletiva.txt` e `bancos/*.pdf` (nome do arquivo = nome do banco).
-  Saídas em `output/reports/fomc/<AAAAMMDD>/`. Tudo fora do git e sob a regra de
-  sigilo abaixo.
+- Pasta do dia: `input/fomc/<AAAAMMDD>/`. Obrigatório só o statement, que a célula 3
+  baixa. Opcionais: `bancos.txt` com os comentários colados dos chats da Bloomberg,
+  cada bloco aberto por uma linha `Casa abaixo:` (o nome antes de "abaixo" vira a
+  instituição; o research alimenta o texto principal, atribuído à casa e nunca ao
+  autor); `bancos/*.pdf` e `bancos/*.txt` (nome do arquivo = nome do banco);
+  `headlines.txt` e `coletiva.txt` (linha com `***` é destaque; o autor costuma colar
+  os headlines direto no Word). A transcrição da coletiva é o
+  `FOMCpresconf<data>.pdf` do Fed, em `src/reports/fomc/input/committee_meeting_docs/`,
+  baixado pela célula 3; a etapa pós-coletiva aceita a transcrição, os headlines ou
+  os dois. Saídas em `output/reports/fomc/<AAAAMMDD>/`. Tudo fora do git e sob a regra
+  de sigilo abaixo.
 - Nenhum teste chama o `claude`: `subprocess.run` e o registro `BACKENDS` recebem
   dublês.
 

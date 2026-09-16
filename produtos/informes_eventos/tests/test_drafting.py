@@ -28,8 +28,11 @@ from reports.fomc.core.drafting import (
     parse_bank_sections,
     pick_summary,
     read_bank_pdfs,
+    read_bank_sources,
+    read_bank_text,
     read_headlines,
     read_presser,
+    read_presser_transcript,
     review_report,
     run_stage,
 )
@@ -413,13 +416,39 @@ class TestDraftSummary:
         with pytest.raises(DraftingError, match="stage"):
             draft_summary(_inputs(), stage="outro")
 
-    def test_decision_stage_without_headlines_refuses_before_model(self, prompts, model, out):
+    def test_decision_stage_without_headlines_runs(self, prompts, model, out):
+        """Headlines são opcionais: o autor cola no Word. O bloco sai (ausente)."""
         state = model("```\nx\n```")
         inputs = _inputs()
         inputs.headlines = []
-        with pytest.raises(DraftingError, match="headlines.txt"):
+        assert draft_summary(inputs) == "x"
+        assert "=== HEADLINES BLOOMBERG === (ausente)" in state["messages"][0][1]
+
+    def test_decision_stage_without_statement_refuses_before_model(self, prompts, model, out):
+        state = model("```\nx\n```")
+        inputs = _inputs()
+        inputs.statement_text = None
+        with pytest.raises(DraftingError, match="statement"):
             draft_summary(inputs)
         assert state["messages"] == []
+
+    def test_bank_sources_enter_the_summary_message(self, prompts, model, out):
+        """O research alimenta o texto principal: um bloco RESEARCH por casa, antes do mercado."""
+        state = model("```\nx\n```")
+        draft_summary(
+            _inputs(),
+            bank_sources=[BankSource("JPMorgan", "texto jpm"), BankSource("Citi", "texto citi")],
+        )
+        msg = state["messages"][0][1]
+        assert "=== RESEARCH: JPMorgan ===\ntexto jpm" in msg
+        assert msg.index("=== RESEARCH: JPMorgan") < msg.index("=== RESEARCH: Citi")
+        assert msg.index("=== HEADLINES BLOOMBERG") < msg.index("=== RESEARCH: JPMorgan")
+        assert msg.index("=== RESEARCH: Citi") < msg.index("=== REAÇÃO DE MERCADO")
+
+    def test_review_receives_bank_sources(self, prompts, model, out):
+        state = model("```\ncorrigido\n```")
+        review_report(_inputs(), "TEXTO", bank_sources=[BankSource("Citi", "texto citi")])
+        assert "=== RESEARCH: Citi ===\ntexto citi" in state["messages"][0][1]
 
 
 class TestReadPresser:
@@ -569,3 +598,110 @@ class TestReviewSource:
     def test_unknown_source_raises(self, tmp_path):
         with pytest.raises(DraftingError, match="SUMMARY_SOURCE"):
             drafting.review_source(tmp_path, "bogus")
+
+
+class TestReadPresserTranscript:
+    def test_none_when_no_path_or_missing_file(self, tmp_path):
+        """Sem PDF da coletiva, a etapa segue só com coletiva.txt."""
+        assert read_presser_transcript(None) is None
+        assert read_presser_transcript(tmp_path / "FOMCpresconf20260916.pdf") is None
+
+    def test_text_from_pdf(self, tmp_path, monkeypatch):
+        pdf = tmp_path / "FOMCpresconf20260916.pdf"
+        pdf.write_bytes(b"%PDF-1.4 fake")
+        monkeypatch.setattr(drafting, "_pdf_text", lambda p: "CHAIR WARSH. Good afternoon.")
+        assert read_presser_transcript(pdf) == "CHAIR WARSH. Good afternoon."
+
+    def test_pdf_without_text_raises(self, tmp_path, monkeypatch):
+        pdf = tmp_path / "FOMCpresconf20260916.pdf"
+        pdf.write_bytes(b"%PDF-1.4 fake")
+        monkeypatch.setattr(drafting, "_pdf_text", lambda p: "  ")
+        with pytest.raises(DraftingError, match="no extractable text"):
+            read_presser_transcript(pdf)
+
+
+class TestPresserTranscriptInStages:
+    def test_presser_stage_accepts_transcript_alone(self, prompts, model, out):
+        """A transcrição do Fed basta; os headlines da coletiva ficam (ausente)."""
+        state = model("```\nnovo\n```")
+        text = draft_summary(
+            _inputs(), stage="presser", previous="RESUMO", presser_transcript="TRANSCRIÇÃO"
+        )
+        assert text == "novo"
+        msg = state["messages"][0][1]
+        assert "=== COLETIVA (transcrição) ===\nTRANSCRIÇÃO" in msg
+        assert "=== HEADLINES DA COLETIVA === (ausente)" in msg
+        assert msg.index("=== RESUMO DA DECISÃO") < msg.index("=== COLETIVA (transcrição)")
+        assert msg.index("=== COLETIVA (transcrição)") < msg.index("=== HEADLINES DA COLETIVA")
+
+    def test_presser_stage_with_both_sources(self, prompts, model, out):
+        state = model("```\nnovo\n```")
+        draft_summary(
+            _inputs(),
+            stage="presser",
+            previous="RESUMO",
+            presser_headlines=[Headline("Warsh says", False)],
+            presser_transcript="TRANSCRIÇÃO",
+        )
+        msg = state["messages"][0][1]
+        assert "=== COLETIVA (transcrição) ===\nTRANSCRIÇÃO" in msg
+        assert "=== HEADLINES DA COLETIVA ===\nWarsh says" in msg
+
+    def test_presser_stage_needs_at_least_one_source(self, prompts, model, out):
+        state = model("```\nx\n```")
+        with pytest.raises(DraftingError, match="coletiva.txt.*FOMCpresconf"):
+            draft_summary(_inputs(), stage="presser", previous="RESUMO")
+        assert state["messages"] == []
+
+    def test_review_receives_transcript_block(self, prompts, model, out):
+        state = model("```\ncorrigido\n```")
+        review_report(_inputs(), "TEXTO", presser_transcript="TRANSCRIÇÃO")
+        msg = state["messages"][0][1]
+        assert "=== COLETIVA (transcrição) ===\nTRANSCRIÇÃO" in msg
+        assert "=== HEADLINES DA COLETIVA === (ausente)" in msg
+
+
+class TestReadBankText:
+    def test_splits_on_abaixo_headers(self, tmp_path):
+        """Uma linha 'Casa abaixo:' abre cada bloco, como o autor cola dos chats da Bloomberg."""
+        p = tmp_path / "bancos.txt"
+        p.write_text(
+            "jpmorgan abaixo:\nFeroli on FOMC:\nlinha um\nlinha dois\n\n"
+            "Citi abaixo\nUS Econ: texto citi\n"
+            "Deutsche Bank ABAIXO:\n\n"
+            "Morgan Stanley abaixo:\nGAPEN: texto ms\n",
+            encoding="utf-8",
+        )
+        sources = read_bank_text(p)
+        assert [s.name for s in sources] == ["jpmorgan", "Citi", "Morgan Stanley"]
+        assert sources[0].text == "Feroli on FOMC:\nlinha um\nlinha dois"
+        assert sources[1].text == "US Econ: texto citi"
+
+    def test_file_without_headers_raises(self, tmp_path):
+        p = tmp_path / "bancos.txt"
+        p.write_text("texto solto sem cabeçalho\n", encoding="utf-8")
+        with pytest.raises(DraftingError, match="abaixo"):
+            read_bank_text(p)
+
+
+class TestReadBankSources:
+    def test_combines_text_file_and_folder(self, tmp_path, monkeypatch):
+        (tmp_path / "bancos.txt").write_text("Citi abaixo:\ntexto citi\n", encoding="utf-8")
+        folder = tmp_path / "bancos"
+        folder.mkdir()
+        (folder / "Goldman_Sachs.pdf").write_bytes(b"%PDF-1.4 fake")
+        (folder / "HSBC.txt").write_text("texto hsbc\n", encoding="utf-8")
+        (folder / "notas.docx").write_bytes(b"x")
+        monkeypatch.setattr(drafting, "_pdf_text", lambda p: "texto gs")
+        sources, ignored = read_bank_sources(tmp_path)
+        assert [(s.name, s.text) for s in sources] == [
+            ("Citi", "texto citi"),
+            ("Goldman Sachs", "texto gs"),
+            ("HSBC", "texto hsbc"),
+        ]
+        assert ignored == ["notas.docx"]
+
+    def test_nothing_is_not_an_error(self, tmp_path):
+        """Bancos são opcionais: sem arquivo nenhum, lista vazia e sem exceção."""
+        assert read_bank_sources(tmp_path) == ([], [])
+        assert read_bank_sources(tmp_path / "nao-existe") == ([], [])
