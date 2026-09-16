@@ -5,6 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 IMPORTS_CLASSES = re.compile(r"\b(from|import)\s+classes\b")
+IMPORTS_MATINAL = re.compile(r"\b(from|import)\s+comentario_matinal\b")
 
 
 class TestNoPyBcbImports:
@@ -21,4 +22,14 @@ class TestNoPyBcbImports:
             if IMPORTS_CLASSES.search(f.read_text(encoding="utf-8"))
         )
         assert files
+        assert offenders == []
+
+    def test_no_import_of_comentario_matinal(self):
+        """O backend do modelo é cópia, não import: os produtos não se acoplam."""
+        files = [*ROOT.glob("src/**/*.py"), *ROOT.glob("src/**/*.ipynb")]
+        offenders = sorted(
+            str(f.relative_to(ROOT))
+            for f in files
+            if IMPORTS_MATINAL.search(f.read_text(encoding="utf-8"))
+        )
         assert offenders == []
