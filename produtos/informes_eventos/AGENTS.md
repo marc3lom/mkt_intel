@@ -43,5 +43,3 @@ Nunca ler, imprimir, comitar ou resumir `etc/.env`, `input/`, `src/reports/*/inp
 ## Questões em aberto
 
 - O template do FOMC é um caminho absoluto no OneDrive (`fomc/core/word_report.py:22`). Trazer um `.dotx` para `templates/`, como o matinal, ou manter?
-- `calculate_surprise` trunca surpresa de 1bp para 0bp (`int()` sobre `0.9999…`); fixado como `xfail` estrito.
-- Subir para pandas 3 (o matinal já está nele).

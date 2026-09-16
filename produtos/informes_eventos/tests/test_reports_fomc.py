@@ -63,13 +63,19 @@ class TestCalculateSurprise:
         """Atual igual à pesquisa é neutro."""
         assert calculate_surprise(2.0, 2.0, "inflation")["direction"] == "neutro"
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="int() trunca 0.9999… para 0: surpresa de 1bp sai como 0bp (defeito conhecido)",
+    @pytest.mark.parametrize(
+        ("actual", "survey", "expected"),
+        [(4.26, 4.25, 1), (4.25, 4.26, -1)],
     )
-    def test_one_bp_surprise(self):
-        """Quando o defeito for corrigido, este xfail estrito quebra e deve ser retirado."""
-        assert calculate_surprise(4.26, 4.25, "rate")["surprise_bps"] == 1
+    def test_one_bp_surprise(self, actual, survey, expected):
+        """Surpresa de um ponto-base sai como um ponto-base, nos dois sentidos.
+
+        `actual - survey` não dá 0,01 exato em ponto flutuante: dá 0,00999…, e
+        multiplicado por 100 vira 0,9999…. Truncar isso apaga a surpresa. Apaga
+        também a de −1bp, porque o truncamento anda em direção ao zero — e é por
+        isso que o caso negativo está aqui.
+        """
+        assert calculate_surprise(actual, survey, "rate")["surprise_bps"] == expected
 
 
 class TestIsSepMeeting:

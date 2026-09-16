@@ -429,7 +429,11 @@ def calculate_surprise(
         "actual": actual,
         "survey": survey,
         "surprise": diff,
-        "surprise_bps": int(diff * 100) if indicator == "rate" else None,
+        # round, e não int: `actual - survey` não dá 0,01 exato em ponto
+        # flutuante — dá 0,00999… —, e truncar o 0,9999… resultante apaga
+        # uma surpresa de um ponto-base. Apaga nos dois sentidos, porque o
+        # truncamento anda em direção ao zero.
+        "surprise_bps": round(diff * 100) if indicator == "rate" else None,
         "direction": direction,
     }
 
