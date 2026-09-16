@@ -235,6 +235,13 @@ class TestProjectRootAnchors:
         """Os documentos do Fed moram em <pacote fomc>/input/."""
         assert data_loader._get_module_path().name == "fomc"
 
+    def test_drafting_root_and_prompts(self):
+        """As etapas de modelo se ancoram na raiz e os quatro prompts existem."""
+        from reports.fomc.core import drafting
+
+        assert (drafting.PROJECT_ROOT / "pyproject.toml").is_file()
+        assert drafting.PROMPTS_DIR == drafting.PROJECT_ROOT / "prompts"
+
 
 class TestMarkedText:
     def test_italic_bold_and_plain_runs(self):
