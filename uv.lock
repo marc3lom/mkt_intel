@@ -7,12 +7,6 @@ resolution-markers = [
     "sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 
-[manifest]
-members = [
-    "comentario-matinal",
-    "informes-eventos",
-]
-
 [[package]]
 name = "anyio"
 version = "4.15.1"
@@ -352,55 +346,6 @@ wheels = [
 ]
 
 [[package]]
-name = "comentario-matinal"
-version = "0.1.0"
-source = { editable = "produtos/comentario_matinal" }
-dependencies = [
-    { name = "blpapi" },
-    { name = "cryptography" },
-    { name = "matplotlib" },
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "pandas-market-calendars" },
-    { name = "polars-bloomberg" },
-    { name = "pyarrow" },
-    { name = "pypdf" },
-    { name = "python-docx" },
-    { name = "xbbg" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "ipykernel" },
-    { name = "nbformat" },
-    { name = "nbstripout" },
-    { name = "pytest" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "blpapi", specifier = ">=3.24", index = "https://blpapi.bloomberg.com/repository/releases/python/simple/" },
-    { name = "cryptography", specifier = ">=50.0.0" },
-    { name = "matplotlib", specifier = ">=3.10" },
-    { name = "numpy", specifier = ">=2.0" },
-    { name = "pandas", specifier = ">=2.2" },
-    { name = "pandas-market-calendars", specifier = ">=5.4.0" },
-    { name = "polars-bloomberg", specifier = ">=0.5.4" },
-    { name = "pyarrow", specifier = ">=25.0.1" },
-    { name = "pypdf", specifier = ">=6.16.1" },
-    { name = "python-docx", specifier = ">=1.2.0" },
-    { name = "xbbg", specifier = ">=1.4" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "ipykernel", specifier = ">=7.1" },
-    { name = "nbformat", specifier = ">=5.10" },
-    { name = "nbstripout", specifier = ">=0.9" },
-    { name = "pytest", specifier = ">=9.1" },
-]
-
-[[package]]
 name = "comm"
 version = "0.2.3"
 source = { registry = "https://pypi.org/simple" }
@@ -701,61 +646,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/5f/f7/abb373e5757eaec4b922b92f97ec8d6d7e057cf06778247604fbc4e7c3f3/idna-3.19.tar.gz", hash = "sha256:5e0811a4383b21dc5838069f801c4fb62113b7447663d2530d2bd6e77b49bf15", size = 215237, upload-time = "2026-08-18T05:14:24.27Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/57/b0/0e52c878c53f245edd3a11020f20979b3f490f245af532c7cae3027754b5/idna-3.19-py3-none-any.whl", hash = "sha256:815e7be7a7806d54abb586dc943addc79e8b2ee16915059658cbeff4b1b43bf4", size = 68550, upload-time = "2026-08-18T05:14:22.343Z" },
-]
-
-[[package]]
-name = "informes-eventos"
-version = "0.1.0"
-source = { editable = "produtos/informes_eventos" }
-dependencies = [
-    { name = "blpapi" },
-    { name = "fonttools" },
-    { name = "fredapi" },
-    { name = "matplotlib" },
-    { name = "narwhals" },
-    { name = "nest-asyncio" },
-    { name = "numpy" },
-    { name = "openpyxl" },
-    { name = "pandas" },
-    { name = "pdfplumber" },
-    { name = "python-docx" },
-    { name = "python-dotenv" },
-    { name = "requests" },
-    { name = "xbbg" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "jupyter" },
-    { name = "nbstripout" },
-    { name = "pytest" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "blpapi", specifier = ">=3.24", index = "https://blpapi.bloomberg.com/repository/releases/python/simple/" },
-    { name = "fonttools", specifier = ">=4.0" },
-    { name = "fredapi", specifier = ">=0.5.2" },
-    { name = "matplotlib", specifier = ">=3.10" },
-    { name = "narwhals", specifier = ">=2.0" },
-    { name = "nest-asyncio", specifier = ">=1.6" },
-    { name = "numpy", specifier = ">=2.0" },
-    { name = "openpyxl", specifier = ">=3.1.5" },
-    { name = "pandas", specifier = ">=3.0" },
-    { name = "pdfplumber", specifier = ">=0.11" },
-    { name = "python-docx", specifier = ">=1.2.0" },
-    { name = "python-dotenv", specifier = ">=1.0" },
-    { name = "requests", specifier = ">=2.32" },
-    { name = "xbbg", specifier = ">=1.4" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "jupyter", specifier = ">=1.0.0" },
-    { name = "nbstripout", specifier = ">=0.9" },
-    { name = "pytest", specifier = ">=9.1" },
-    { name = "ruff", specifier = ">=0.16.4" },
 ]
 
 [[package]]
@@ -1408,6 +1298,75 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/7b/92/328a294a6de83bacb95bed01f04e0eaff4e3616ee359fc821a5dfc539b02/mistune-3.3.4.tar.gz", hash = "sha256:58b5c96d6fcb61190dfe5fae498d2b2065f99cf61e9649418fd54cf1ada86dfe", size = 121426, upload-time = "2026-07-22T05:22:30.89Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/77/e4/288365afae98953bc01de09f686f40d8ee84578135aa7767d5d4e60b5278/mistune-3.3.4-py3-none-any.whl", hash = "sha256:ee015381e955e370962968befe1d729ab60fafb6a715ac6751763fbce38c8d4a", size = 66862, upload-time = "2026-07-22T05:22:29.419Z" },
+]
+
+[[package]]
+name = "mkt-intelligence"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "blpapi" },
+    { name = "cryptography" },
+    { name = "fonttools" },
+    { name = "fredapi" },
+    { name = "matplotlib" },
+    { name = "narwhals" },
+    { name = "nest-asyncio" },
+    { name = "numpy" },
+    { name = "openpyxl" },
+    { name = "pandas" },
+    { name = "pandas-market-calendars" },
+    { name = "pdfplumber" },
+    { name = "polars-bloomberg" },
+    { name = "pyarrow" },
+    { name = "pypdf" },
+    { name = "python-docx" },
+    { name = "python-dotenv" },
+    { name = "requests" },
+    { name = "xbbg" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "ipykernel" },
+    { name = "jupyter" },
+    { name = "nbformat" },
+    { name = "nbstripout" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "blpapi", specifier = ">=3.24", index = "https://blpapi.bloomberg.com/repository/releases/python/simple/" },
+    { name = "cryptography", specifier = ">=50.0.0" },
+    { name = "fonttools", specifier = ">=4.0" },
+    { name = "fredapi", specifier = ">=0.5.2" },
+    { name = "matplotlib", specifier = ">=3.10" },
+    { name = "narwhals", specifier = ">=2.0" },
+    { name = "nest-asyncio", specifier = ">=1.6" },
+    { name = "numpy", specifier = ">=2.0" },
+    { name = "openpyxl", specifier = ">=3.1.5" },
+    { name = "pandas", specifier = ">=3.0" },
+    { name = "pandas-market-calendars", specifier = ">=5.4.0" },
+    { name = "pdfplumber", specifier = ">=0.11" },
+    { name = "polars-bloomberg", specifier = ">=0.5.4" },
+    { name = "pyarrow", specifier = ">=25.0.1" },
+    { name = "pypdf", specifier = ">=6.16.1" },
+    { name = "python-docx", specifier = ">=1.2.0" },
+    { name = "python-dotenv", specifier = ">=1.0" },
+    { name = "requests", specifier = ">=2.32" },
+    { name = "xbbg", specifier = ">=1.4" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "ipykernel", specifier = ">=7.1" },
+    { name = "jupyter", specifier = ">=1.0.0" },
+    { name = "nbformat", specifier = ">=5.10" },
+    { name = "nbstripout", specifier = ">=0.9" },
+    { name = "pytest", specifier = ">=9.1" },
+    { name = "ruff", specifier = ">=0.16.4" },
 ]
 
 [[package]]

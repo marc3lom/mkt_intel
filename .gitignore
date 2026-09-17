@@ -57,3 +57,8 @@ saida/
 
 # PDFs das fontes do dia, deixados pelo analista.
 fontes/
+
+# Dados de trabalho dos informes. Sem âncora durante a reestruturação: vale em
+# qualquer profundidade, inclusive para o input/ que mora dentro de src/reports/.
+input/
+output/

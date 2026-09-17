@@ -125,7 +125,9 @@ def _executaveis_instalados() -> set[str]:
     lembrar deste arquivo, e entrada removida derruba na hora a página que
     seguia ensinando o comando.
     """
-    with (RAIZ / "pyproject.toml").open("rb") as arquivo:
+    from comentario_matinal.config import RAIZ as TOPO
+
+    with (TOPO / "pyproject.toml").open("rb") as arquivo:
         return set(tomllib.load(arquivo)["project"]["scripts"])
 
 
@@ -392,6 +394,9 @@ def test_a_contagem_de_testes_citada_bate_com_a_suite():
     A coleta roda num processo à parte, e só coleta: não executa teste nenhum, e
     portanto não há recursão. Sem conseguir coletar, o teste se declara pulado em
     vez de acusar o documento por um problema que é de ambiente.
+
+    A contagem é a desta suíte — a pasta deste arquivo —, não a do repositório:
+    teste novo no outro pacote não envelhece este documento.
     """
     import subprocess
     import sys
@@ -405,7 +410,7 @@ def test_a_contagem_de_testes_citada_bate_com_a_suite():
     try:
         saida = subprocess.run(
             [sys.executable, "-m", "pytest", "--collect-only", "-q",
-             "-p", "no:cacheprovider"],
+             "-p", "no:cacheprovider", str(Path(__file__).parent)],
             capture_output=True, cwd=RAIZ, check=True, text=True,
         ).stdout
     except (OSError, subprocess.CalledProcessError) as e:
