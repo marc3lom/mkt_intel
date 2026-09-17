@@ -11,12 +11,10 @@ from pathlib import Path
 ROOT: Path = Path(__file__).resolve().parents[2]
 PRODUCT: str = "informes_eventos"
 
-# Temporário: input/ e output/ ainda não foram para a raiz.
-_PRODUCT: Path = ROOT / "produtos" / PRODUCT
-
-INPUT: Path = _PRODUCT / "input"
-OUTPUT: Path = _PRODUCT / "output"
+INPUT: Path = ROOT / "input" / PRODUCT
+OUTPUT: Path = ROOT / "output" / PRODUCT
 # Documentos do Fed (committee_meeting_docs/) e planilhas de e-mail (email_info/).
-FED_DOCS: Path = Path(__file__).resolve().parent / "fomc" / "input"
+FED_DOCS: Path = INPUT / "fed"
 PROMPTS: Path = ROOT / "prompts" / PRODUCT
-ENV_FILE: Path = _PRODUCT / "etc" / ".env"
+# A chave do FRED: `op inject -i .env.tpl -o .env`, na raiz.
+ENV_FILE: Path = ROOT / ".env"

@@ -10,8 +10,9 @@ o que muda ao rodar por `notebooks/plantao.ipynb` está em
 ## Passo 1 — Coleta (T0)
 
 Reunir as fontes do dia: wraps da Bloomberg, First Word, e-mails de sell-side, matérias
-do Financial Times ou do Wall Street Journal. **Salvar em PDF dentro de `fontes/`** — é
-de lá que as etapas de IA leem, e a pasta fica fora do repositório.
+do Financial Times ou do Wall Street Journal. **Salvar em PDF dentro de
+`input/comentario_matinal/`** — é de lá que as etapas de IA leem, e a pasta fica fora
+do repositório.
 
 **Só PDF é lido.** `.docx`, `.png`, `.msg` e afins ficam de fora: as etapas recebem
 texto, nunca anexo nem imagem, para que o insumo não mude com o backend. O comando
@@ -23,7 +24,7 @@ Ctrl+P → Salvar em PDF.
 Os PDFs da Bloomberg trazem marcação de uso exclusivo nominal e vedação à
 redistribuição. O material não é redistribuído em nenhuma hipótese: apenas o conteúdo
 informa a redação do comentário, que é produto derivado e interno. Os PDFs não entram
-no repositório (ver `.gitignore`), e a `fontes/` é esvaziada no Passo 9.
+no repositório (ver `.gitignore`), e a `input/comentario_matinal/` é esvaziada no Passo 9.
 
 Gerar as saídas do dia:
 
@@ -31,7 +32,7 @@ Gerar as saídas do dia:
 uv run matinal
 ```
 
-Uma execução, uma consulta de mercado, quatro arquivos em `saida/`:
+Uma execução, uma consulta de mercado, quatro arquivos em `output/comentario_matinal/`:
 
 | Arquivo | Uso |
 |---|---|
@@ -64,15 +65,17 @@ acompanha o trabalho até a revisão.
 uv run matinal triagem
 ```
 
-Converte os PDFs de `fontes/` para texto, monta a mensagem com o guia de estilo, o
-prompt da etapa, as fontes, o painel e o calendário, e grava `saida/triagem_AAAAMMDD.md`
-— tabela de temas candidatos, tema dominante proposto, alertas e sugestão de corte.
+Converte os PDFs de `input/comentario_matinal/` para texto, monta a mensagem com o guia
+de estilo, o prompt da etapa, as fontes, o painel e o calendário, e grava
+`output/comentario_matinal/triagem_AAAAMMDD.md` — tabela de temas candidatos, tema
+dominante proposto, alertas e sugestão de corte.
 
 **O horário de redação não é informado à mão: vem do carimbo do painel**, que é o
 término da coleta. Passar `--asof` diverge disso e o comando avisa.
 
 **O comentário do dia anterior também entra sozinho**, tomado do arquivado mais
-recente em `arquivo/AAAA/MM/`. É contra ele que a triagem julga ineditismo do tema. O
+recente em `arquivo/comentario_matinal/AAAA/MM/`. É contra ele que a triagem julga
+ineditismo do tema. O
 comando informa no stderr qual data foi usada — numa segunda-feira é a de sexta — e
 avisa quando não achou nenhum dentro da última semana. `--anterior caminho.md` força
 outro arquivo; `--sem-anterior` roda sem.
@@ -118,8 +121,8 @@ impediu o comentário de afirmar que o dólar caíra no dia, quando o painel mos
 câmbio estável.
 
 A redação recebe os alertas da triagem automaticamente, extraídos da seção C do arquivo
-da etapa anterior. Sai `saida/redacao_AAAAMMDD.md`, com o comentário e o bloco de
-auditoria.
+da etapa anterior. Sai `output/comentario_matinal/redacao_AAAAMMDD.md`, com o
+comentário e o bloco de auditoria.
 
 Conferir o bloco de auditoria: contagem total dentro de 350–500, orçamento por marcador,
 mapeamento marcador → fonte, ressalvas.
@@ -140,10 +143,12 @@ auditoria e **o horário de redação**.
 uv run matinal revisao
 ```
 
-Toma o comentário e o bloco de auditoria de `saida/redacao_AAAAMMDD.md` e grava
-`saida/revisao_AAAAMMDD.md` — correções obrigatórias, sugestões, texto revisado e
-auditoria da revisão. Grava também `saida/comentario_AAAAMMDD.md`, extraído do bloco de
-código da seção 3, que é o insumo do passo 7.
+Toma o comentário e o bloco de auditoria de
+`output/comentario_matinal/redacao_AAAAMMDD.md` e grava
+`output/comentario_matinal/revisao_AAAAMMDD.md` — correções obrigatórias, sugestões,
+texto revisado e auditoria da revisão. Grava também
+`output/comentario_matinal/comentario_AAAAMMDD.md`, extraído do bloco de código da
+seção 3, que é o insumo do passo 7.
 
 **Se esse bloco não vier no formato esperado, o comando falha e não grava o `.md`.** É o
 único ponto em que a saída do modelo entra direto no documento que vai à diretoria, e um
@@ -166,12 +171,13 @@ decidi-los está em [O que é seu decidir](04-decisoes.md#os-pontos-sob-julgamen
 
 ## Passo 7 — Montagem do documento
 
-O texto revisado já está em `saida/comentario_AAAAMMDD.md` — o Passo 6 o gravou, e o
-comando imprimiu o caminho. Editar esse arquivo, e não uma cópia: é ele que o Passo 8
-compara com o `.docx`, e é ele que o Passo 9 arquiva. Um marcador por parágrafo.
+O texto revisado já está em `output/comentario_matinal/comentario_AAAAMMDD.md` — o
+Passo 6 o gravou, e o comando imprimiu o caminho. Editar esse arquivo, e não uma
+cópia: é ele que o Passo 8 compara com o `.docx`, e é ele que o Passo 9 arquiva. Um
+marcador por parágrafo.
 
 ```
-uv run matinal --comentario saida/comentario_AAAAMMDD.md
+uv run matinal --comentario output/comentario_matinal/comentario_AAAAMMDD.md
 ```
 
 **Exceção:** se o Passo 6 não gravou o `.md` — bloco de código malformado —, aí sim
@@ -179,15 +185,17 @@ salvar o texto à mão a partir da revisão, com esse mesmo nome e nessa mesma p
 Salvá-lo noutro lugar faz o Passo 8 comparar o documento com um arquivo que você não
 editou, e acusar divergências que são artefato do par errado.
 
-Sai `saida/comentario_AAAAMMDD.docx`, a partir de `templates/comentario.dotx`, com o
-painel no alto e a tabela do calendário depois dos marcadores. Do Markdown, `- ` vira
+Sai `output/comentario_matinal/comentario_AAAAMMDD.docx`, a partir de
+`templates/comentario_matinal/comentario.dotx`, com o painel no alto e a tabela do
+calendário depois dos marcadores. Do Markdown, `- ` vira
 parágrafo com o marcador do template, `*termo*` vira itálico e `**termo**` vira negrito.
 O fecho vem do template; se o Markdown trouxer um, ele é descartado com aviso.
 
 **Esta chamada não consulta o Bloomberg.** Ela reaproveita o painel e o calendário já
 gerados para a data — o comentário é escrito depois do painel, e recoletar produziria um
 documento com o mercado de agora sob um texto redigido contra o de antes. Se as imagens
-do dia não existirem em `saida/`, aí sim o comando coleta antes de montar.
+do dia não existirem em `output/comentario_matinal/`, aí sim o comando coleta antes de
+montar.
 
 O comando avisa no stderr quando o comentário sai da faixa de quatro a cinco marcadores
 que o guia fixa, e quando alguma linha fora de marcador foi ignorada.
@@ -308,9 +316,10 @@ Enviado o e-mail — e só então — seguir para o Passo 9.
 uv run matinal enviado
 ```
 
-Arquiva `arquivo/AAAA/MM/AAAAMMDD.md` e `arquivo/AAAA/MM/comentario_AAAAMMDD.docx`, e
-esvazia `fontes/` e `saida/`. **Rodar só depois de o e-mail ter saído** — o comando
-afirma que o comentário foi enviado.
+Arquiva `arquivo/comentario_matinal/AAAA/MM/AAAAMMDD.md` e
+`arquivo/comentario_matinal/AAAA/MM/comentario_AAAAMMDD.docx`, e esvazia
+`input/comentario_matinal/` e `output/comentario_matinal/`. **Rodar só depois de o
+e-mail ter saído** — o comando afirma que o comentário foi enviado.
 
 Antes de arquivar, ele **repete a comparação do Passo 8** e para sem arquivar nada se os
 dois divergirem. Aqui a checagem já não salva o comentário de hoje — o e-mail saiu. Ela
@@ -334,8 +343,9 @@ Quando cada uma delas é legítima de contornar está em
 A limpeza só ocorre **depois** de o arquivamento dar certo. Falhando o arquivamento,
 nada é apagado.
 
-O `.docx` vai para `arquivo/` como registro local do que foi mandado, mas **não é
-versionado** — `.gitignore` cobre `*.docx`. O que entra no git é o `.md`.
+O `.docx` vai para `arquivo/comentario_matinal/` como registro local do que foi
+mandado, mas **não é versionado** — `.gitignore` cobre `*.docx`. O que entra no git é
+o `.md`.
 
 **O nome do arquivo é lido pelo comando**, não é só convenção de organização: é dele
 que sai o comentário do dia anterior da triagem e da revisão do plantão seguinte.

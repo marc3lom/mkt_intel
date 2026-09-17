@@ -47,3 +47,15 @@ def test_no_default_depends_on_cwd():
         if pattern.search(f.read_text(encoding="utf-8"))
     )
     assert offenders == []
+
+
+def test_final_layout():
+    assert _paths.INPUT == _paths.ROOT / "input" / "informes_eventos"
+    assert _paths.OUTPUT == _paths.ROOT / "output" / "informes_eventos"
+    assert _paths.FED_DOCS == _paths.INPUT / "fed"
+    assert _paths.ENV_FILE == _paths.ROOT / ".env"
+    assert not hasattr(_paths, "_PRODUCT")
+
+
+def test_no_data_folder_inside_the_package():
+    assert not any(p.name in {"input", "output"} for p in PACKAGE.rglob("*") if p.is_dir())

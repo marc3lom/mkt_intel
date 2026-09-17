@@ -21,14 +21,11 @@ TZ_BR = ZoneInfo("America/Sao_Paulo")
 RAIZ = Path(__file__).resolve().parents[2]
 PRODUTO = "comentario_matinal"
 
-# Temporário: as duas pastas de trabalho ainda não foram para input/ e output/.
-_PRODUTO = RAIZ / "produtos" / PRODUTO
-
 CONFIG_PADRAO = RAIZ / "config" / PRODUTO / "painel.toml"
-SAIDA_PADRAO = _PRODUTO / "saida"
+SAIDA_PADRAO = RAIZ / "output" / PRODUTO
 TEMPLATE_PADRAO = RAIZ / "templates" / PRODUTO / "comentario.dotx"
 MERCADO_FECHADO = RAIZ / "templates" / PRODUTO / "mercado_fechado.png"
-FONTES_PADRAO = _PRODUTO / "fontes"
+FONTES_PADRAO = RAIZ / "input" / PRODUTO
 ARQUIVO_PADRAO = RAIZ / "arquivo" / PRODUTO
 MANUAL = RAIZ / "docs" / PRODUTO / "plantao"
 PROMPTS = RAIZ / "prompts" / PRODUTO

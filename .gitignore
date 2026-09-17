@@ -53,13 +53,10 @@ desktop.ini
 ~$*.docx
 ~$*.doc
 
-# Saídas do comando matinal — imagens e texto regenerados a cada manhã.
-saida/
-
-# PDFs das fontes do dia, deixados pelo analista.
-fontes/
-
-# Dados de trabalho dos informes. Sem âncora durante a reestruturação: vale em
-# qualquer profundidade, inclusive para o input/ que mora dentro de src/reports/.
-input/
-output/
+# --- Entrada e saída do dia --------------------------------------------------
+# Tudo o que entra (PDFs das fontes, documentos do Fed, planilhas de e-mail) e
+# tudo o que sai (painel, calendário, etapas, .docx, gráficos). Ancoradas: só as
+# duas pastas da raiz, inteiras, sem exceção. O registro versionado do que foi
+# enviado é arquivo/, que não mora aqui de propósito.
+/input/
+/output/

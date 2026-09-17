@@ -8,7 +8,7 @@ aqui pelo trecho que apareceu na sua tela.
 | "a consulta de referência não devolveu dado algum" | terminal Bloomberg inativo | abrir o terminal e repetir |
 | a consulta do calendário estoura | máquina sem licença BQL | `--sem-calendario`, ou `SEM_CALENDARIO` no notebook |
 | "N PDF(s) não renderam texto" | digitalização sem OCR | reimprimir em PDF |
-| "arquivo(s) NÃO foram lidos" | arquivo que não é PDF em `fontes/` | reimprimir em PDF |
+| "arquivo(s) NÃO foram lidos" | arquivo que não é PDF em `input/comentario_matinal/` | reimprimir em PDF |
 | "não achei a tabela de temas candidatos" | a triagem saiu fora do formato | escrever os temas à mão, sem os números |
 | "a triagem de … não tem o tema N" | número fora da tabela | reler a tabela; ela diz até onde vai |
 | o `conferir` acusa divergência | texto corrigido no Word e não repetido no `.md` | repetir no `.md`, ou entender o que sumiu |
@@ -56,7 +56,7 @@ repetir o Passo 2 depois de corrigi-lo — a triagem sem ele não vai citar o qu
 
 ## "arquivo(s) NÃO foram lidos"
 
-Há algo em `fontes/` que não é PDF — um `.docx`, um `.msg` arrastado do Outlook, um
+Há algo em `input/comentario_matinal/` que não é PDF — um `.docx`, um `.msg` arrastado do Outlook, um
 `.png` de gráfico. **Só PDF é aproveitado**, para que o insumo não mude com o backend
 do modelo, e o conteúdo desse arquivo não chegou ao modelo.
 
@@ -72,8 +72,8 @@ A triagem rodou, mas a saída não trouxe a tabela no formato esperado — e sem
 há números para escolher. Acontece quando o modelo responde fora de formato.
 
 Saída: escrever os temas à mão, sem os números. `--temas "dominante | tema 2"` ou
-`--temas-arquivo temas.md`. O arquivo da triagem continua em `saida/`, e é dele que
-você tira o texto dos temas.
+`--temas-arquivo temas.md`. O arquivo da triagem continua em
+`output/comentario_matinal/`, e é dele que você tira o texto dos temas.
 
 Rodar a triagem de novo também costuma resolver, e é mais barato que transcrever. Só
 não vale rodar duas vezes sem olhar: se a segunda saiu no formato, compare o tema
@@ -133,7 +133,7 @@ em texto, antes de citá-lo.
 O comando nomeia sempre o arquivo e a etapa. Duas verificações resolvem a maioria do
 resto:
 
-1. **Os arquivos do dia estão em `saida/`?** As etapas não recoletam nada: cada uma lê
+1. **Os arquivos do dia estão em `output/comentario_matinal/`?** As etapas não recoletam nada: cada uma lê
    o que a anterior gravou. Falta de insumo é sempre uma etapa não rodada, e o comando
    diz qual.
 2. **A data é a de hoje?** Todos os nomes carregam `AAAAMMDD`. Um plantão iniciado

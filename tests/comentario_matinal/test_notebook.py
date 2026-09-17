@@ -17,8 +17,9 @@ NOTEBOOKS = RAIZ / "notebooks" / "comentario_matinal"
 NOTEBOOK = NOTEBOOKS / "plantao.ipynb"
 CLI = Path(_cli.__file__)
 
-# O fechamento do plantão fica fora do notebook de propósito: apaga fontes/ e
-# saida/, grava o arquivo que a triagem de amanhã lê, e notebook é onde se
+# O fechamento do plantão fica fora do notebook de propósito: apaga
+# input/comentario_matinal/ e output/comentario_matinal/, grava o arquivo que
+# a triagem de amanhã lê, e notebook é onde se
 # re-executa célula sem querer.
 FORA_DO_NOTEBOOK = {"fecha_plantao"}
 
@@ -57,11 +58,14 @@ EQUIVALENTE = {
 PARAMETROS_FORA_DO_NOTEBOOK = {
     "saida": "as saídas do dia vão para a pasta padrão do repositório; apontar "
              "outra é reprocessar um dia antigo sem misturá-lo com o de hoje",
-    "fontes": "os PDFs da manhã ficam em `fontes/`, na pasta do produto — a célula "
-              "do Passo 1 diz isso, e apontar outra pasta é caso de teste",
-    "arquivo": "o comentário do dia anterior sai de `arquivo/`, que é onde o "
-               "`uv run matinal enviado` o grava; não há o que escolher aqui",
-    "config": "a lista de ativos do painel é canônica e única — `config/painel.toml`",
+    "fontes": "os PDFs da manhã ficam em `input/comentario_matinal/`, na raiz do "
+              "repositório — a célula do Passo 1 diz isso, e apontar outra pasta é "
+              "caso de teste",
+    "arquivo": "o comentário do dia anterior sai de `arquivo/comentario_matinal/`, "
+               "que é onde o `uv run matinal enviado` o grava; não há o que "
+               "escolher aqui",
+    "config": "a lista de ativos do painel é canônica e única — "
+              "`config/comentario_matinal/painel.toml`",
     "template": "o documento sai do template da mesa; outro template é ensaio de "
                 "formatação, e nele o interesse é o .docx, não o plantão",
     "asof": "reproduzir um horário antigo é ensaio por definição, e ensaio se faz "
@@ -166,7 +170,8 @@ def test_o_notebook_segue_a_ordem_dos_passos_do_nucleo():
     assert not fora, (
         "As células saíram da ordem do runbook: " + "; ".join(fora) + ". A ordem "
         "dos passos é `plantao.PASSOS`, e cada célula consome o que a anterior "
-        "gravou em `saida/` — trocá-las de lugar ensina o processo errado a quem "
+        "gravou em `output/comentario_matinal/` — trocá-las de lugar ensina o "
+        "processo errado a quem "
         "aprende o plantão por aqui."
     )
 
@@ -240,8 +245,8 @@ def test_o_notebook_das_imagens_para_onde_o_subcomando_para():
     O que as duas fachadas não podem divergir é o ponto de parada: as duas
     imagens saem, o bloco direcional não. Um `monta_bloco` acrescentado aqui
     transformaria este notebook no Passo 1 do plantão com outro nome — e quem o
-    rodasse acharia que gerou só imagens, deixando em `saida/` um texto que
-    ninguém escreveu.
+    rodasse acharia que gerou só imagens, deixando em `output/comentario_matinal/`
+    um texto que ninguém escreveu.
     """
     import json
 
@@ -352,13 +357,15 @@ def test_o_fechamento_do_plantao_nao_entra_no_notebook():
     """A restrição mais dura do projeto, aferida em vez de combinada.
 
     O `FORA_DO_NOTEBOOK` só dispensa o `fecha_plantao` da cobertura; nada impedia
-    alguém de acrescentar a célula amanhã. Ele apaga fontes/ e saida/, grava o
-    arquivo que a triagem de amanhã lê como comentário do dia anterior, e
-    notebook é onde se re-executa célula sem querer.
+    alguém de acrescentar a célula amanhã. Ele apaga input/comentario_matinal/ e
+    output/comentario_matinal/, grava o arquivo que a triagem de amanhã lê como
+    comentário do dia anterior, e notebook é onde se re-executa célula sem
+    querer.
     """
     assert "fecha_plantao" not in _codigo(), (
         "`fecha_plantao` apareceu numa célula. É o único passo destrutivo do "
-        "processo: apaga fontes/ e saida/ e grava o arquivo que a triagem de "
+        "processo: apaga input/comentario_matinal/ e output/comentario_matinal/ "
+        "e grava o arquivo que a triagem de "
         "amanhã lê como comentário do dia anterior. Ele fica no terminal. Se a "
         "decisão mudou, mudar junto o FORA_DO_NOTEBOOK e o motivo escrito ali."
     )

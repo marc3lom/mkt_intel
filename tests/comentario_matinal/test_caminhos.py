@@ -39,3 +39,9 @@ def test_so_o_config_le_dunder_file():
         if f.name != "config.py" and re.search(r"\b__file__\b", f.read_text(encoding="utf-8"))
     )
     assert culpados == []
+
+
+def test_o_arranjo_final():
+    assert config.FONTES_PADRAO == config.RAIZ / "input" / config.PRODUTO
+    assert config.SAIDA_PADRAO == config.RAIZ / "output" / config.PRODUTO
+    assert not hasattr(config, "_PRODUTO")

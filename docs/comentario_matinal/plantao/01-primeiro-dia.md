@@ -42,7 +42,7 @@ a revisão, conferir o documento no Word — são os curtos, e são os que não 
 
 O comando decide tudo o que é mecânico e verificável, e **recusa** decidir o resto.
 
-Ele decide sozinho: quais ativos entram no painel (`config/painel.toml`), a direção de
+Ele decide sozinho: quais ativos entram no painel (`config/comentario_matinal/painel.toml`), a direção de
 cada um, se um indicador já foi divulgado (por comparação de horário, nunca pelo valor
 na tela), qual é o comentário do dia anterior, qual é o horário de redação (o carimbo do
 painel, não o relógio), e se a execução está dentro da janela.
@@ -77,7 +77,8 @@ texto, e a montagem do documento é recusada — o template tem dois lugares de 
 um deles ficaria vazio no que vai à diretoria.
 
 **O Passo 9 só existe no terminal.** `uv run matinal enviado` arquiva o comentário e
-esvazia `fontes/` e `saida/`; o que ele arquiva vira o "comentário do dia anterior" de
+esvazia `input/comentario_matinal/` e `output/comentario_matinal/`; o que ele arquiva
+vira o "comentário do dia anterior" de
 amanhã. É o único passo destrutivo do processo e o único que afirma um fato que
 nenhum código pode verificar — que o e-mail foi mesmo enviado. Notebook é onde se
 re-executa célula sem querer, e por isso ele fica de fora de propósito.

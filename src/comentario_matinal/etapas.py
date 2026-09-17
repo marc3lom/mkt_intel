@@ -1,4 +1,4 @@
-"""As três etapas de IA do plantão, encadeadas pelos arquivos de `saida/`.
+"""As três etapas de IA do plantão, encadeadas pelos arquivos de `output/comentario_matinal/`.
 
 Cada etapa monta a mensagem a partir do guia de estilo, do prompt da etapa e dos
 insumos do dia, chama o modelo por `modelo.executa` e grava a saída. O que liga

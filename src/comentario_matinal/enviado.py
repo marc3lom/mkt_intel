@@ -1,7 +1,8 @@
 """Arquivamento do comentário enviado e limpeza do dia.
 
 Fecha o plantão: confere que o texto arquivado é o mesmo que foi ao Word, move
-os dois arquivos para ``arquivo/AAAA/MM/`` e esvazia ``fontes/`` e ``saida/``.
+os dois arquivos para ``arquivo/comentario_matinal/AAAA/MM/`` e esvazia
+``input/comentario_matinal/`` e ``output/comentario_matinal/``.
 
 A conferência existe porque o runbook manda abrir o `.docx` para conferir o
 texto antes de exportar o PDF. Corrigido algo ali, o `.md` deixa de ser o que foi
@@ -193,10 +194,11 @@ def arquiva(saida: Path, raiz: Path, marca: str, forcar: bool = False) -> list[P
 def limpa(pastas: list[Path]) -> int:
     """Esvazia as pastas do dia, preservando as próprias pastas.
 
-    As pastas ficam: `fontes/` é onde o analista larga os PDFs da manhã
-    seguinte, e `saida/` é criada pelo comando, mas apagá-la faria o `arquivo/`
-    e o `fontes/` parecerem opcionais no runbook. Chamada só depois de o
-    arquivamento ter dado certo.
+    As pastas ficam: `input/comentario_matinal/` é onde o analista larga os
+    PDFs da manhã seguinte, e `output/comentario_matinal/` é criada pelo
+    comando, mas apagá-la faria o `arquivo/` e o `input/comentario_matinal/`
+    parecerem opcionais no runbook. Chamada só depois de o arquivamento ter
+    dado certo.
     """
     n = 0
     for pasta in pastas:

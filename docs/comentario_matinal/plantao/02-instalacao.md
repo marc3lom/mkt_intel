@@ -50,7 +50,7 @@ autenticação fica gravada na máquina e não se repete a cada plantão. Confer
 O acesso ao modelo está hoje em assinatura pessoal — ver as notas do
 [`README.md`](../README.md) do produto sobre a migração para o ambiente corporativo.
 
-**5. O Word.** O Passo 7 monta um `.docx` a partir de `templates/comentario.dotx`, e é
+**5. O Word.** O Passo 7 monta um `.docx` a partir de `templates/comentario_matinal/comentario.dotx`, e é
 no Word que você insere o gráfico do dia — opcional, colado à mão, e nunca gerado pelo
 comando —, confere o documento e **exporta o PDF** que vai anexado ao e-mail. O comando
 não gera o PDF, e não há caminho sem esse passo manual.
@@ -78,11 +78,11 @@ instituição, e a URL muda quando ele existir. Se o comando acima falhar por en
 inválido num dia futuro, a explicação mais provável é essa, e não um erro seu — procure
 o endereço novo antes de tratar o caso como problema de acesso.
 
-O repositório reúne vários produtos da divisão, cada um na sua pasta. O comentário
-matinal é um deles, e **todos os comandos abaixo rodam de dentro da pasta dele**:
+O repositório reúne vários produtos da divisão. O comentário matinal é um deles, e
+**todos os comandos abaixo rodam da raiz do clone**:
 
 ```
-cd mkt_intelligence\produtos\comentario_matinal
+cd mkt_intelligence
 ```
 
 ## A instalação
@@ -94,9 +94,9 @@ alternativo — ver [O Project do Claude](#o-project-do-claude), mais abaixo.
 
 Três comandos:
 
-1. Instalar as dependências, **da raiz do clone**: `uv sync --all-packages`.
+1. Instalar as dependências: `uv sync`.
 2. Instalar o filtro de notebook: `uv run nbstripout --install`.
-3. Criar a pasta das fontes: `mkdir fontes` (ver abaixo por que ela não vem no clone).
+3. Criar a pasta das fontes: `mkdir input\comentario_matinal` (ver abaixo por que ela não vem no clone).
 
 O passo 2 vale por clone, e é o que impede que um notebook executado leve para o
 commit os dados de mercado e o texto do comentário — possivelmente antes de ele ter
@@ -104,24 +104,25 @@ sido enviado. O filtro tira as saídas no `git add`, sem tocar no arquivo aberto
 tela. Sem ele nada avisa na hora: quem percebe é o `tests/test_notebook.py`, que
 existe como rede para o clone em que o passo foi esquecido.
 
-O `uv sync --all-packages` cria a `.venv` — uma só, na raiz, para os dois produtos — e
-instala tudo, inclusive o `blpapi`, que não vem do PyPI —
+O `uv sync` cria a `.venv` — uma só, na raiz, para todos os produtos — e instala tudo,
+inclusive o `blpapi`, que não vem do PyPI —
 o `pyproject.toml` já aponta para o índice da Bloomberg. Rodar sempre do Windows nativo,
 nunca do WSL: o `blpapi` conversa com o terminal por IPC local. A instalação não exige
 terminal aberto; a execução do comando, sim.
 
 ### As pastas que não vêm no clone
 
-`fontes/` e `saida/` estão no `.gitignore` e **não existem depois de clonar**. É de
+`input/` e `output/` estão no `.gitignore` e **não existem depois de clonar**. É de
 propósito: uma guarda os PDFs da Bloomberg, que não entram no repositório, e a outra
 guarda as saídas do dia, que são refeitas toda manhã.
 
-Isso importa porque o Passo 1 manda salvar os PDFs do dia **dentro de `fontes/`**, e a
-pasta não está lá. Criá-la à mão, na pasta do produto — ao lado de `prompts/` — não
-dentro de `notebooks/`, que é o engano fácil de quem roda pelo notebook: os caminhos
-padrão são ancorados na pasta do produto, e uma `fontes/` no lugar errado faz a etapa
-avisar que não aproveitou PDF algum, sem dizer por quê. A `saida/` o próprio comando
-cria.
+Isso importa porque o Passo 1 manda salvar os PDFs do dia **dentro de
+`input/comentario_matinal/`**, e a pasta não está lá. Criá-la à mão, na raiz do
+repositório — ao lado de `prompts/` — não dentro de `notebooks/`, que é o engano
+fácil de quem roda pelo notebook: os caminhos padrão são ancorados na raiz do
+repositório, e uma pasta de fontes no lugar errado faz a etapa avisar que não
+aproveitou PDF algum, sem dizer por quê. A `output/comentario_matinal/` o próprio
+comando cria.
 
 ## O ensaio que fecha a instalação
 
@@ -130,7 +131,7 @@ janela de 7h–9h** — de tarde, na véspera. Fora da janela toda execução é
 comando produz todos os artefatos e carimba o painel com `PAINEL DIRECIONAL — DRY RUN`.
 Nada é enviado, e nada é bloqueado.
 
-Com o terminal Bloomberg aberto e logado, e um PDF qualquer em `fontes/`:
+Com o terminal Bloomberg aberto e logado, e um PDF qualquer em `input/comentario_matinal/`:
 
 ```
 uv run matinal
@@ -138,7 +139,7 @@ uv run matinal triagem
 ```
 
 O primeiro exercita a instalação inteira do lado da Bloomberg — `blpapi`, licença,
-IPC — e deve gravar quatro arquivos em `saida/`. O segundo exercita o `claude`, que é
+IPC — e deve gravar quatro arquivos em `output/comentario_matinal/`. O segundo exercita o `claude`, que é
 a outra metade que pode faltar. Se os dois passaram, sua máquina está pronta.
 
 Ensaiar até o fim — redação, revisão, montagem do `.docx` — é melhor ainda, e é a única
@@ -159,7 +160,7 @@ também. Não editar convenções nos prompts de etapa — eles apenas referenci
 ## O Wiki (passo único de quem publica o manual)
 
 Só quem publica o manual precisa disto — não é parte da instalação de quem só roda o
-plantão. `uv run publica-wiki` copia `docs/plantao/` para o Wiki do GitHub, mas o
+plantão. `uv run publica-wiki` copia `docs/comentario_matinal/plantao/` para o Wiki do GitHub, mas o
 GitHub só cria o repositório `mkt_intelligence.wiki.git` **depois que a primeira
 página nasce pela interface web**. Antes disso, `git clone` (e portanto o publicador)
 responde que o repositório não existe — verificado em 17/08.

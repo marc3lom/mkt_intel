@@ -144,8 +144,10 @@ def main() -> int:
                              "escreve o texto por fora. `conferir` compara o "
                              ".docx com o .md, sem arquivar nem limpar — para "
                              "rodar entre o Word e o e-mail. `enviado` fecha o "
-                             "plantão: arquiva o comentário e limpa fontes/ e "
-                             "saida/. Sem argumento, coleta o mercado e gera "
+                             "plantão: arquiva o comentário e limpa "
+                             "input/comentario_matinal/ e "
+                             "output/comentario_matinal/. Sem argumento, "
+                             "coleta o mercado e gera "
                              "painel, calendário e texto.")
     parser.add_argument("--forcar", action="store_true",
                         help="Só para `enviado`: contorna as três recusas — "
@@ -280,7 +282,7 @@ def _imagens(args, ctx: Contexto, voz: _Voz) -> int:
     Para antes do bloco direcional de propósito: ele é insumo das etapas de IA
     — é dele que a revisão tira a direção de cada ativo para cobrar acordo com o
     texto —, e quem não vai rodar etapa alguma não tem o que fazer com um
-    arquivo a mais em `saida/`. Foi este o caminho que o repositório `daily`
+    arquivo a mais em `output/comentario_matinal/`. Foi este o caminho que o repositório `daily`
     servia, com outro código e as mesmas duas imagens.
     """
     mercado = plantao.coleta_mercado(ctx, progresso=voz)

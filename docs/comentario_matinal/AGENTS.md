@@ -12,8 +12,8 @@ Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, 
 
 - **Só uv.** Nunca `pip install`. Dependência entra com `uv add`, execução é `uv run`. O `uv.lock` é versionado de propósito — não colocar no gitignore. O piso do Python é **3.14**.
 - **Bloomberg**: `xbbg` e `blpapi` exigem Windows com o terminal aberto e logado. O `blpapi` não está no PyPI; vem do índice explícito da Bloomberg, declarado no `pyproject.toml` da raiz do workspace — num workspace o uv só respeita o do raiz —, e por isso o `uv sync` precisa de rede até ele.
-- Instalação: `uv sync --all-packages` na raiz do repositório e depois `uv run nbstripout --install` (o filtro de saída dos notebooks, ligado pelo `.gitattributes`).
-- Template: `templates/comentario.dotx` (`TEMPLATE_PADRAO` no `config.py`; todo caminho do repositório deriva do `RAIZ`, que está lá).
+- Instalação: `uv sync` na raiz do repositório e depois `uv run nbstripout --install` (o filtro de saída dos notebooks, ligado pelo `.gitattributes`).
+- Template: `templates/comentario_matinal/comentario.dotx` (`TEMPLATE_PADRAO` no `config.py`; todo caminho do repositório deriva do `RAIZ`, que está lá).
 - A única variável de ambiente que o código lê é `COMENTARIO_MATINAL_BACKEND` (padrão `claude-code`). As etapas de IA chamam o executável `claude`, que precisa estar no PATH.
 - **A autenticação do backend é a sessão do Claude Code**, não chave de API. O `modelo.py` roda o `claude` com `--safe-mode` — que desliga CLAUDE.md, hooks, skills, plugins, MCP e agentes do ambiente de quem está de plantão, para a etapa render o mesmo em qualquer máquina — e retira `ANTHROPIC_API_KEY` do ambiente do subprocesso, porque uma chave esquecida ali tem precedência e uma chave sem saldo derruba a etapa com código 1. Rodar por chave de API é escrever outro backend, não mexer neste.
 
@@ -21,25 +21,25 @@ Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, 
 
 | Para quê | Comando | Observação |
 |---|---|---|
-| Instalar | `uv sync --all-packages`, na raiz | cria a `.venv` única e puxa o `blpapi` do índice da Bloomberg |
-| **Verificar (o padrão)** | `uv run pytest` | 185 testes, ~7 s, **sem Bloomberg** |
-| Coletar o mercado | `uv run matinal` | **chama a Bloomberg e grava em `saida/`** |
+| Instalar | `uv sync`, na raiz | cria a `.venv` única e puxa o `blpapi` do índice da Bloomberg |
+| **Verificar (o padrão)** | `uv run pytest tests/comentario_matinal` | 186 testes, ~7 s, **sem Bloomberg** |
+| Coletar o mercado | `uv run matinal` | **chama a Bloomberg e grava em `output/comentario_matinal/`** |
 | Coletar sem o BQL | `uv run matinal --sem-calendario` | pula só a consulta do calendário |
 | Só as duas imagens | `uv run matinal imagens` | painel e calendário, sem o bloco direcional |
 | Triagem | `uv run matinal triagem` | chama o modelo; leva minutos |
 | Redação | `uv run matinal redacao --temas-numeros "1,3,2"` | exige a triagem em disco |
 | Revisão | `uv run matinal revisao` | exige a redação em disco |
-| Montar o .docx | `uv run matinal --comentario saida/comentario_AAAAMMDD.md` | **não** rodar como teste |
+| Montar o .docx | `uv run matinal --comentario output/comentario_matinal/comentario_AAAAMMDD.md` | **não** rodar como teste |
 | Conferir antes do e-mail | `uv run matinal conferir` | compara o `.docx` com o `.md`; não destrói nada |
-| Fechar o plantão | `uv run matinal enviado` | destrutivo; arquiva e depois esvazia `fontes/` e `saida/` |
+| Fechar o plantão | `uv run matinal enviado` | destrutivo; arquiva e depois esvazia `input/comentario_matinal/` e `output/comentario_matinal/` |
 | Publicar o manual | `uv run publica-wiki` | fora do plantão |
 
 **Verificar é rodar `uv run pytest`.** Ler com atenção: `dry_run` aqui **não** quer dizer "roda sem Bloomberg". Quer dizer apenas que o relógio está fora das 7h00–9h00, e nesse caso as saídas saem carimbadas com `*** DRY RUN ***` e o `enviado` recusa sem `--forcar`. O `uv run matinal` continua chamando a Bloomberg e continua gravando arquivo. Não existe caminho offline do pipeline. Portanto:
 
 - Verificar alteração com `uv run pytest`, nunca rodando o pipeline.
 - Nunca rodar `uv run matinal --comentario …` como teste — isso monta um documento de verdade.
-- Nunca rodar `uv run matinal enviado` sem que peçam. Ele afirma que o comentário foi à diretoria, torna-o o "dia anterior" de amanhã e esvazia `fontes/` e `saida/` sem volta.
-- Seguro rodar: `triagem`, `revisao`, `conferir` e `enviado` contra uma `saida/` vazia — falham limpo, sem tocar a Bloomberg, e é assim que se lê um caminho de falha.
+- Nunca rodar `uv run matinal enviado` sem que peçam. Ele afirma que o comentário foi à diretoria, torna-o o "dia anterior" de amanhã e esvazia `input/comentario_matinal/` e `output/comentario_matinal/` sem volta.
+- Seguro rodar: `triagem`, `revisao`, `conferir` e `enviado` contra uma `output/comentario_matinal/` vazia — falham limpo, sem tocar a Bloomberg, e é assim que se lê um caminho de falha.
 
 **Não existe portão de lint.** O `ruff` não é declarado nem configurado; hoje `uvx ruff check .` acusa 38 erros e `uvx ruff format --check .` diz que 30 arquivos seriam reformatados. Não "consertar" isso de passagem, e não acrescentar etapa de lint sem pedido. O portão é o `pytest`.
 
@@ -54,7 +54,7 @@ Quatro prompts, montados na mensagem do modelo pelo `etapas.py`. O guia de estil
 3. `prompts/02_redacao.md` — etapa 2. Escreve o comentário a partir dos temas que o autor escolheu, mais um bloco de auditoria que não vai ao e-mail.
 4. `prompts/03_revisao.md` — etapa 3. Checa os fatos, depois cobra a conformidade dura, depois sugere mudanças editoriais — nessa ordem.
 
-A ordem é `triagem` → **decisão humana** → `redacao` → `revisao`. O passo humano não é opcional: `redacao` sem `--temas*` levanta `SemTemas` de propósito. As etapas se encadeiam por arquivos em `saida/`: a seção C da triagem vira os alertas da redação; o texto da redação mais a auditoria vão à revisão; o bloco cercado da revisão vira o `comentario_AAAAMMDD.md`, que é o que o `--comentario` monta.
+A ordem é `triagem` → **decisão humana** → `redacao` → `revisao`. O passo humano não é opcional: `redacao` sem `--temas*` levanta `SemTemas` de propósito. As etapas se encadeiam por arquivos em `output/comentario_matinal/`: a seção C da triagem vira os alertas da redação; o texto da redação mais a auditoria vão à revisão; o bloco cercado da revisão vira o `comentario_AAAAMMDD.md`, que é o que o `--comentario` monta.
 
 O `prompts/project_instructions.md` é o caminho alternativo, pelo Project do Claude, e não faz parte da CLI.
 
@@ -98,7 +98,7 @@ A **função primeira** da etapa de revisão é a correção factual contra as f
 
 ## 8. Montagem do Word
 
-O `documento.py` monta o `.docx` a partir do `templates/comentario.dotx`. **A autoridade de formatação é o template**: papel, margens, fontes, numeração dos marcadores e as duas imagens de cabeçalho e rodapé vêm todos dele. Não aplicar formatação direta sobre o que o template já define — o código limpa os filhos de cada parágrafo preservando o `pPr` justamente para que estilo, marcador e justificação continuem vindo do template.
+O `documento.py` monta o `.docx` a partir do `templates/comentario_matinal/comentario.dotx`. **A autoridade de formatação é o template**: papel, margens, fontes, numeração dos marcadores e as duas imagens de cabeçalho e rodapé vêm todos dele. Não aplicar formatação direta sobre o que o template já define — o código limpa os filhos de cada parágrafo preservando o `pPr` justamente para que estilo, marcador e justificação continuem vindo do template.
 
 | Parágrafo do template | Estilo | Recebe |
 |---|---|---|
@@ -111,11 +111,11 @@ Os `[Parágrafo N]` não usados são apagados junto com o espaçador; um sexto m
 
 ## 9. Não mexer
 
-- **`fontes/`** — os PDFs do dia (Bloomberg, FT, WSJ, sell-side). Fora do git, sujeitos aos termos de uso da Bloomberg. Nunca comitar, nunca reproduzir em extensão, nunca citar além de um trecho curto.
-- **`saida/`** — as saídas do dia, inclusive o comentário ainda não enviado. Fora do git.
+- **`input/comentario_matinal/`** — os PDFs do dia (Bloomberg, FT, WSJ, sell-side). Fora do git, sujeitos aos termos de uso da Bloomberg. Nunca comitar, nunca reproduzir em extensão, nunca citar além de um trecho curto.
+- **`output/comentario_matinal/`** — as saídas do dia, inclusive o comentário ainda não enviado. Fora do git.
 - **`*.pdf`, `*.docx`** — fora do git em qualquer lugar. O artefato versionado é o `.md`.
 - **`.env`, `.env.*`, credenciais** — fora do git. Hoje nenhum código deste produto lê `.env`; não acrescentar sem perguntar.
-- **`arquivo/AAAA/MM/AAAAMMDD.md`** — os comentários enviados, registro institucional, escritos só pelo `matinal enviado`. Nunca editar à mão e nunca renomear: o nome do arquivo *é* a data de envio, e é ele que a busca pelo dia anterior lê.
+- **`arquivo/comentario_matinal/AAAA/MM/AAAAMMDD.md`** — os comentários enviados, registro institucional, escritos só pelo `matinal enviado`. Nunca editar à mão e nunca renomear: o nome do arquivo *é* a data de envio, e é ele que a busca pelo dia anterior lê.
 - **`exemplos/aprovados/`, `exemplos/rejeitados/`** — material humano de trabalho; nada em `src/` os lê. Só influenciam a saída quando alguém promove um caso à §12 do guia, à mão.
 - Nunca colar conteúdo de fonte, número do painel ou minuta do comentário em mensagem de commit, issue, ou qualquer coisa que saia da máquina. O repositório é privado e guarda material que vai à diretoria.
 

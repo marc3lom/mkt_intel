@@ -49,7 +49,7 @@ RE_INTERVALO = re.compile(
     re.IGNORECASE,
 )
 
-# Caminho escrito entre crases: `saida/`, `arquivo/AAAA/MM/`, `config/painel.toml`.
+# Caminho escrito entre crases: `output/`, `arquivo/AAAA/MM/`, `config/painel.toml`.
 RE_CAMINHO = re.compile(r"`([\w.-]+)/[\w./-]*`")
 
 # Uma ligação de Markdown: `[o que se lê](para onde vai)`.
@@ -65,8 +65,6 @@ RE_CERCA = re.compile(r"^\s*(?:```|~~~)")
 # a dizer que é molde.
 CAMINHOS_QUE_SAO_MOLDE = {
     "AAAA": "molde de data em `arquivo/AAAA/MM/AAAAMMDD.md`",
-    "saida": "TEMPORÁRIO — sai na Task 6 da reestruturação, com a prosa",
-    "fontes": "TEMPORÁRIO — sai na Task 6 da reestruturação, com a prosa",
 }
 
 # Executáveis que o manual ensina e que não saem deste repositório: vêm de uma
@@ -82,11 +80,14 @@ EXECUTAVEIS_DE_TERCEIROS = {
 # apontam para outro lugar as pastas que o plantão usa por padrão, e mexer nelas
 # é ensaio ou teste — não é o plantão.
 BANDEIRAS_FORA_DO_MANUAL = {
-    "--saida": "as saídas do dia vão para `saida/`; apontar outra é reprocessar",
-    "--fontes": "os PDFs da manhã ficam em `fontes/`, na pasta do produto",
-    "--arquivo": "o comentário do dia anterior sai de `arquivo/`, onde o "
-                 "`enviado` o grava",
-    "--config": "a lista de ativos do painel é única — `config/painel.toml`",
+    "--saida": "as saídas do dia vão para `output/comentario_matinal/`; "
+               "apontar outra é reprocessar",
+    "--fontes": "os PDFs da manhã ficam em `input/comentario_matinal/`, na "
+                "raiz do repositório",
+    "--arquivo": "o comentário do dia anterior sai de "
+                 "`arquivo/comentario_matinal/`, onde o `enviado` o grava",
+    "--config": "a lista de ativos do painel é única — "
+                "`config/comentario_matinal/painel.toml`",
     "--template": "o documento sai do template da mesa; outro é ensaio de "
                   "formatação",
 }
@@ -283,13 +284,13 @@ def test_a_janela_citada_na_prosa_bate_com_o_codigo():
 def _pastas_conhecidas() -> set[str]:
     """As pastas que a documentação pode citar sem que o teste as chame de invento.
 
-    O disco não é o invariante. `saida/` e `fontes/` estão no `.gitignore` e só
+    O disco não é o invariante. `input/` e `output/` estão no `.gitignore` e só
     passam a existir depois da primeira coleta — um clone recém-feito não as
     tem. E é exatamente quem acabou de clonar, seguindo `02-instalacao.md` e
     rodando a suíte para conferir a instalação, quem um teste vermelho aqui
     mais confundiria: intermitente por construção, porque o próprio passo de
     instalação manda rodar `uv run matinal` de ensaio, e é esse comando que
-    cria `saida/`. Vermelho antes dele, verde depois.
+    cria `output/comentario_matinal/`. Vermelho antes dele, verde depois.
 
     O que vale é o que `config.py` declara como pasta padrão — essas existem
     por contrato, tenham sido criadas ou não — somado ao que de fato está na

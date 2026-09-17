@@ -1,6 +1,6 @@
 # comentario_matinal
 
-> **Vai rodar o plantão?** O manual é [`docs/plantao/`](plantao/) — instalação,
+> **Vai rodar o plantão?** O manual é [`docs/comentario_matinal/plantao/`](plantao/) — instalação,
 > os nove passos, o que é seu decidir e o que fazer quando algo quebra. Este arquivo
 > descreve o repositório para quem mexe no código.
 
@@ -19,55 +19,63 @@ Fora dessa janela o comando entende que a execução é ensaio e carimba as saí
 
 ## Estrutura
 
+O repositório reúne vários produtos, cada um espalhado por pasta de tipo na raiz do
+clone; não há mais uma pasta única de nome `comentario_matinal`. Só o que é do matinal:
+
 ```
-comentario_matinal/
-├── README.md                   este arquivo — o repositório para quem mexe no código
-├── docs/
-│   └── plantao/                o manual de quem roda o plantão
-│       ├── README.md           índice
-│       ├── 01-primeiro-dia.md  o produto, o tempo, as duas formas, a janela
-│       ├── 02-instalacao.md    uma vez por máquina
-│       ├── 03-runbook.md       os nove passos
-│       ├── 04-decisoes.md      o que é do autor decidir
+mkt_intelligence/
+├── docs/comentario_matinal/
+│   ├── README.md                 este arquivo — o repositório para quem mexe no código
+│   ├── AGENTS.md                 instruções para quem trabalha no código, humano ou não
+│   ├── CLAUDE.md                 atalho do Claude Code para o AGENTS.md
+│   └── plantao/                  o manual de quem roda o plantão
+│       ├── README.md             índice
+│       ├── 01-primeiro-dia.md    o produto, o tempo, as duas formas, a janela
+│       ├── 02-instalacao.md      uma vez por máquina
+│       ├── 03-runbook.md         os nove passos
+│       ├── 04-decisoes.md        o que é do autor decidir
 │       └── 05-quando-da-errado.md  os modos de falha e a saída de cada um
-├── prompts/
-│   ├── 00_guia_de_estilo.md    fonte única de convenções
-│   ├── 01_triagem.md           etapa 1 — seleção de temas
-│   ├── 02_redacao.md           etapa 2 — redação
-│   ├── 03_revisao.md           etapa 3 — revisão
-│   └── project_instructions.md o Project do Claude — caminho alternativo
-├── exemplos/                   material humano; nada em src/ lê estas pastas
-│   ├── aprovados/              casos a promover à seção 12 do guia
-│   └── rejeitados/             trechos rejeitados, com o motivo no cabeçalho
-├── arquivo/
-│   └── AAAA/MM/AAAAMMDD.md     comentários enviados — o nome é lido pelo comando
-├── src/comentario_matinal/     o comando `matinal`
-│   ├── config.py               leitura do painel.toml
-│   ├── dados.py                a coleta de mercado — uma só, para todas as saídas
-│   ├── calendario.py           calendário econômico e status de divulgação
-│   ├── janela.py               a janela 7h–9h, o fuso local e o dry run
-│   ├── texto.py                bloco direcional
-│   ├── fontes.py               PDFs das fontes → texto
-│   ├── modelo.py               a chamada ao modelo, atrás de uma função única
-│   ├── etapas.py               as três etapas de IA e o encadeamento
-│   ├── documento.py            montagem do .docx a partir do template
-│   ├── enviado.py              arquivamento do enviado e limpeza do dia
-│   ├── plantao.py              o plantão como funções — o núcleo das duas fachadas
-│   ├── cli.py                  fachada de terminal: o comando
-│   ├── wiki.py                 fora do plantão — publica `docs/plantao/` no Wiki
-│   └── render/                 painel, tabelas do calendário e o que elas precisam
-├── notebooks/
-│   ├── plantao.ipynb           fachada de notebook — as mesmas funções, em células
-│   └── imagens.ipynb           só o painel e o calendário, sem o bloco direcional
-├── fontes/                     PDFs do dia (fora do repositório)
-├── saida/                      saídas do dia (fora do repositório)
-├── config/
-│   └── painel.toml             lista canônica de ativos do painel
-├── templates/
-│   └── comentario.dotx         template do documento enviado
-├── pyproject.toml              dependências do comando
-└── uv.lock                     versões exatas — versionado de propósito
+├── prompts/comentario_matinal/
+│   ├── 00_guia_de_estilo.md      fonte única de convenções
+│   ├── 01_triagem.md             etapa 1 — seleção de temas
+│   ├── 02_redacao.md             etapa 2 — redação
+│   ├── 03_revisao.md             etapa 3 — revisão
+│   └── project_instructions.md   o Project do Claude — caminho alternativo
+├── exemplos/comentario_matinal/  material humano; nada em src/ lê estas pastas
+│   ├── aprovados/                casos a promover à seção 12 do guia
+│   └── rejeitados/               trechos rejeitados, com o motivo no cabeçalho
+├── arquivo/comentario_matinal/
+│   └── AAAA/MM/AAAAMMDD.md       comentários enviados — o nome é lido pelo comando
+├── src/comentario_matinal/       o comando `matinal`
+│   ├── config.py                 leitura do painel.toml e âncora de todo caminho (RAIZ)
+│   ├── dados.py                  a coleta de mercado — uma só, para todas as saídas
+│   ├── calendario.py             calendário econômico e status de divulgação
+│   ├── janela.py                 a janela 7h–9h, o fuso local e o dry run
+│   ├── texto.py                  bloco direcional
+│   ├── fontes.py                 PDFs das fontes → texto
+│   ├── modelo.py                 a chamada ao modelo, atrás de uma função única
+│   ├── etapas.py                 as três etapas de IA e o encadeamento
+│   ├── documento.py              montagem do .docx a partir do template
+│   ├── enviado.py                arquivamento do enviado e limpeza do dia
+│   ├── plantao.py                o plantão como funções — o núcleo das duas fachadas
+│   ├── cli.py                    fachada de terminal: o comando
+│   ├── wiki.py                   fora do plantão — publica `docs/comentario_matinal/plantao/` no Wiki
+│   └── render/                   painel, tabelas do calendário e o que elas precisam
+├── notebooks/comentario_matinal/
+│   ├── plantao.ipynb             fachada de notebook — as mesmas funções, em células
+│   └── imagens.ipynb             só o painel e o calendário, sem o bloco direcional
+├── tests/comentario_matinal/     o portão: `uv run pytest tests/comentario_matinal`
+├── config/comentario_matinal/
+│   └── painel.toml               lista canônica de ativos do painel
+├── templates/comentario_matinal/
+│   ├── comentario.dotx           template do documento enviado
+│   └── mercado_fechado.png       imagem de rodapé quando o mercado está fechado
+├── input/comentario_matinal/     PDFs do dia (fora do repositório)
+└── output/comentario_matinal/    saídas do dia (fora do repositório)
 ```
+
+`pyproject.toml` e `uv.lock` são únicos, na raiz do repositório, e servem os dois
+produtos do workspace — não há mais um par por produto.
 
 O formato de `arquivo/` é Markdown por decisão deliberada: o arquivo precisa ser
 pesquisável por texto e legível pelo comando. `arquivo/` guarda apenas o que o processo
@@ -108,7 +116,7 @@ errado numa célula, onde não há linha de comando na tela que o autor está ol
 ## Instalação
 
 Quem clona para desenvolver precisa exatamente do mesmo que o plantonista: está em
-[`docs/plantao/02-instalacao.md`](plantao/02-instalacao.md). Duas instruções de
+[`docs/comentario_matinal/plantao/02-instalacao.md`](plantao/02-instalacao.md). Duas instruções de
 instalação divergiriam, e a que envelhecesse seria justamente esta.
 
 ## As etapas de IA
