@@ -19,18 +19,19 @@ TZ_BR = ZoneInfo("America/Sao_Paulo")
 # O topo do repositório. É a única conta de níveis do pacote; o
 # `tests/test_caminhos.py` prende que nenhum outro módulo a repita.
 RAIZ = Path(__file__).resolve().parents[2]
+PRODUTO = "comentario_matinal"
 
-# Temporário: a pasta do produto some ao fim da reestruturação.
-_PRODUTO = RAIZ / "produtos" / "comentario_matinal"
+# Temporário: as duas pastas de trabalho ainda não foram para input/ e output/.
+_PRODUTO = RAIZ / "produtos" / PRODUTO
 
-CONFIG_PADRAO = _PRODUTO / "config" / "painel.toml"
+CONFIG_PADRAO = RAIZ / "config" / PRODUTO / "painel.toml"
 SAIDA_PADRAO = _PRODUTO / "saida"
-TEMPLATE_PADRAO = _PRODUTO / "templates" / "comentario.dotx"
-MERCADO_FECHADO = _PRODUTO / "templates" / "mercado_fechado.png"
+TEMPLATE_PADRAO = RAIZ / "templates" / PRODUTO / "comentario.dotx"
+MERCADO_FECHADO = RAIZ / "templates" / PRODUTO / "mercado_fechado.png"
 FONTES_PADRAO = _PRODUTO / "fontes"
-ARQUIVO_PADRAO = _PRODUTO / "arquivo"
-MANUAL = _PRODUTO / "docs" / "plantao"
-PROMPTS = _PRODUTO / "prompts"
+ARQUIVO_PADRAO = RAIZ / "arquivo" / PRODUTO
+MANUAL = RAIZ / "docs" / PRODUTO / "plantao"
+PROMPTS = RAIZ / "prompts" / PRODUTO
 GUIA_DE_ESTILO = PROMPTS / "00_guia_de_estilo.md"
 PROMPT_ETAPA = {
     "triagem": PROMPTS / "01_triagem.md",

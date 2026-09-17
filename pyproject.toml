@@ -67,7 +67,7 @@ explicit = true
 [tool.ruff]
 line-length = 100
 target-version = "py314"
-include = ["src/reports/**/*.py", "produtos/informes_eventos/tests/**/*.py"]
+include = ["src/reports/**/*.py", "tests/informes_eventos/**/*.py"]
 extend-exclude = ["*.ipynb", ".venv", "build", "dist"]
 
 [tool.ruff.lint]
@@ -76,13 +76,13 @@ ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401", "F403", "I001"]
-"**/tests/**/*.py" = ["F841"]
+"tests/**/*.py" = ["F841"]
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 
 [tool.pytest.ini_options]
-testpaths = ["produtos/comentario_matinal/tests", "produtos/informes_eventos/tests"]
+testpaths = ["tests"]
 # importlib: há test_modelo.py nas duas suítes, e sem ele os nomes colidem.
 addopts = "-ra --strict-markers --import-mode=importlib"

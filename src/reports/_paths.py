@@ -9,13 +9,14 @@ from pathlib import Path
 
 # src/reports/_paths.py → parents[2] é o topo do repositório.
 ROOT: Path = Path(__file__).resolve().parents[2]
+PRODUCT: str = "informes_eventos"
 
-# Temporário: a pasta do produto some ao fim da reestruturação.
-_PRODUCT: Path = ROOT / "produtos" / "informes_eventos"
+# Temporário: input/ e output/ ainda não foram para a raiz.
+_PRODUCT: Path = ROOT / "produtos" / PRODUCT
 
 INPUT: Path = _PRODUCT / "input"
 OUTPUT: Path = _PRODUCT / "output"
 # Documentos do Fed (committee_meeting_docs/) e planilhas de e-mail (email_info/).
 FED_DOCS: Path = Path(__file__).resolve().parent / "fomc" / "input"
-PROMPTS: Path = _PRODUCT / "prompts"
+PROMPTS: Path = ROOT / "prompts" / PRODUCT
 ENV_FILE: Path = _PRODUCT / "etc" / ".env"

@@ -12,22 +12,23 @@ from pathlib import Path
 
 import pytest
 
-RAIZ = Path(__file__).parent.parent
-MANUAL = RAIZ / "docs" / "plantao"
+from comentario_matinal.config import MANUAL, PRODUTO, RAIZ
+
+DOCS = RAIZ / "docs" / PRODUTO
 # Os dois arquivos de agente entram aqui pelo mesmo motivo que o README: são
 # lidos como verdade sobre este repositório, e ninguém os confere. Eram os
 # únicos documentos fora da aferição, e foi neles que sobreviveram uma contagem
 # de testes velha, uma norma de língua que o código contradizia e uma afirmação
 # sobre qual prompt cita qual seção do guia.
 DOCUMENTOS = sorted(MANUAL.glob("*.md")) + [
-    RAIZ / "README.md",
-    RAIZ / "AGENTS.md",
-    RAIZ / "CLAUDE.md",
+    DOCS / "README.md",
+    DOCS / "AGENTS.md",
+    DOCS / "CLAUDE.md",
 ]
 
 # O guia entra na aferição da janela porque o modelo o lê em toda etapa: uma
 # janela errada ali não confunde o leitor, confunde a triagem.
-GUIA = RAIZ / "prompts" / "00_guia_de_estilo.md"
+GUIA = RAIZ / "prompts" / PRODUTO / "00_guia_de_estilo.md"
 
 # Pares de horas que NÃO são a janela do plantão, com o motivo de cada um. Sem
 # esta lista o teste ficaria vermelho num documento correto; com ela, cada par
@@ -64,6 +65,8 @@ RE_CERCA = re.compile(r"^\s*(?:```|~~~)")
 # a dizer que é molde.
 CAMINHOS_QUE_SAO_MOLDE = {
     "AAAA": "molde de data em `arquivo/AAAA/MM/AAAAMMDD.md`",
+    "saida": "TEMPORÁRIO — sai na Task 6 da reestruturação, com a prosa",
+    "fontes": "TEMPORÁRIO — sai na Task 6 da reestruturação, com a prosa",
 }
 
 # Executáveis que o manual ensina e que não saem deste repositório: vêm de uma
@@ -125,9 +128,7 @@ def _executaveis_instalados() -> set[str]:
     lembrar deste arquivo, e entrada removida derruba na hora a página que
     seguia ensinando o comando.
     """
-    from comentario_matinal.config import RAIZ as TOPO
-
-    with (TOPO / "pyproject.toml").open("rb") as arquivo:
+    with (RAIZ / "pyproject.toml").open("rb") as arquivo:
         return set(tomllib.load(arquivo)["project"]["scripts"])
 
 
@@ -304,18 +305,14 @@ def _pastas_conhecidas() -> set[str]:
         TEMPLATE_PADRAO,
     )
 
-    declaradas = {
-        SAIDA_PADRAO.name,
-        FONTES_PADRAO.name,
-        ARQUIVO_PADRAO.name,
-        PROMPTS.name,
-        CONFIG_PADRAO.parent.name,
-        TEMPLATE_PADRAO.parent.name,
-    }
+    def _primeiro_nivel(caminho: Path) -> str:
+        return caminho.relative_to(RAIZ).parts[0]
+
+    declaradas = {_primeiro_nivel(c) for c in (
+        SAIDA_PADRAO, FONTES_PADRAO, ARQUIVO_PADRAO, PROMPTS,
+        CONFIG_PADRAO, TEMPLATE_PADRAO,
+    )}
     do_disco = {p.name for p in RAIZ.iterdir() if p.is_dir()}
-    # A reestruturação está levando as pastas do produto para a raiz do
-    # repositório, uma família por vez; até a última sair daqui, vale a soma.
-    do_disco |= {p.name for p in RAIZ.parent.parent.iterdir() if p.is_dir()}
     return declaradas | do_disco
 
 
@@ -335,7 +332,7 @@ def test_toda_pasta_citada_existe():
 
 def test_o_readme_aponta_para_o_manual():
     """O README é a porta do repositório; o runbook saiu dele."""
-    assert "docs/plantao/" in (RAIZ / "README.md").read_text(encoding="utf-8"), (
+    assert "plantao/" in (DOCS / "README.md").read_text(encoding="utf-8"), (
         "O README não aponta para o manual, e quem chega pelo repositório não "
         "acha o runbook."
     )

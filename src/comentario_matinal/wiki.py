@@ -1,6 +1,6 @@
 """Publica o manual do plantão no Wiki do GitHub.
 
-A fonte é `docs/plantao/`, que a suíte afere. O que sai daqui é cópia, e cada
+A fonte é `docs/comentario_matinal/plantao/`, que a suíte afere. O que sai daqui é cópia, e cada
 página diz isso e de qual commit veio: não há como aferir por teste uma cópia
 que mora noutro repositório git, então a honestidade fica no próprio texto,
 onde o leitor a encontra sem procurar.
@@ -26,7 +26,7 @@ URL_WIKI = "git@github.com:marc3lom/mkt_intelligence.wiki.git"
 DESTINO_PADRAO = RAIZ.parent / "mkt_intelligence.wiki"
 
 FAIXA = (
-    "> Gerado a partir de `docs/plantao/{origem}` no commit `{sha}`.\n"
+    "> Gerado a partir de `docs/comentario_matinal/plantao/{origem}` no commit `{sha}`.\n"
     "> Não editar aqui — a edição se perde na próxima publicação.\n\n"
 )
 
@@ -103,7 +103,7 @@ def _clona_ou_atualiza(destino: Path) -> None:
 
     Antes de a primeira página do wiki nascer pela interface do GitHub, o
     repositório não existe e o clone responde "repository not found" — ver a
-    seção do Wiki em `docs/plantao/02-instalacao.md`.
+    seção do Wiki em `docs/comentario_matinal/plantao/02-instalacao.md`.
     """
     if (destino / ".git").is_dir():
         subprocess.run(["git", "pull", "--ff-only"], cwd=destino, check=True)
@@ -116,7 +116,7 @@ def _clona_ou_atualiza(destino: Path) -> None:
         raise RuntimeError(
             "Não consegui clonar o Wiki. Se `mkt_intelligence.wiki.git` ainda "
             "não existe, crie a primeira página pela aba Wiki no GitHub — ver "
-            "a seção do Wiki em docs/plantao/02-instalacao.md."
+            "a seção do Wiki em docs/comentario_matinal/plantao/02-instalacao.md."
         ) from erro
 
 
@@ -137,7 +137,7 @@ def main() -> int:
     para, imprimindo o comando que falta.
     """
     analisador = argparse.ArgumentParser(
-        description="Publica o manual do plantão (docs/plantao/) no Wiki do GitHub."
+        description="Publica o manual do plantão (docs/comentario_matinal/plantao/) no Wiki do GitHub."
     )
     analisador.add_argument(
         "--sem-push", action="store_true",

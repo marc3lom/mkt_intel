@@ -1,6 +1,6 @@
 # comentario_matinal
 
-> **Vai rodar o plantão?** O manual é [`docs/plantao/`](docs/plantao/) — instalação,
+> **Vai rodar o plantão?** O manual é [`docs/plantao/`](plantao/) — instalação,
 > os nove passos, o que é seu decidir e o que fazer quando algo quebra. Este arquivo
 > descreve o repositório para quem mexe no código.
 
@@ -13,7 +13,7 @@ não deve variar com o autor nem com o horário em que o plantão começa. Este 
 existe para garantir isso.
 
 Fora dessa janela o comando entende que a execução é ensaio e carimba as saídas
-(ver [A janela e o dry run](docs/plantao/01-primeiro-dia.md#a-janela-e-o-dry-run)).
+(ver [A janela e o dry run](plantao/01-primeiro-dia.md#a-janela-e-o-dry-run)).
 
 ---
 
@@ -108,7 +108,7 @@ errado numa célula, onde não há linha de comando na tela que o autor está ol
 ## Instalação
 
 Quem clona para desenvolver precisa exatamente do mesmo que o plantonista: está em
-[`docs/plantao/02-instalacao.md`](docs/plantao/02-instalacao.md). Duas instruções de
+[`docs/plantao/02-instalacao.md`](plantao/02-instalacao.md). Duas instruções de
 instalação divergiriam, e a que envelhecesse seria justamente esta.
 
 ## As etapas de IA
@@ -139,7 +139,7 @@ nenhuma.
 - O bloco de auditoria nunca vai no e-mail.
 - Os PDFs das fontes não entram no repositório (ver `.gitignore`). A regra de uso da
   Bloomberg que sustenta isso está no
-  [Passo 1](docs/plantao/03-runbook.md#passo-1--coleta-t0), com quem manuseia os
+  [Passo 1](plantao/03-runbook.md#passo-1--coleta-t0), com quem manuseia os
   arquivos.
 - O acesso ao modelo está hoje em assinatura pessoal, tanto na CLI quanto no Project.
   Na migração para o ambiente corporativo, submeter o fluxo à governança de IA da

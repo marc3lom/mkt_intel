@@ -48,7 +48,7 @@ autenticação fica gravada na máquina e não se repete a cada plantão. Confer
 `claude --version`, e conferir que ele responde: `claude -p "responda ok"`.
 
 O acesso ao modelo está hoje em assinatura pessoal — ver as notas do
-[`README.md`](../../README.md) do produto sobre a migração para o ambiente corporativo.
+[`README.md`](../README.md) do produto sobre a migração para o ambiente corporativo.
 
 **5. O Word.** O Passo 7 monta um `.docx` a partir de `templates/comentario.dotx`, e é
 no Word que você insere o gráfico do dia — opcional, colado à mão, e nunca gerado pelo

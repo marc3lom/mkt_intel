@@ -68,7 +68,7 @@ Nenhuma das duas implementa o plantão. As duas são fachadas sobre
 `src/comentario_matinal/plantao.py` e chamam as mesmas funções, então não podem
 divergir no que fazem. A escolha entre elas é de conforto, não de resultado — e a
 sincronia das duas não depende de ninguém lembrar: um teste da suíte a prende, e o
-[`README.md`](../../README.md) do produto explica como.
+[`README.md`](../README.md) do produto explica como.
 
 Numa máquina sem licença BQL, `uv run matinal --sem-calendario` pula a consulta do
 calendário; no notebook o equivalente é o `SEM_CALENDARIO = True` da célula do

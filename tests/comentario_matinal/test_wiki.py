@@ -58,7 +58,7 @@ def test_nome_errado_e_pego_pelo_teste():
 
 def test_a_faixa_leva_a_origem_e_o_sha():
     texto = FAIXA.format(origem="03-runbook.md", sha="ec86860")
-    assert "docs/plantao/03-runbook.md" in texto
+    assert "docs/comentario_matinal/plantao/03-runbook.md" in texto
     assert "ec86860" in texto
     assert texto.startswith(">")
 
@@ -116,9 +116,9 @@ def test_link_para_ancora_da_propria_pagina_nao_e_tocado():
 
 
 def test_link_para_fora_do_manual_nao_e_tocado():
-    """`../../README.md` sai do manual e vai para a pasta do produto — não
+    """`../README.md` sai do manual e vai para a pasta do produto — não
     é página do wiki, e reescrevê-lo produziria um link que não existe ali."""
-    texto = "Ver [`README.md`](../../README.md) da pasta do produto."
+    texto = "Ver [`README.md`](../README.md) da pasta do produto."
     assert _reescreve_links(texto, _PAGINAS) == texto
 
 
@@ -165,7 +165,7 @@ def test_monta_escreve_as_seis_paginas_com_faixa_e_sha(tmp_path):
     }
     for caminho in escritas:
         conteudo = caminho.read_text(encoding="utf-8")
-        assert conteudo.startswith("> Gerado a partir de `docs/plantao/")
+        assert conteudo.startswith("> Gerado a partir de `docs/comentario_matinal/plantao/")
         assert sha in conteudo.splitlines()[0]
 
 
