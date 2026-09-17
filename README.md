@@ -6,20 +6,65 @@ material que vai à diretoria.
 
 ## Produtos
 
-| Produto | O que produz | Cadência | Pasta |
-|---|---|---|---|
-| Comentário Matinal | e-mail de abertura de mercado | diária, 7h–9h | `produtos/comentario_matinal/` |
-| Informes pós-evento | e-mails de inteligência após FOMC e payroll | por evento | `produtos/informes_eventos/` |
+| Produto | O que produz | Cadência | Pacote | Notebooks | Docs |
+|---|---|---|---|---|---|
+| Comentário Matinal | e-mail de abertura de mercado | diária, 7h–9h | `src/comentario_matinal` | `notebooks/comentario_matinal/` | `docs/comentario_matinal/` |
+| Informes pós-evento | e-mails de inteligência após FOMC e payroll | por evento | `src/reports` | `notebooks/informes_eventos/` | `docs/informes_eventos/` |
 
-Cada produto tem `pyproject.toml`, testes e `AGENTS.md` próprios, e é membro do
-workspace uv da raiz: um `uv.lock` e uma `.venv`, as duas na raiz. Instalar é
-`uv sync --all-packages` na raiz; o resto roda **de dentro da pasta do produto**. O manual de quem
-roda o plantão do matinal está em `produtos/comentario_matinal/docs/plantao/`.
+Um projeto uv só: um `pyproject.toml`, um `uv.lock` e uma `.venv`, os três na raiz.
+Instalar é `uv sync`, na raiz; tudo roda **da raiz**, inclusive `uv run jupyter lab`.
+Cada produto tem `AGENTS.md` próprio em `docs/<produto>/`, importado pelo `CLAUDE.md`
+da raiz. O manual de quem roda o plantão do matinal está em
+`docs/comentario_matinal/plantao/`.
+
+### Árvore-alvo
+
+```
+mkt_intelligence/
+├── pyproject.toml            # projeto único; índice da Bloomberg; ruff; pytest
+├── uv.lock  .python-version  .gitignore  .gitattributes
+├── AGENTS.md  CLAUDE.md  README.md
+├── .env.tpl                  # versionado: referências do 1Password
+├── .env                      # fora do git
+├── src/
+│   ├── comentario_matinal/
+│   └── reports/              # sem notebooks/ e sem input/ dentro
+├── notebooks/
+│   ├── comentario_matinal/   plantao.ipynb, imagens.ipynb
+│   └── informes_eventos/
+│       ├── fomc/             fomc_analysis.ipynb, market_reaction_grid.ipynb
+│       └── payroll/          payroll_analysis.ipynb, payroll_report.ipynb,
+│                             market_reaction_grid.ipynb
+├── tests/
+│   ├── comentario_matinal/   inclui referencia/*.png
+│   └── informes_eventos/     inclui conftest.py
+├── config/comentario_matinal/painel.toml
+├── prompts/{comentario_matinal,informes_eventos}/
+├── templates/comentario_matinal/   comentario.dotx, mercado_fechado.png
+├── arquivo/comentario_matinal/AAAA/MM/AAAAMMDD.md
+├── exemplos/comentario_matinal/{aprovados,rejeitados}/
+├── docs/
+│   ├── comentario_matinal/   AGENTS.md, CLAUDE.md, README.md, plantao/, superpowers/
+│   ├── informes_eventos/     AGENTS.md, README.md, historico-py-bcb.md, superpowers/
+│   └── superpowers/          specs e planos que valem para o repositório
+├── input/                    # fora do git, inteiro
+│   ├── comentario_matinal/   os PDFs do dia (a antiga fontes/)
+│   └── informes_eventos/
+│       ├── fomc/<AAAAMMDD>/  pasta do dia
+│       ├── fed/              documentos do Fed (hoje src/reports/fomc/input/)
+│       └── …                 grid1.xlsx, email_info/, payroll — como hoje
+└── output/                   # fora do git, inteiro
+    ├── comentario_matinal/   painel, calendário, etapas, .docx (a antiga saida/)
+    └── informes_eventos/     reports/fomc/<AAAAMMDD>/, payroll, fonts/
+```
+
+Dentro de `input/informes_eventos/` e `output/informes_eventos/` a estrutura interna
+é a de hoje; só o prefixo muda. A exceção é `fed/`, que sai de dentro do pacote.
 
 ## Um produto novo
 
-1. Informe pós-evento de mesma natureza (CPI, BCE, Copom…) → subpacote de `reports` em `produtos/informes_eventos/`.
-2. Produto de outra natureza → pasta nova `produtos/<nome>/`, com `uv init`, `.python-version` 3.14, `pyproject.toml`, `tests/`, `AGENTS.md` e `CLAUDE.md` com `@AGENTS.md`. O `members = ["produtos/*"]` da raiz o adota sozinho, e o índice da Bloomberg já está lá.
-3. Dados de trabalho e segredos ficam fora do git: `.gitignore` do produto com `input/`, `output/`, `saida/` ou o que couber.
-4. Linha nova na tabela acima.
-5. Um `produtos/_comum/` só nasce quando um terceiro produto precisar do mesmo código.
+1. Informe pós-evento de mesma natureza (CPI, BCE, Copom…) → subpacote de `src/reports/`, notebooks em `notebooks/informes_eventos/<evento>/`.
+2. Produto de outra natureza → pacote novo em `src/<nome>/`, acrescentado a `module-name` no `pyproject.toml`, com um módulo único de caminhos e o teste de âncora correspondente; subpasta `<nome>/` em `notebooks/`, `tests/`, `docs/` (com `AGENTS.md`, importado pelo `CLAUDE.md` da raiz) e no que mais usar.
+3. Dados de trabalho em `input/<nome>/` e `output/<nome>/`, que já estão fora do git. Segredo no `.env` da raiz.
+4. O pacote novo não importa os outros: acrescentar a direção nova a `tests/informes_eventos/test_independence.py`.
+5. Linha nova na tabela acima.

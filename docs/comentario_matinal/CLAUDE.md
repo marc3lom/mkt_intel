@@ -9,7 +9,7 @@ Este arquivo orienta o Claude Code (claude.ai/code) ao trabalhar neste repositó
 É ele que reúne as regras deste repositório: o ambiente (uv apenas, Python ≥3.14,
 Bloomberg no Windows), a tabela de comandos, o encadeamento dos quatro prompts, os
 invariantes editoriais, a disciplina de checagem factual, o contrato de montagem do
-Word, o que não se toca e o acordo de trabalho. O `tests/test_documentacao.py` afere
+Word, o que não se toca e o acordo de trabalho. O `tests/comentario_matinal/test_documentacao.py` afere
 dos dois o que é verificável — caminhos, pastas, subcomandos, bandeiras, a janela, as
 seções do guia citadas, a contagem de testes —, mas a prosa continua sendo
 responsabilidade de quem escreve. Por isso o conteúdo dele não é repetido aqui: duas
@@ -23,8 +23,8 @@ o `AGENTS.md` não detalha.
 `uv run pytest` é o portão inteiro — 186 testes, ~7 s, sem Bloomberg e sem rede.
 Enquanto se itera, dá para estreitar:
 
-- Um arquivo: `uv run pytest tests/test_temas.py -q`
-- Um teste: `uv run pytest tests/test_documentacao.py::test_o_readme_aponta_para_o_manual -q`
+- Um arquivo: `uv run pytest tests/comentario_matinal/test_temas.py -q`
+- Um teste: `uv run pytest tests/comentario_matinal/test_documentacao.py::test_o_readme_aponta_para_o_manual -q`
 - Por nome, na suíte toda: `uv run pytest -q -k notebook`
 - Ver a falha inteira: acrescentar `-x -vv`
 

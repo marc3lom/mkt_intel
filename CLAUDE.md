@@ -2,5 +2,7 @@
 
 @AGENTS.md
 
-Ao trabalhar num produto, o `CLAUDE.md` e o `AGENTS.md` da pasta dele valem junto
-com estes, e prevalecem no que for específico.
+As regras de cada produto valem junto com estas, e prevalecem no que for específico:
+
+@docs/comentario_matinal/CLAUDE.md
+@docs/informes_eventos/AGENTS.md

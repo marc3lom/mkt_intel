@@ -75,7 +75,7 @@ mkt_intelligence/
 ```
 
 `pyproject.toml` e `uv.lock` são únicos, na raiz do repositório, e servem os dois
-produtos do workspace — não há mais um par por produto.
+produtos — não há mais um par por produto.
 
 O formato de `arquivo/` é Markdown por decisão deliberada: o arquivo precisa ser
 pesquisável por texto e legível pelo comando. `arquivo/` guarda apenas o que o processo
@@ -88,15 +88,15 @@ padrão que o comando lê.
 ## As duas fachadas, e o que as prende
 
 O plantão roda de duas formas — `uv run matinal`, no terminal, e
-`notebooks/plantao.ipynb`. Nenhuma das duas o implementa: as duas são fachadas sobre
+`notebooks/comentario_matinal/plantao.ipynb`. Nenhuma das duas o implementa: as duas são fachadas sobre
 `src/comentario_matinal/plantao.py` e chamam as mesmas funções, então não podem
 divergir no que fazem. O que poderia divergir é a **sequência** — ela existe duas
-vezes, no argparse e nas células —, e é isso que `tests/test_notebook.py` prende:
+vezes, no argparse e nas células —, e é isso que `tests/comentario_matinal/test_notebook.py` prende:
 passo novo no núcleo, subcomando novo no terminal ou célula fora da ordem de
 `plantao.PASSOS` derrubam o teste até que o notebook seja atualizado junto.
 
 Há um caminho mais curto, com as duas fachadas também: `uv run matinal imagens` e
-`notebooks/imagens.ipynb` param depois do painel e do calendário, sem montar o bloco
+`notebooks/comentario_matinal/imagens.ipynb` param depois do painel e do calendário, sem montar o bloco
 direcional. Serve a quem quer só as imagens da manhã e escreve o texto por fora — era o
 que o repositório `daily` fazia, e ele foi aposentado quando este caminho nasceu. O
 ponto de parada é o que as duas fachadas não podem divergir, e é o que o teste prende.

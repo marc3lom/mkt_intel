@@ -6,12 +6,12 @@ Instruções para você mesmo. Erro de fato chega à diretoria de um banco centr
 
 Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, Banco Central do Brasil): um comentário de abertura de mercado escrito e enviado por e-mail entre 7h00 e 9h00, no fuso da máquina. Leitores: a diretoria colegiada do BCB, a alta administração institucional, os chefes de gabinete dos diretores, os chefes de unidade, a chefia do DEPIN. Autores: os gestores da divisão, em rodízio — o produto tem de ser indistinguível entre eles, e é essa invariância que justifica o repositório.
 
-**Tudo aqui é em português**: os prompts, o `docs/plantao/`, o arquivo, o comentário gerado — e também o código. Os identificadores são portugueses (`ErroDePlantao`, `SemTemas`, `coleta_mercado`), e os comentários também: são 329 linhas de comentário em `src/`, e nenhuma em inglês. Escrever em inglês aqui é divergir do repositório. A única exceção é o vocabulário editorial que o guia manda preservar em inglês e itálico (§9.1) — esse nunca se traduz.
+**Tudo aqui é em português**: os prompts, o `docs/comentario_matinal/plantao/`, o arquivo, o comentário gerado — e também o código. Os identificadores são portugueses (`ErroDePlantao`, `SemTemas`, `coleta_mercado`), e os comentários também: são 329 linhas de comentário em `src/`, e nenhuma em inglês. Escrever em inglês aqui é divergir do repositório. A única exceção é o vocabulário editorial que o guia manda preservar em inglês e itálico (§9.1) — esse nunca se traduz.
 
 ## 2. Ambiente
 
 - **Só uv.** Nunca `pip install`. Dependência entra com `uv add`, execução é `uv run`. O `uv.lock` é versionado de propósito — não colocar no gitignore. O piso do Python é **3.14**.
-- **Bloomberg**: `xbbg` e `blpapi` exigem Windows com o terminal aberto e logado. O `blpapi` não está no PyPI; vem do índice explícito da Bloomberg, declarado no `pyproject.toml` da raiz do workspace — num workspace o uv só respeita o do raiz —, e por isso o `uv sync` precisa de rede até ele.
+- **Bloomberg**: `xbbg` e `blpapi` exigem Windows com o terminal aberto e logado. O `blpapi` não está no PyPI; vem do índice explícito da Bloomberg, declarado no `pyproject.toml` da raiz, e por isso o `uv sync` precisa de rede até ele.
 - Instalação: `uv sync` na raiz do repositório e depois `uv run nbstripout --install` (o filtro de saída dos notebooks, ligado pelo `.gitattributes`).
 - Template: `templates/comentario_matinal/comentario.dotx` (`TEMPLATE_PADRAO` no `config.py`; todo caminho do repositório deriva do `RAIZ`, que está lá).
 - A única variável de ambiente que o código lê é `COMENTARIO_MATINAL_BACKEND` (padrão `claude-code`). As etapas de IA chamam o executável `claude`, que precisa estar no PATH.
@@ -43,7 +43,7 @@ Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, 
 
 **Não existe portão de lint.** O `ruff` não é declarado nem configurado; hoje `uvx ruff check .` acusa 38 erros e `uvx ruff format --check .` diz que 30 arquivos seriam reformatados. Não "consertar" isso de passagem, e não acrescentar etapa de lint sem pedido. O portão é o `pytest`.
 
-O `tests/test_documentacao.py` prende o `docs/plantao/*.md`, o `README.md` e também este arquivo e o `CLAUDE.md` contra o código — flags, subcomandos, a janela, nomes de pasta, âncoras, as seções do guia que a prosa cita e a contagem de testes anunciada aqui em cima. **O que ele não afere é a prosa**: um invariante editorial resumido errado, uma norma inventada, um motivo que deixou de valer — nada disso fica vermelho. Conferir à mão o que for julgamento; a máquina só cuida do que é verificável.
+O `tests/comentario_matinal/test_documentacao.py` prende o `docs/comentario_matinal/plantao/*.md`, o `README.md` e também este arquivo e o `CLAUDE.md` contra o código — flags, subcomandos, a janela, nomes de pasta, âncoras, as seções do guia que a prosa cita e a contagem de testes anunciada aqui em cima. **O que ele não afere é a prosa**: um invariante editorial resumido errado, uma norma inventada, um motivo que deixou de valer — nada disso fica vermelho. Conferir à mão o que for julgamento; a máquina só cuida do que é verificável.
 
 ## 4. Arquitetura do pipeline
 
@@ -60,7 +60,7 @@ O `prompts/project_instructions.md` é o caminho alternativo, pelo Project do Cl
 
 **Os prompts são a fonte de verdade do comportamento editorial.** Para mudar como o texto lê, editar o guia de estilo — e o prompt da etapa só se a mecânica da etapa mudar. Nunca fixar decisão de estilo no Python. Os dois lugares em que o Python carrega um número de estilo (`MIN_MARCADORES, MAX_MARCADORES = 4, 5`, no `documento.py`; a mesma faixa em `etapas.comentario_revisado`) espelham as §3–§4 do guia: mudar o guia obriga a mudar os dois, ou a montagem passa a avisar contra a regra nova.
 
-O `plantao.py` é o núcleo; o `cli.py` e o `notebooks/plantao.ipynb` são fachadas e não implementam nada. Regra nova vai no núcleo, que nunca diz o que digitar em seguida: ele nomeia o que falta como um código (`REMEDIOS`), e cada fachada escreve a frase. O `tests/test_notebook.py` falha se um passo ou um parâmetro de passo for acrescentado sem ser exercitado no notebook ou listado ali com o motivo escrito.
+O `plantao.py` é o núcleo; o `cli.py` e o `notebooks/comentario_matinal/plantao.ipynb` são fachadas e não implementam nada. Regra nova vai no núcleo, que nunca diz o que digitar em seguida: ele nomeia o que falta como um código (`REMEDIOS`), e cada fachada escreve a frase. O `tests/comentario_matinal/test_notebook.py` falha se um passo ou um parâmetro de passo for acrescentado sem ser exercitado no notebook ou listado ali com o motivo escrito.
 
 ## 5. Invariantes editoriais
 
@@ -127,8 +127,8 @@ Os `[Parágrafo N]` não usados são apagados junto com o espaçador; um sexto m
 - **Nunca comitar nem empurrar sem que peçam.** Quando pedirem, comitar direto na `main` — este repositório não cria ramo para trabalho de rotina. Mostrar o diff e a mensagem e esperar antes de empurrar. Nunca resolver por conta própria uma divergência entre local e remoto: apontá-la e perguntar.
 - Estilo de commit, tirado do `git log`: português, terceira pessoa do presente, uma linha de até 72 caracteres, sem prefixo nem escopo, sem ponto final ("Arquiva o comentário de 18 de agosto"; "Fecha a última lacuna do manual: a convenção de assunto"). O corpo é prosa portuguesa explicando *por quê*, muitas vezes em vários parágrafos. Manter os trailers `Co-Authored-By:` e `Claude-Session:` — o histórico os usa.
 - **Quando o guia de estilo e o código discordarem, o guia vence — e você para e aponta o conflito, em vez de reconciliar em silêncio.** Vale igual quando uma instrução contradiz o guia: dizer antes de agir.
-- Acrescentar passo ou parâmetro de passo ao `plantao.py` obriga a atualizar o `notebooks/plantao.ipynb`, ou a pôr o parâmetro na lista de exceções do `tests/test_notebook.py` *com o motivo escrito*. O teste avisa.
-- Mexer em `docs/plantao/` ou no `README.md` obriga a rodar `uv run pytest` — os testes de documentação conferem flags, pastas, âncoras e a janela contra o código.
+- Acrescentar passo ou parâmetro de passo ao `plantao.py` obriga a atualizar o `notebooks/comentario_matinal/plantao.ipynb`, ou a pôr o parâmetro na lista de exceções do `tests/comentario_matinal/test_notebook.py` *com o motivo escrito*. O teste avisa.
+- Mexer em `docs/comentario_matinal/plantao/` ou no `README.md` obriga a rodar `uv run pytest` — os testes de documentação conferem flags, pastas, âncoras e a janela contra o código.
 
 ## Questões em aberto
 

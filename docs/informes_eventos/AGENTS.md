@@ -15,7 +15,7 @@ Tudo roda da raiz do repositório.
 | Lint | `uv run ruff check .` e `uv run ruff format --check .` |
 | Notebooks (a interface) | `uv run jupyter notebook` |
 
-- pandas 3 e numpy 2.5, as mesmas versões do comentário matinal: o workspace resolve um lock só, e os dois produtos andam juntos. O teto `<3` herdado do py-bcb caiu em 15/09, aferido pela caracterização antes de sair.
+- pandas 3 e numpy 2.5, as mesmas versões do comentário matinal: o projeto resolve um lock só, e os dois produtos andam juntos. O teto `<3` herdado do py-bcb caiu em 15/09, aferido pela caracterização antes de sair.
 - `is_bloomberg_available()` não existe aqui; chamada real à Bloomberg só com Windows e o terminal logado.
 - A chave do FRED (fallback do payroll) é lida de `.env`, gerado do `.env.tpl` com `op inject -i .env.tpl -o .env`.
 
