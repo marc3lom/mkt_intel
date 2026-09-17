@@ -9,7 +9,6 @@ import re
 from pathlib import Path
 
 import comentario_matinal
-
 import reports
 from reports import _paths
 

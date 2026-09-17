@@ -7,8 +7,8 @@ a pasta por uma temporária. `tests/test_paths.py` prende o arranjo.
 
 from pathlib import Path
 
-# src/reports/_paths.py dentro de produtos/informes_eventos → parents[4] é o topo.
-ROOT: Path = Path(__file__).resolve().parents[4]
+# src/reports/_paths.py → parents[2] é o topo do repositório.
+ROOT: Path = Path(__file__).resolve().parents[2]
 
 # Temporário: a pasta do produto some ao fim da reestruturação.
 _PRODUCT: Path = ROOT / "produtos" / "informes_eventos"

@@ -41,8 +41,8 @@ build-backend = "uv_build"
 
 # Dois pacotes, um projeto. Um não importa o outro: tests/…/test_independence.py.
 [tool.uv.build-backend]
-module-root = "produtos/comentario_matinal/src"
-module-name = "comentario_matinal"
+module-root = "src"
+module-name = ["comentario_matinal", "reports"]
 
 [dependency-groups]
 dev = [
@@ -67,15 +67,8 @@ explicit = true
 [tool.ruff]
 line-length = 100
 target-version = "py314"
-include = ["produtos/informes_eventos/src/**/*.py", "produtos/informes_eventos/tests/**/*.py"]
+include = ["src/reports/**/*.py", "produtos/informes_eventos/tests/**/*.py"]
 extend-exclude = ["*.ipynb", ".venv", "build", "dist"]
-# Sem isto o ruff, rodado da raiz, deixa de reconhecer `reports` como
-# first-party e a regra I reordena os imports. Não acrescentar aqui o `src`
-# do comentário matinal: isso tornaria `comentario_matinal` first-party
-# também, e a regra I fundiria os dois blocos de import em
-# tests/test_independence.py, que os separa de propósito (um é a fronteira
-# entre os dois pacotes).
-src = ["produtos/informes_eventos/src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
@@ -93,4 +86,3 @@ indent-style = "space"
 testpaths = ["produtos/comentario_matinal/tests", "produtos/informes_eventos/tests"]
 # importlib: há test_modelo.py nas duas suítes, e sem ele os nomes colidem.
 addopts = "-ra --strict-markers --import-mode=importlib"
-pythonpath = ["produtos/informes_eventos/src"]

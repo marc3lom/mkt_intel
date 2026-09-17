@@ -272,7 +272,7 @@ class TestMarkedText:
 
 
 class TestFomcNotebook:
-    NB = Path(__file__).resolve().parents[1] / "src/reports/fomc/notebooks/fomc_analysis.ipynb"
+    NB = Path(__file__).resolve().parents[3] / "src/reports/fomc/notebooks/fomc_analysis.ipynb"
 
     def _sources(self) -> list[str]:
         nb = json.loads(self.NB.read_text(encoding="utf-8"))
