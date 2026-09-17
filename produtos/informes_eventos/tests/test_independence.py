@@ -14,9 +14,8 @@ from reports import _paths
 
 REPORTS = Path(reports.__file__).resolve().parent
 MATINAL = Path(comentario_matinal.__file__).resolve().parent
-# Os notebooks do informes ainda moram dentro do pacote.
-REPORTS_NOTEBOOKS = REPORTS
-MATINAL_NOTEBOOKS = _paths.ROOT / "produtos" / "comentario_matinal" / "notebooks"
+REPORTS_NOTEBOOKS = _paths.ROOT / "notebooks" / "informes_eventos"
+MATINAL_NOTEBOOKS = _paths.ROOT / "notebooks" / "comentario_matinal"
 
 
 def _offenders(files: list[Path], module: str) -> list[str]:

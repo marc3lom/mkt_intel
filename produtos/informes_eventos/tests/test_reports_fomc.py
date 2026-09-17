@@ -5,13 +5,13 @@ mkt_intelligence; lá, os mesmos testes provam que a mudança de casa não mudou
 """
 
 import json
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import pytest
 from docx import Document
 
+from reports import _paths
 from reports.fomc.core import word_export
 from reports.fomc.core.calculations import calculate_surprise, classify_change_direction
 from reports.fomc.core.data_loader import _TZ_BRT, _TZ_ET, is_sep_meeting
@@ -272,7 +272,7 @@ class TestMarkedText:
 
 
 class TestFomcNotebook:
-    NB = Path(__file__).resolve().parents[3] / "src/reports/fomc/notebooks/fomc_analysis.ipynb"
+    NB = _paths.ROOT / "notebooks" / "informes_eventos" / "fomc" / "fomc_analysis.ipynb"
 
     def _sources(self) -> list[str]:
         nb = json.loads(self.NB.read_text(encoding="utf-8"))

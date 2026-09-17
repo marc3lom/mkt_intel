@@ -11,9 +11,10 @@ from pathlib import Path
 import pytest
 
 from comentario_matinal import cli as _cli
+from comentario_matinal.config import RAIZ
 
-RAIZ = Path(__file__).parent.parent
-NOTEBOOK = RAIZ / "notebooks" / "plantao.ipynb"
+NOTEBOOKS = RAIZ / "notebooks" / "comentario_matinal"
+NOTEBOOK = NOTEBOOKS / "plantao.ipynb"
 CLI = Path(_cli.__file__)
 
 # O fechamento do plantão fica fora do notebook de propósito: apaga fontes/ e
@@ -244,7 +245,7 @@ def test_o_notebook_das_imagens_para_onde_o_subcomando_para():
     """
     import json
 
-    caminho = RAIZ / "notebooks" / "imagens.ipynb"
+    caminho = NOTEBOOKS / "imagens.ipynb"
     assert caminho.is_file(), (
         "O `uv run matinal imagens` existe no terminal e está sem fachada de "
         "notebook. Ou o notebook nasce, ou o subcomando sai."
@@ -323,11 +324,10 @@ def _notebook_no_indice():
     import nbformat
 
     try:
-        # `:./caminho`, não `:caminho`: o produto mora numa subpasta do
-        # repositório, e o `:caminho` puro do git resolve a partir do topo do
-        # repositório, não do cwd — aqui apontaria para fora de `RAIZ`.
+        # `:caminho` resolve a partir do topo do repositório, que é onde os
+        # notebooks moram agora.
         bruto = subprocess.run(
-            ["git", "show", ":./notebooks/plantao.ipynb"],
+            ["git", "show", ":notebooks/comentario_matinal/plantao.ipynb"],
             capture_output=True, cwd=RAIZ, check=True,
         ).stdout.decode("utf-8")
     except (OSError, subprocess.CalledProcessError) as e:
@@ -343,8 +343,8 @@ def test_notebook_comitado_nao_carrega_saida():
         f"As células {sujas} carregam saída de execução. Comitar assim leva dados "
         "de mercado — e possivelmente o texto do comentário antes de ele ter sido "
         "enviado — para o histórico do git. Rodar `uv run nbstripout "
-        "notebooks/plantao.ipynb`, ou instalar o filtro com `uv run nbstripout "
-        "--install`."
+        "notebooks/comentario_matinal/plantao.ipynb`, ou instalar o filtro com "
+        "`uv run nbstripout --install`."
     )
 
 

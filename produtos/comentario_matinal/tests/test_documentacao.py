@@ -313,10 +313,9 @@ def _pastas_conhecidas() -> set[str]:
         TEMPLATE_PADRAO.parent.name,
     }
     do_disco = {p.name for p in RAIZ.iterdir() if p.is_dir()}
-    # Task 3 da reestruturação moveu o pacote para `<raiz do repo>/src`: a
-    # pasta citada pelos documentos não é mais filha de RAIZ (a do produto).
-    if (RAIZ.parent.parent / "src").is_dir():
-        do_disco.add("src")
+    # A reestruturação está levando as pastas do produto para a raiz do
+    # repositório, uma família por vez; até a última sair daqui, vale a soma.
+    do_disco |= {p.name for p in RAIZ.parent.parent.iterdir() if p.is_dir()}
     return declaradas | do_disco
 
 
