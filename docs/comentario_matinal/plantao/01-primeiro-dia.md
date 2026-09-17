@@ -20,7 +20,7 @@ da diretoria no WhatsApp, e ninguém mais na divisão tem acesso a esse grupo. O
 O leitor é a diretoria do Banco Central. O comentário é descritivo e impessoal: ele
 relata o que os mercados fizeram e o que as fontes atribuíram a esse movimento, sem
 posição institucional e sem previsão. As convenções todas estão em
-`prompts/00_guia_de_estilo.md`, que é a fonte única — o comando o injeta em toda etapa
+`prompts/comentario_matinal/00_guia_de_estilo.md`, que é a fonte única — o comando o injeta em toda etapa
 de IA, e é por isso que você não precisa conhecê-lo de cor para produzir texto que o
 respeite.
 
@@ -59,7 +59,7 @@ se delega.
 ## As duas formas de rodar
 
 O [runbook](03-runbook.md) é contado no terminal, com `uv run matinal`.
-`notebooks/plantao.ipynb`
+`notebooks/comentario_matinal/plantao.ipynb`
 é a outra forma, com os mesmos passos em células: quem prefere ver o painel e as
 tabelas na própria página, ou quer inspecionar o `DataFrame` que virou o bloco
 direcional, roda por lá.

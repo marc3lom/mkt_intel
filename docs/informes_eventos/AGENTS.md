@@ -22,7 +22,7 @@ Tudo roda da raiz do repositório.
 ## Código
 
 - Identificadores, mensagens de log e de erro em inglês; docstrings, comentários, rótulos de gráfico e commits em pt-BR. Docstrings antigas em inglês ficam como estão.
-- `src/reports/_bloomberg.py` e `src/reports/_style.py` são cópias do `py-bcb`. Nunca importar `classes.*` — `tests/test_independence.py` falha.
+- `src/reports/_bloomberg.py` e `src/reports/_style.py` são cópias do `py-bcb`. Nunca importar `classes.*` — `tests/informes_eventos/test_independence.py` falha.
 - Todo caminho sai de `src/reports/_paths.py`: `input/informes_eventos/`, `output/informes_eventos/`, `.env` na raiz, e `input/informes_eventos/fed/` para os documentos do Fed. `tests/informes_eventos/test_paths.py` prende isso.
 - xbbg 1.x: `abdib` aceita um ticker por chamada e devolve o horário (UTC) numa **coluna** `time`; chamadas sync travam no Jupyter — usar sempre `_run_async`.
 - Fusos: horários do FOMC e do payroll são âncoras em ET (`America/New_York`); exibição em `America/Sao_Paulo`; tirar o fuso só imediatamente antes de plotar.
@@ -41,7 +41,7 @@ Tudo roda da raiz do repositório.
 Resumo, comentários dos bancos e revisão de coerência são etapas de modelo em
 `fomc/core/drafting.py`, disparadas por células do `fomc_analysis.ipynb`. O backend é
 `src/reports/_modelo.py`, **cópia** do `modelo.py` do comentário matinal — nunca
-importar `comentario_matinal`; `tests/test_independence.py` falha.
+importar `comentario_matinal`; `tests/informes_eventos/test_independence.py` falha.
 
 - Chama `claude -p --safe-mode` sem ferramentas, mensagem pela stdin, autenticação
   pela sessão do Claude Code; `ANTHROPIC_API_KEY` sai do ambiente do subprocesso.

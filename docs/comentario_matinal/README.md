@@ -131,7 +131,8 @@ qualquer backend — um lê PDF anexo, outro não.
 
 ## Os exemplos
 
-`exemplos/aprovados/` e `exemplos/rejeitados/` são material de trabalho humano, **não
+`exemplos/comentario_matinal/aprovados/` e `exemplos/comentario_matinal/rejeitados/`
+são material de trabalho humano, **não
 insumo do comando**: nada em `src/` lê essas pastas. Elas guardam os casos brutos —
 comentários que a chefia destacou, trechos rejeitados com o motivo no cabeçalho — até
 que alguém os transforme em exemplo anotado na seção 12 do guia de estilo. É a seção

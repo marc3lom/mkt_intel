@@ -17,7 +17,7 @@ Cada produto tem `AGENTS.md` próprio em `docs/<produto>/`, importado pelo `CLAU
 da raiz. O manual de quem roda o plantão do matinal está em
 `docs/comentario_matinal/plantao/`.
 
-### Árvore-alvo
+### Estrutura
 
 ```
 mkt_intelligence/
@@ -48,18 +48,18 @@ mkt_intelligence/
 │   ├── informes_eventos/     AGENTS.md, README.md, historico-py-bcb.md, superpowers/
 │   └── superpowers/          specs e planos que valem para o repositório
 ├── input/                    # fora do git, inteiro
-│   ├── comentario_matinal/   os PDFs do dia (a antiga fontes/)
+│   ├── comentario_matinal/   os PDFs do dia
 │   └── informes_eventos/
 │       ├── fomc/<AAAAMMDD>/  pasta do dia
-│       ├── fed/              documentos do Fed (hoje src/reports/fomc/input/)
-│       └── …                 grid1.xlsx, email_info/, payroll — como hoje
+│       ├── fed/              documentos do Fed
+│       └── …                 grid1.xlsx, email_info/, payroll, entre outros
 └── output/                   # fora do git, inteiro
-    ├── comentario_matinal/   painel, calendário, etapas, .docx (a antiga saida/)
+    ├── comentario_matinal/   painel, calendário, etapas, .docx
     └── informes_eventos/     reports/fomc/<AAAAMMDD>/, payroll, fonts/
 ```
 
-Dentro de `input/informes_eventos/` e `output/informes_eventos/` a estrutura interna
-é a de hoje; só o prefixo muda. A exceção é `fed/`, que sai de dentro do pacote.
+Dentro de `input/informes_eventos/` cada evento tem sua pasta. A exceção é `fed/`:
+documentos do Fed sem data de evento, fora do pacote `src/reports/`.
 
 ## Um produto novo
 

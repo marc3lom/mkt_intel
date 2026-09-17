@@ -20,7 +20,8 @@ o `AGENTS.md` não detalha.
 
 ## Escolher quais testes rodar
 
-`uv run pytest` é o portão inteiro — 186 testes, ~7 s, sem Bloomberg e sem rede.
+`uv run pytest tests/comentario_matinal` é o portão do matinal — 186 testes, ~7 s,
+sem Bloomberg e sem rede. O portão do repositório inteiro é `uv run pytest`, na raiz.
 Enquanto se itera, dá para estreitar:
 
 - Um arquivo: `uv run pytest tests/comentario_matinal/test_temas.py -q`
@@ -28,7 +29,8 @@ Enquanto se itera, dá para estreitar:
 - Por nome, na suíte toda: `uv run pytest -q -k notebook`
 - Ver a falha inteira: acrescentar `-x -vv`
 
-Terminar sempre pelo `uv run pytest` sem filtro, e citar o resultado. Nunca verificar
+Terminar sempre pelo `uv run pytest` sem filtro, na raiz — o portão do repositório
+inteiro. Nunca verificar
 uma alteração rodando `uv run matinal`: toda entrada do pipeline ou chama a Bloomberg,
 ou grava arquivo de verdade, ou — no caso do `enviado` — destrói o trabalho do dia.
 

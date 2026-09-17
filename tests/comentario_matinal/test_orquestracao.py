@@ -121,7 +121,7 @@ def test_imagens_para_nas_duas_imagens(bloomberg_falsa, monkeypatch, tmp_path):
 
     O bloco direcional existe para as etapas de IA: é dele que a revisão tira a
     direção de cada ativo para cobrar acordo com o texto. Quem não vai rodar
-    etapa alguma não o quer, e gerá-lo assim mesmo deixaria em `saida/` um
+    etapa alguma não o quer, e gerá-lo assim mesmo deixaria em `output/comentario_matinal/` um
     arquivo que ninguém escreveu e ninguém lê.
     """
     from comentario_matinal.cli import main

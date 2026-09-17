@@ -6,7 +6,7 @@ lê numa manhã em que algo já saiu do trilho, e nenhum estava preso por teste 
 quem mexer nisto depois não terá os fixtures daquela comparação. Estes prendem.
 
 Nenhum destes testes toca o Bloomberg: as três etapas de IA consomem material já
-gravado em `saida/`, e a chamada ao modelo entra como dublê.
+gravado em `output/comentario_matinal/`, e a chamada ao modelo entra como dublê.
 """
 
 from dataclasses import dataclass

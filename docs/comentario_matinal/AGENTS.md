@@ -49,14 +49,14 @@ O `tests/comentario_matinal/test_documentacao.py` prende o `docs/comentario_mati
 
 Quatro prompts, montados na mensagem do modelo pelo `etapas.py`. O guia de estilo entra na mensagem de **todas** as etapas, à frente do prompt da etapa.
 
-1. `prompts/00_guia_de_estilo.md` — fonte única das convenções editoriais. A versão está no cabeçalho (**1.4 — 17/08/2026**). Nenhum código a lê e nenhum teste a afere; subir a versão é trabalho manual, ao mudar o guia.
-2. `prompts/01_triagem.md` — etapa 1. Inventaria e ordena os temas candidatos numa tabela numerada, marca status temporal e alertas. Não produz prosa nenhuma; termina esperando o autor.
-3. `prompts/02_redacao.md` — etapa 2. Escreve o comentário a partir dos temas que o autor escolheu, mais um bloco de auditoria que não vai ao e-mail.
-4. `prompts/03_revisao.md` — etapa 3. Checa os fatos, depois cobra a conformidade dura, depois sugere mudanças editoriais — nessa ordem.
+1. `prompts/comentario_matinal/00_guia_de_estilo.md` — fonte única das convenções editoriais. A versão está no cabeçalho (**1.4 — 17/08/2026**). Nenhum código a lê e nenhum teste a afere; subir a versão é trabalho manual, ao mudar o guia.
+2. `prompts/comentario_matinal/01_triagem.md` — etapa 1. Inventaria e ordena os temas candidatos numa tabela numerada, marca status temporal e alertas. Não produz prosa nenhuma; termina esperando o autor.
+3. `prompts/comentario_matinal/02_redacao.md` — etapa 2. Escreve o comentário a partir dos temas que o autor escolheu, mais um bloco de auditoria que não vai ao e-mail.
+4. `prompts/comentario_matinal/03_revisao.md` — etapa 3. Checa os fatos, depois cobra a conformidade dura, depois sugere mudanças editoriais — nessa ordem.
 
 A ordem é `triagem` → **decisão humana** → `redacao` → `revisao`. O passo humano não é opcional: `redacao` sem `--temas*` levanta `SemTemas` de propósito. As etapas se encadeiam por arquivos em `output/comentario_matinal/`: a seção C da triagem vira os alertas da redação; o texto da redação mais a auditoria vão à revisão; o bloco cercado da revisão vira o `comentario_AAAAMMDD.md`, que é o que o `--comentario` monta.
 
-O `prompts/project_instructions.md` é o caminho alternativo, pelo Project do Claude, e não faz parte da CLI.
+O `prompts/comentario_matinal/project_instructions.md` é o caminho alternativo, pelo Project do Claude, e não faz parte da CLI.
 
 **Os prompts são a fonte de verdade do comportamento editorial.** Para mudar como o texto lê, editar o guia de estilo — e o prompt da etapa só se a mecânica da etapa mudar. Nunca fixar decisão de estilo no Python. Os dois lugares em que o Python carrega um número de estilo (`MIN_MARCADORES, MAX_MARCADORES = 4, 5`, no `documento.py`; a mesma faixa em `etapas.comentario_revisado`) espelham as §3–§4 do guia: mudar o guia obriga a mudar os dois, ou a montagem passa a avisar contra a regra nova.
 
@@ -116,7 +116,7 @@ Os `[Parágrafo N]` não usados são apagados junto com o espaçador; um sexto m
 - **`*.pdf`, `*.docx`** — fora do git em qualquer lugar. O artefato versionado é o `.md`.
 - **`.env`, `.env.*`, credenciais** — fora do git. Hoje nenhum código deste produto lê `.env`; não acrescentar sem perguntar.
 - **`arquivo/comentario_matinal/AAAA/MM/AAAAMMDD.md`** — os comentários enviados, registro institucional, escritos só pelo `matinal enviado`. Nunca editar à mão e nunca renomear: o nome do arquivo *é* a data de envio, e é ele que a busca pelo dia anterior lê.
-- **`exemplos/aprovados/`, `exemplos/rejeitados/`** — material humano de trabalho; nada em `src/` os lê. Só influenciam a saída quando alguém promove um caso à §12 do guia, à mão.
+- **`exemplos/comentario_matinal/aprovados/`, `exemplos/comentario_matinal/rejeitados/`** — material humano de trabalho; nada em `src/` os lê. Só influenciam a saída quando alguém promove um caso à §12 do guia, à mão.
 - Nunca colar conteúdo de fonte, número do painel ou minuta do comentário em mensagem de commit, issue, ou qualquer coisa que saia da máquina. O repositório é privado e guarda material que vai à diretoria.
 
 ## 10. Acordo de trabalho
@@ -132,7 +132,7 @@ Os `[Parágrafo N]` não usados são apagados junto com o espaçador; um sexto m
 
 ## Questões em aberto
 
-- **O `prompts/03_revisao.md` v1.0 é anterior ao guia v1.4.** Os três prompts de etapa são de 14/08/2026; o guia é de 17/08/2026 e ganhou a §7.3 depois deles. O prompt da revisão cita a §7.3, então parece intencional, mas nada prende essa relação — e os prompts da triagem e da redação não a citam. As versões dos prompts deveriam acompanhar as do guia?
+- **O `prompts/comentario_matinal/03_revisao.md` v1.0 é anterior ao guia v1.4.** Os três prompts de etapa são de 14/08/2026; o guia é de 17/08/2026 e ganhou a §7.3 depois deles. O prompt da revisão cita a §7.3, então parece intencional, mas nada prende essa relação — e os prompts da triagem e da redação não a citam. As versões dos prompts deveriam acompanhar as do guia?
 - **A §12.7, "Exemplo positivo", segue "Pendente"**, então a §12 só tem exemplos negativos, cada um no formato citação *Rejeitado* → **Motivo** → citação *Corrigido*. Um exemplo positivo deveria entrar antes da próxima revisão do guia, e quem julga que um comentário qualifica?
-- **`exemplos/aprovados/` e `exemplos/rejeitados/` estão vazios** (só `.gitkeep`). O caminho de promoção à §12 está em uso, ou a §12 é mantida diretamente?
+- **`exemplos/comentario_matinal/aprovados/` e `exemplos/comentario_matinal/rejeitados/` estão vazios** (só `.gitkeep`). O caminho de promoção à §12 está em uso, ou a §12 é mantida diretamente?
 - **Não há configuração de lint.** O `ruff` deveria virar dependência de desenvolvimento, com configuração e uma linha de base limpa, ou a ausência é deliberada?

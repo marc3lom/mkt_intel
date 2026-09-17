@@ -101,7 +101,7 @@ Três comandos:
 O passo 2 vale por clone, e é o que impede que um notebook executado leve para o
 commit os dados de mercado e o texto do comentário — possivelmente antes de ele ter
 sido enviado. O filtro tira as saídas no `git add`, sem tocar no arquivo aberto na
-tela. Sem ele nada avisa na hora: quem percebe é o `tests/test_notebook.py`, que
+tela. Sem ele nada avisa na hora: quem percebe é o `tests/comentario_matinal/test_notebook.py`, que
 existe como rede para o clone em que o passo foi esquecido.
 
 O `uv sync` cria a `.venv` — uma só, na raiz, para todos os produtos — e instala tudo,
@@ -152,7 +152,7 @@ falha desta lista.
 
 ## Manter o guia de estilo
 
-Sempre que uma convenção mudar, editar `prompts/00_guia_de_estilo.md` e comitar. O
+Sempre que uma convenção mudar, editar `prompts/comentario_matinal/00_guia_de_estilo.md` e comitar. O
 comando lê o arquivo do disco a cada execução, então a mudança vale no plantão
 seguinte, sem mais nenhum passo. Quem usa o Project precisa substituir o arquivo lá
 também. Não editar convenções nos prompts de etapa — eles apenas referenciam o guia.
@@ -178,7 +178,7 @@ são exatamente os mesmos; o que o comando evita é o trabalho de anexar os arqu
 o risco de anexar a versão errada.
 
 Para montá-lo: criar um Project chamado "Comentário Matinal — DEPIN/DIRIN", colar
-`prompts/project_instructions.md` nas instruções e anexar ao conhecimento os quatro
+`prompts/comentario_matinal/project_instructions.md` nas instruções e anexar ao conhecimento os quatro
 arquivos de `prompts/`. Escrever `etapa 1`, `etapa 2` ou `etapa 3`, com o horário de
 redação e o material do dia anexo.
 

@@ -70,7 +70,10 @@ def _get_fred_client() -> Any:
 
     api_key = os.getenv("FRED_API_KEY")
     if api_key is None:
-        raise ValueError("FRED API key not found. Set FRED_API_KEY in etc/.env")
+        raise ValueError(
+            "FRED API key not found. Set FRED_API_KEY in .env at the repository root "
+            "(op inject -i .env.tpl -o .env)"
+        )
     return Fred(api_key=api_key)
 
 

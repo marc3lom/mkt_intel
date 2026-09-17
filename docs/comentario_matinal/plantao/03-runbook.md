@@ -4,7 +4,7 @@ Os nove passos, contados no terminal, mais [o envio](#o-envio) — que não tem 
 porque nenhuma linha de código participa dele, e que fica entre o Passo 8 e o Passo 9.
 O quanto cada um demora e por que o roteiro é
 contado em tempo relativo estão em [O primeiro dia](01-primeiro-dia.md#quanto-tempo-leva);
-o que muda ao rodar por `notebooks/plantao.ipynb` está em
+o que muda ao rodar por `notebooks/comentario_matinal/plantao.ipynb` está em
 [As duas formas de rodar](01-primeiro-dia.md#as-duas-formas-de-rodar).
 
 ## Passo 1 — Coleta (T0)
@@ -42,7 +42,7 @@ Uma execução, uma consulta de mercado, quatro arquivos em `output/comentario_m
 | `calendario_AAAAMMDD.md` | o mesmo calendário em texto, idem |
 
 Quem quer **só as duas imagens** — porque vai escrever o texto por fora, sem as etapas
-de IA — roda `uv run matinal imagens`, ou o `notebooks/imagens.ipynb`. Sai o mesmo painel
+de IA — roda `uv run matinal imagens`, ou o `notebooks/comentario_matinal/imagens.ipynb`. Sai o mesmo painel
 e o mesmo calendário, e não sai o bloco direcional, que só serve de insumo às etapas.
 Não é o caminho do plantão: o comentário que vai à diretoria nasce do `uv run matinal`.
 

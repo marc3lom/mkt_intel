@@ -10,6 +10,11 @@ painel.txt
 # (arquivo/AAAA/MM/AAAAMMDD.md); o .docx é subproduto de envio e não gera diff útil.
 *.docx
 
+# Planilhas de e-mail e o grid do FOMC: dado de trabalho, moram em input/, mas a
+# barreira por extensão vale em qualquer pasta.
+*.xlsx
+*.xlsm
+
 # --- Segredos e configuração local -------------------------------------------
 .env
 .env.*
