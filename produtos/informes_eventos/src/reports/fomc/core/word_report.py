@@ -17,6 +17,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 
+from reports import _paths
+
 logger = logging.getLogger(__name__)
 
 # === Constantes ===
@@ -658,7 +660,7 @@ def generate_fomc_report(
 
     # === SALVAR ===
     if output_path is None:
-        output_dir = Path("output/reports/fomc")
+        output_dir = _paths.OUTPUT / "reports" / "fomc"
         output_dir.mkdir(parents=True, exist_ok=True)
         date_clean = meeting_date.replace("-", "")
         output_path = output_dir / f"Mesa de Investimentos - FOMC_{date_clean}.docx"

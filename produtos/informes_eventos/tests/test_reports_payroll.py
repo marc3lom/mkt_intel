@@ -4,8 +4,6 @@ Fixam o comportamento atual antes de o pacote migrar para o repositório
 mkt_intelligence. Nenhum toca Bloomberg, FRED ou BLS.
 """
 
-from pathlib import Path
-
 import pandas as pd
 import pytest
 from docx import Document
@@ -104,8 +102,9 @@ class TestGeneratePayrollReport:
 
 
 class TestProjectRootAnchors:
-    def test_env_path_is_project_etc(self):
-        """A chave do FRED é lida de <raiz do projeto>/etc/.env."""
-        env = Path(data_loader._env_path).resolve()
-        assert env.parent.name == "etc"
-        assert (env.parent.parent / "pyproject.toml").is_file()
+    def test_env_file_comes_from_paths(self):
+        """A chave do FRED é lida do arquivo que `_paths` aponta."""
+        from reports import _paths
+
+        assert _paths.ENV_FILE.name == ".env"
+        assert not hasattr(data_loader, "_env_path")

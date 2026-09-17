@@ -12,11 +12,12 @@ import matplotlib.pyplot as plt
 from fontTools.ttLib import TTFont
 from matplotlib import font_manager
 
+from reports import _paths
+
 DPI: int = 96  # Resolução padrão de tela (para impressão usar 150-300)
 FIGSIZE: tuple[float, float] = (19.2, 8)
 FONT: str = "calibri"
-# src/reports/_style.py → parents[2] é a raiz do produto, como era a do py-bcb
-FONT_CACHE_DIR: Path = Path(__file__).resolve().parents[2] / "output" / "fonts"
+FONT_CACHE_DIR: Path = _paths.OUTPUT / "fonts"
 LOCALE_BR: str = "pt_BR.UTF-8"
 
 DEFAULT_STYLE: dict[str, Any] = {

@@ -16,14 +16,21 @@ from comentario_matinal.render.ativos import ItemDaGrade
 
 TZ_BR = ZoneInfo("America/Sao_Paulo")
 
-RAIZ = Path(__file__).resolve().parent.parent.parent
-CONFIG_PADRAO = RAIZ / "config" / "painel.toml"
-SAIDA_PADRAO = RAIZ / "saida"
-TEMPLATE_PADRAO = RAIZ / "templates" / "comentario.dotx"
-MERCADO_FECHADO = RAIZ / "templates" / "mercado_fechado.png"
-FONTES_PADRAO = RAIZ / "fontes"
-ARQUIVO_PADRAO = RAIZ / "arquivo"
-PROMPTS = RAIZ / "prompts"
+# O topo do repositório. É a única conta de níveis do pacote; o
+# `tests/test_caminhos.py` prende que nenhum outro módulo a repita.
+RAIZ = Path(__file__).resolve().parents[4]
+
+# Temporário: a pasta do produto some ao fim da reestruturação.
+_PRODUTO = RAIZ / "produtos" / "comentario_matinal"
+
+CONFIG_PADRAO = _PRODUTO / "config" / "painel.toml"
+SAIDA_PADRAO = _PRODUTO / "saida"
+TEMPLATE_PADRAO = _PRODUTO / "templates" / "comentario.dotx"
+MERCADO_FECHADO = _PRODUTO / "templates" / "mercado_fechado.png"
+FONTES_PADRAO = _PRODUTO / "fontes"
+ARQUIVO_PADRAO = _PRODUTO / "arquivo"
+MANUAL = _PRODUTO / "docs" / "plantao"
+PROMPTS = _PRODUTO / "prompts"
 GUIA_DE_ESTILO = PROMPTS / "00_guia_de_estilo.md"
 PROMPT_ETAPA = {
     "triagem": PROMPTS / "01_triagem.md",

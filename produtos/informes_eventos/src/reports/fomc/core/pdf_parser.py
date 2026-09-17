@@ -574,9 +574,9 @@ def _parse_minutes_text(text: str) -> dict[str, Any]:
 
 def get_projection_dates() -> list[str]:
     """Get list of meeting dates that have projection tables."""
-    from .data_loader import _get_module_path
+    from reports import _paths
 
-    docs_path = _get_module_path() / "input" / "committee_meeting_docs"
+    docs_path = _paths.FED_DOCS / "committee_meeting_docs"
 
     if not docs_path.exists():
         return []

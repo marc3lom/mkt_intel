@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 from docx import Document
 
-from reports.fomc.core import data_loader, word_export
+from reports.fomc.core import word_export
 from reports.fomc.core.calculations import calculate_surprise, classify_change_direction
 from reports.fomc.core.data_loader import _TZ_BRT, _TZ_ET, is_sep_meeting
 from reports.fomc.core.pdf_parser import (
@@ -219,29 +219,19 @@ class TestCreateMarketReactionGrid:
 
 
 class TestProjectRootAnchors:
-    """input/, output/ e etc/ se ancoram na raiz do projeto — a que tem o pyproject.toml.
+    """Quem acha pasta é `reports._paths`; `tests/test_paths.py` o afere."""
 
-    A migração só é neutra se a raiz do produto novo repetir esse arranjo.
-    """
+    def test_word_export_writes_under_output(self, monkeypatch, tmp_path):
+        from reports import _paths
 
-    def test_word_export_root_has_pyproject(self):
-        """output/reports/fomc nasce na raiz do projeto."""
-        assert (word_export._get_project_root() / "pyproject.toml").is_file()
+        monkeypatch.setattr(_paths, "OUTPUT", tmp_path)
+        assert word_export.get_word_export_path("x.png") == tmp_path / "reports" / "fomc" / "x.png"
 
-    def test_grid1_anchor_is_project_root(self):
-        """O grid1.xlsx é procurado em <raiz>/input/."""
-        assert (Path(data_loader.__file__).parents[4] / "pyproject.toml").is_file()
-
-    def test_module_path_is_fomc_package(self):
-        """Os documentos do Fed moram em <pacote fomc>/input/."""
-        assert data_loader._get_module_path().name == "fomc"
-
-    def test_drafting_root_and_prompts(self):
-        """As etapas de modelo se ancoram na raiz e os quatro prompts existem."""
+    def test_drafting_prompts_come_from_paths(self):
+        from reports import _paths
         from reports.fomc.core import drafting
 
-        assert (drafting.PROJECT_ROOT / "pyproject.toml").is_file()
-        assert drafting.PROMPTS_DIR == drafting.PROJECT_ROOT / "prompts"
+        assert drafting.PROMPTS_DIR == _paths.PROMPTS
 
 
 class TestMarkedText:

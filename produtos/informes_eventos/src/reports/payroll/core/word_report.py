@@ -15,6 +15,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Inches, Pt, RGBColor
 
+from reports import _paths
+
 from .calculations import MESES_PTBR_FULL
 
 # === Document styling constants ===
@@ -186,7 +188,7 @@ def generate_payroll_report(
         Path to the generated .docx file.
     """
     if output_dir is None:
-        output_dir = Path("output/reports/payroll")
+        output_dir = _paths.OUTPUT / "reports" / "payroll"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     release_date_clean = release_date.replace("-", "")

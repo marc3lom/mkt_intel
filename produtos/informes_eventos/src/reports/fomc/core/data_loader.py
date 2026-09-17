@@ -14,6 +14,8 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
+from reports import _paths
+
 # Fusos usados na reação de mercado intraday
 _TZ_ET = ZoneInfo("America/New_York")  # horários do FOMC são fixos em ET
 _TZ_BRT = ZoneInfo("America/Sao_Paulo")  # fuso de exibição (Brasília)
@@ -101,18 +103,13 @@ def _get_bloomberg_client() -> Any:
         raise RuntimeError("Bloomberg (xbbg) not available. Install with: uv add xbbg")
 
 
-def _get_module_path() -> Path:
-    """Get the path to the fomc module root."""
-    return Path(__file__).parent.parent
-
-
 def get_fomc_dates() -> list[str]:
     """Get list of all available FOMC meeting dates from local documents.
 
     Returns:
         List of meeting dates in YYYYMMDD format, sorted descending.
     """
-    docs_path = _get_module_path() / "input" / "committee_meeting_docs"
+    docs_path = _paths.FED_DOCS / "committee_meeting_docs"
 
     if not docs_path.exists():
         logger.warning(f"Committee docs folder not found: {docs_path}")
@@ -142,7 +139,7 @@ def get_meeting_documents(date: str) -> dict[str, Path | None]:
     Returns:
         Dictionary mapping document types to file paths (or None if missing).
     """
-    docs_path = _get_module_path() / "input" / "committee_meeting_docs"
+    docs_path = _paths.FED_DOCS / "committee_meeting_docs"
 
     documents: dict[str, Path | None] = {
         "statement": None,
@@ -300,7 +297,7 @@ def load_sep_data(sheet_name: str | None = None) -> pd.DataFrame:
     Raises:
         RuntimeError: If SEP file not found or parsing fails.
     """
-    sep_path = _get_module_path() / "input" / "email_info" / "SEP.xlsx"
+    sep_path = _paths.FED_DOCS / "email_info" / "SEP.xlsx"
 
     if not sep_path.exists():
         raise RuntimeError(f"SEP file not found: {sep_path}")
@@ -423,7 +420,7 @@ def load_market_reaction_data(sheet_name: str = "Market Reaction") -> pd.DataFra
     Raises:
         RuntimeError: If file not found or parsing fails.
     """
-    file_path = _get_module_path() / "input" / "email_info" / "Market_Reaction_FOMC.xlsm"
+    file_path = _paths.FED_DOCS / "email_info" / "Market_Reaction_FOMC.xlsm"
 
     if not file_path.exists():
         raise RuntimeError(f"Market reaction file not found: {file_path}")
@@ -515,7 +512,7 @@ def load_dots_snapshot(
     """
     if grid_path is None:
         # Tentar caminho padrão do projeto
-        grid_path = Path(__file__).parents[4] / "input" / "grid1.xlsx"
+        grid_path = _paths.INPUT / "grid1.xlsx"
 
     grid_path = Path(grid_path)
     if not grid_path.exists():
@@ -588,7 +585,7 @@ def save_sep_to_excel(
     """
     import openpyxl
 
-    sep_path = _get_module_path() / "input" / "email_info" / "SEP.xlsx"
+    sep_path = _paths.FED_DOCS / "email_info" / "SEP.xlsx"
 
     # Calcular nome da sheet: "mar 26"
     meeting_dt = dt.datetime.strptime(meeting_date, "%Y%m%d")

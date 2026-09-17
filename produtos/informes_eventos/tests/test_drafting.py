@@ -7,7 +7,7 @@ import time
 import pandas as pd
 import pytest
 
-from reports import _modelo
+from reports import _modelo, _paths
 from reports.fomc.core import drafting
 from reports.fomc.core.data_loader import _TZ_BRT
 from reports.fomc.core.drafting import (
@@ -40,13 +40,10 @@ from reports.fomc.core.drafting import (
 
 class TestDayFolders:
     def test_day_and_output_folders_anchor_on_project_root(self):
-        assert (
-            drafting.day_folder("20260916") == drafting.PROJECT_ROOT / "input" / "fomc" / "20260916"
-        )
-        assert (drafting.PROJECT_ROOT / "pyproject.toml").is_file()
+        assert drafting.day_folder("20260916") == _paths.INPUT / "fomc" / "20260916"
 
     def test_output_folder_is_created(self, monkeypatch, tmp_path):
-        monkeypatch.setattr(drafting, "PROJECT_ROOT", tmp_path)
+        monkeypatch.setattr(_paths, "OUTPUT", tmp_path / "output")
         out = drafting.output_folder("20260916")
         assert out == tmp_path / "output" / "reports" / "fomc" / "20260916"
         assert out.is_dir()
@@ -364,7 +361,7 @@ def _inputs(is_sep=True) -> MeetingInputs:
 
 @pytest.fixture
 def out(tmp_path, monkeypatch):
-    monkeypatch.setattr(drafting, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(_paths, "OUTPUT", tmp_path / "output")
     return tmp_path / "output" / "reports" / "fomc" / "20260916"
 
 

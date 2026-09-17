@@ -13,6 +13,8 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from reports import _paths
+
 logger = logging.getLogger(__name__)
 
 # Fuso de exibição do grid intraday (horário de Brasília)
@@ -53,12 +55,6 @@ WORD_TICK_SIZE: int = 10
 WORD_LEGEND_SIZE: int = 10
 
 
-def _get_project_root() -> Path:
-    """Get the path to the project root (py-bcb)."""
-    # Navigate from src/reports/fomc/core/ to project root
-    return Path(__file__).parent.parent.parent.parent.parent
-
-
 def get_word_export_path(filename: str) -> Path:
     """Get the output path for Word-optimized exports.
 
@@ -68,8 +64,7 @@ def get_word_export_path(filename: str) -> Path:
     Returns:
         Full path in the output directory (output/reports/fomc/).
     """
-    # Seguir convenção CLAUDE.md: outputs em output/ na raiz do projeto
-    output_dir = _get_project_root() / "output" / "reports" / "fomc"
+    output_dir = _paths.OUTPUT / "reports" / "fomc"
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir / filename
 

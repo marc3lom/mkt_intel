@@ -15,11 +15,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from reports import _modelo
+from reports import _modelo, _paths
 
-# Raiz do produto: a pasta com o pyproject.toml. TestProjectRootAnchors prende.
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-PROMPTS_DIR = PROJECT_ROOT / "prompts"
+# Nome de módulo, e não leitura direta de `_paths`: os testes o trocam.
+PROMPTS_DIR = _paths.PROMPTS
 
 STYLE_GUIDE = "00_guia_de_estilo.md"
 PROMPT_SUMMARY = "01_resumo.md"
@@ -57,13 +56,13 @@ class BankSource:
 
 
 def day_folder(meeting_date: str) -> Path:
-    """<raiz>/input/fomc/<AAAAMMDD>: headlines.txt, coletiva.txt, bancos/."""
-    return PROJECT_ROOT / "input" / "fomc" / meeting_date
+    """<input>/fomc/<AAAAMMDD>: headlines.txt, coletiva.txt, bancos/."""
+    return _paths.INPUT / "fomc" / meeting_date
 
 
 def output_folder(meeting_date: str) -> Path:
-    """<raiz>/output/reports/fomc/<AAAAMMDD>, criada se não existir."""
-    folder = PROJECT_ROOT / "output" / "reports" / "fomc" / meeting_date
+    """<output>/reports/fomc/<AAAAMMDD>, criada se não existir."""
+    folder = _paths.OUTPUT / "reports" / "fomc" / meeting_date
     folder.mkdir(parents=True, exist_ok=True)
     return folder
 

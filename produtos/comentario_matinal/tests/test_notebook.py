@@ -10,9 +10,11 @@ from pathlib import Path
 
 import pytest
 
+from comentario_matinal import cli as _cli
+
 RAIZ = Path(__file__).parent.parent
 NOTEBOOK = RAIZ / "notebooks" / "plantao.ipynb"
-CLI = RAIZ / "src" / "comentario_matinal" / "cli.py"
+CLI = Path(_cli.__file__)
 
 # O fechamento do plantão fica fora do notebook de propósito: apaga fontes/ e
 # saida/, grava o arquivo que a triagem de amanhã lê, e notebook é onde se

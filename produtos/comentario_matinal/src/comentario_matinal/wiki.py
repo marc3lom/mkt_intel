@@ -13,8 +13,7 @@ import re
 import subprocess
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parent.parent.parent
-MANUAL = RAIZ / "docs" / "plantao"
+from comentario_matinal.config import MANUAL, RAIZ
 
 # O endereço de verdade. Fica num nome de módulo, e não dentro de main(), para
 # que um teste possa trocá-lo por um `git init --bare` descartável sem tocar
@@ -23,9 +22,8 @@ MANUAL = RAIZ / "docs" / "plantao"
 URL_WIKI = "git@github.com:marc3lom/mkt_intelligence.wiki.git"
 
 # O clone do wiki fica ao lado do repositório, nunca dentro: é outro repositório
-# git. `RAIZ` é a pasta do produto, `produtos/comentario_matinal`; o topo do
-# repositório está dois níveis acima, e o clone vai para a pasta que o contém.
-DESTINO_PADRAO = RAIZ.parents[1].parent / "mkt_intelligence.wiki"
+# git. `RAIZ` é o topo deste; o clone vai para a pasta que o contém.
+DESTINO_PADRAO = RAIZ.parent / "mkt_intelligence.wiki"
 
 FAIXA = (
     "> Gerado a partir de `docs/plantao/{origem}` no commit `{sha}`.\n"

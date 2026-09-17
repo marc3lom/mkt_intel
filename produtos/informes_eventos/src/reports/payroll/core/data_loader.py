@@ -14,11 +14,12 @@ from typing import Any
 import pandas as pd
 from dotenv import load_dotenv
 
+from reports import _paths
+
 logger = logging.getLogger(__name__)
 
-# Load environment variables from etc/.env
-_env_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "etc", ".env")
-load_dotenv(_env_path)
+# A chave do FRED; o endereço do arquivo é de `_paths`.
+load_dotenv(_paths.ENV_FILE)
 
 # Bloomberg tickers for payroll indicators
 PAYROLL_TICKERS: dict[str, str] = {

@@ -11,6 +11,8 @@ from pathlib import Path
 
 import requests
 
+from reports import _paths
+
 logger = logging.getLogger(__name__)
 
 # Federal Reserve FOMC calendar URL
@@ -37,11 +39,6 @@ DOCUMENT_TYPES = {
     "projections": "fomcprojtabl",
     "presser": "presconf",
 }
-
-
-def _get_module_path() -> Path:
-    """Get the path to the fomc module root."""
-    return Path(__file__).parent.parent
 
 
 def fetch_calendar_page() -> str:
@@ -136,7 +133,7 @@ def download_document(
         RuntimeError: If download fails.
     """
     if output_path is None:
-        output_path = _get_module_path() / "input" / "committee_meeting_docs"
+        output_path = _paths.FED_DOCS / "committee_meeting_docs"
 
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -184,7 +181,7 @@ def fetch_latest_documents(
         doc_types = list(DOCUMENT_TYPES.keys())
 
     available = get_available_documents()
-    local_path = _get_module_path() / "input" / "committee_meeting_docs"
+    local_path = _paths.FED_DOCS / "committee_meeting_docs"
 
     results: dict[str, Path | None] = {}
 
@@ -223,7 +220,7 @@ def check_for_updates() -> dict[str, bool]:
         Dictionary mapping document types to whether new docs are available.
     """
     available = get_available_documents()
-    local_path = _get_module_path() / "input" / "committee_meeting_docs"
+    local_path = _paths.FED_DOCS / "committee_meeting_docs"
 
     updates: dict[str, bool] = {}
 
@@ -249,7 +246,7 @@ def sync_all_documents(since_date: str = "20200101") -> dict[str, int]:
         Dictionary with count of documents downloaded per type.
     """
     available = get_available_documents()
-    local_path = _get_module_path() / "input" / "committee_meeting_docs"
+    local_path = _paths.FED_DOCS / "committee_meeting_docs"
 
     counts: dict[str, int] = {}
 
