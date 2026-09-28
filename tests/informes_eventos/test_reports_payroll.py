@@ -102,9 +102,20 @@ class TestGeneratePayrollReport:
 
 
 class TestProjectRootAnchors:
-    def test_env_file_comes_from_paths(self):
-        """A chave do FRED é lida do arquivo que `_paths` aponta."""
-        from reports import _paths
+    def test_fred_key_comes_from_1password(self, monkeypatch):
+        """A chave do FRED vem de `get_secret`, não de um `.env` em disco."""
+        from reports import _onepassword_env
 
-        assert _paths.ENV_FILE.name == ".env"
+        monkeypatch.delenv("FRED_API_KEY", raising=False)
+
+        async def fake_fetch():
+            return {"FRED_API_KEY": "abc123"}
+
+        monkeypatch.setattr(_onepassword_env, "_fetch_variables", fake_fetch)
+        _onepassword_env.environment_variables.cache_clear()
+        try:
+            client = data_loader._get_fred_client()
+        finally:
+            _onepassword_env.environment_variables.cache_clear()
+        assert client.api_key == "abc123"
         assert not hasattr(data_loader, "_env_path")

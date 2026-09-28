@@ -24,7 +24,6 @@ mkt_intelligence/
 ├── pyproject.toml            # projeto único; índice da Bloomberg; ruff; pytest
 ├── uv.lock  .python-version  .gitignore  .gitattributes
 ├── AGENTS.md  CLAUDE.md  README.md
-├── .env.tpl                  # versionado: referências do 1Password
 ├── .env                      # fora do git
 ├── src/
 │   ├── comentario_matinal/

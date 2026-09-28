@@ -8,18 +8,13 @@ unemployment rate, wage data, U6, and JOLTS.
 
 import datetime as dt
 import logging
-import os
 from typing import Any
 
 import pandas as pd
-from dotenv import load_dotenv
 
-from reports import _paths
+from reports._onepassword_env import get_secret
 
 logger = logging.getLogger(__name__)
-
-# A chave do FRED; o endereço do arquivo é de `_paths`.
-load_dotenv(_paths.ENV_FILE)
 
 # Bloomberg tickers for payroll indicators
 PAYROLL_TICKERS: dict[str, str] = {
@@ -68,11 +63,12 @@ def _get_fred_client() -> Any:
     """Get FRED API client."""
     from fredapi import Fred
 
-    api_key = os.getenv("FRED_API_KEY")
+    # Resolvida só aqui, na hora do uso: importar o módulo não toca o 1Password.
+    api_key = get_secret("FRED_API_KEY")
     if api_key is None:
         raise ValueError(
-            "FRED API key not found. Set FRED_API_KEY in .env at the repository root "
-            "(op inject -i .env.tpl -o .env)"
+            "FRED API key not found. Set FRED_API_KEY in the 1Password Environment "
+            "(desktop app open and unlocked) or in the process environment"
         )
     return Fred(api_key=api_key)
 

@@ -24,7 +24,7 @@ def test_prompts_exist():
 
 
 def test_working_paths_stay_inside_the_repository():
-    for path in (_paths.INPUT, _paths.OUTPUT, _paths.FED_DOCS, _paths.ENV_FILE):
+    for path in (_paths.INPUT, _paths.OUTPUT, _paths.FED_DOCS):
         assert path.is_relative_to(_paths.ROOT), path
 
 
@@ -53,7 +53,7 @@ def test_final_layout():
     assert _paths.INPUT == _paths.ROOT / "input" / "informes_eventos"
     assert _paths.OUTPUT == _paths.ROOT / "output" / "informes_eventos"
     assert _paths.FED_DOCS == _paths.INPUT / "fed"
-    assert _paths.ENV_FILE == _paths.ROOT / ".env"
+    assert not hasattr(_paths, "ENV_FILE"), "segredo não vem mais de arquivo"
     assert not hasattr(_paths, "_PRODUCT")
 
 

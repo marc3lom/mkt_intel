@@ -16,5 +16,3 @@ OUTPUT: Path = ROOT / "output" / PRODUCT
 # Documentos do Fed (committee_meeting_docs/) e planilhas de e-mail (email_info/).
 FED_DOCS: Path = INPUT / "fed"
 PROMPTS: Path = ROOT / "prompts" / PRODUCT
-# A chave do FRED: `op inject -i .env.tpl -o .env`, na raiz.
-ENV_FILE: Path = ROOT / ".env"

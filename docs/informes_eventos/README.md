@@ -10,5 +10,5 @@ Cada informe é um notebook que coleta os dados, gera os gráficos e monta o `.d
 | Payroll | `src/reports/payroll/notebooks/payroll_report.ipynb` |
 | Grid de reação ao payroll | `src/reports/payroll/notebooks/market_reaction_grid.ipynb` |
 
-Instalação: `uv sync`, depois `op inject -i .env.tpl -o .env`.
+Instalação: `uv sync`. A chave do FRED vem da Environment do 1Password pelo SDK Python; basta o app do 1Password aberto e destravado.
 Regras para quem mexe no código: `AGENTS.md`. Histórico das decisões: `docs/historico-py-bcb.md`.
