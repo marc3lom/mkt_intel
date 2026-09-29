@@ -44,9 +44,14 @@ a resposta, a célula continua sozinha.
 Depois de enviado o e-mail, no terminal: `uv run matinal enviado`. Ele arquiva o
 comentário em `arquivo/` (só nesta máquina) e esvazia o `input/` e o `output/` do dia.
 
+**O manual do plantão** — instalação, os nove passos, o que é seu decidir e o que fazer
+quando algo dá errado — está em
+[`docs/comentario_matinal/plantao_copilot/`](docs/comentario_matinal/plantao_copilot/README.md).
+Leia-o inteiro antes do primeiro plantão.
+
 ## Informes de eventos
 
-- FOMC: `notebooks/informes_eventos/fomc/fomc_analysis.ipynb`. Pasta do dia:
+- FOMC: `notebooks/informes_eventos/fomc/fomc_analysis_copilot.ipynb`. Pasta do dia:
   `input/informes_eventos/fomc/<AAAAMMDD>/`. Etapas de texto: `/fomc-resumo`,
   `/fomc-bancos` e `/fomc-revisao`, do mesmo jeito.
 - Payroll: `notebooks/informes_eventos/payroll/`.

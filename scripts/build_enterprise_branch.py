@@ -6,10 +6,13 @@ GitHub Copilot, e mais nada. A regra de seleção é esta, e é o único lugar o
 ela vive:
 
 - ``src/``, ``notebooks/``, ``prompts/``, ``templates/``, ``config/``,
-  ``.github/prompts/`` e ``etc/``, inteiros, menos: os módulos ``_backend_*.py``
-  (o backend local, que depende de uma CLI que as máquinas do BC não têm), o
-  ``wiki.py`` (publica no GitHub pessoal do autor), o ``plantao_claude.ipynb`` (a
-  fachada do backend local; o do branch é o ``plantao_copilot.ipynb``) e o
+  ``.github/prompts/``, ``etc/`` e o manual do plantão com o Copilot
+  (``docs/comentario_matinal/plantao_copilot/``), inteiros, menos: os módulos
+  ``_backend_*.py`` (o backend local, que depende de uma CLI que as máquinas do
+  BC não têm), o ``wiki.py`` (publica no GitHub pessoal do autor), os
+  notebooks que não rodam com o Copilot — o ``plantao_claude.ipynb``, o
+  ``imagens.ipynb`` e o ``fomc_analysis.ipynb``, cujas versões para o Copilot
+  são o ``plantao_copilot.ipynb`` e o ``fomc_analysis_copilot.ipynb`` — e o
   ``project_instructions.md`` (o caminho alternativo por um Project, que lá não
   existe);
 - ``pyproject.toml`` sem a linha do ``publica-wiki``, ``uv.lock``,
@@ -75,11 +78,14 @@ INCLUDED_DIRS = (
     "config/",
     ".github/prompts/",
     "etc/",
+    "docs/comentario_matinal/plantao_copilot/",
 )
 ROOT_FILES = ("pyproject.toml", "uv.lock", ".python-version", ".gitattributes")
 EXCLUDED = frozenset(
     {
         "notebooks/comentario_matinal/plantao_claude.ipynb",
+        "notebooks/comentario_matinal/imagens.ipynb",
+        "notebooks/informes_eventos/fomc/fomc_analysis.ipynb",
         "prompts/comentario_matinal/project_instructions.md",
         "src/comentario_matinal/wiki.py",
     }
