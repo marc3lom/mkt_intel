@@ -22,7 +22,7 @@ Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, 
 | Para quê | Comando | Observação |
 |---|---|---|
 | Instalar | `uv sync`, na raiz | cria a `.venv` única e puxa o `blpapi` do índice da Bloomberg |
-| **Verificar (o padrão)** | `uv run pytest tests/comentario_matinal` | 205 testes, ~7 s, **sem Bloomberg** |
+| **Verificar (o padrão)** | `uv run pytest tests/comentario_matinal` | 211 testes, ~7 s, **sem Bloomberg** |
 | Coletar o mercado | `uv run matinal` | **chama a Bloomberg e grava em `output/comentario_matinal/`** |
 | Coletar sem o BQL | `uv run matinal --sem-calendario` | pula só a consulta do calendário |
 | Só as duas imagens | `uv run matinal imagens` | painel e calendário, sem o bloco direcional |
@@ -111,7 +111,7 @@ Os `[Parágrafo N]` não usados são apagados junto com o espaçador; um sexto m
 
 ## 9. Não mexer
 
-- **`input/comentario_matinal/`** — os PDFs do dia (Bloomberg, FT, WSJ, sell-side). Fora do git, sujeitos aos termos de uso da Bloomberg. Nunca comitar, nunca reproduzir em extensão, nunca citar além de um trecho curto.
+- **`input/comentario_matinal/`** — os PDFs do dia (Bloomberg, FT, WSJ, sell-side). Fora do git, sujeitos aos termos de uso da Bloomberg. Nunca comitar, nunca reproduzir em extensão, nunca citar além de um trecho curto. Um PDF cujo nome comece por `anterior` é o comentário do dia anterior, não fonte: vai para o campo próprio quando não há `.md` arquivado.
 - **`output/comentario_matinal/`** — as saídas do dia, inclusive o comentário ainda não enviado. Fora do git.
 - **`*.pdf`, `*.docx`** — fora do git em qualquer lugar. O artefato versionado é o `.md`.
 - **`.env`, `.env.*`, credenciais** — fora do git. Hoje nenhum código deste produto lê `.env`; não acrescentar sem perguntar.

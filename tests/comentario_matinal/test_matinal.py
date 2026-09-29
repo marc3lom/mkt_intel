@@ -1018,3 +1018,85 @@ def test_mapeamento_de_colunas_fica_com_a_primeira_que_casa():
     df = pd.DataFrame(columns=["ACTUAL_RELEASE", "ACTUAL"])
     renomeado = _map_bql_columns(df, {"ACTUAL": "ATUAL"})
     assert list(renomeado.columns) == ["ATUAL", "ACTUAL"]
+
+
+# --- comentário do dia anterior em PDF ----------------------------------------
+
+
+@pytest.fixture
+def pdf_falso(monkeypatch):
+    """PDF de mentira: o texto é o nome do arquivo, sem precisar de PDF de verdade."""
+    from comentario_matinal import fontes
+
+    monkeypatch.setattr(fontes, "_texto_do_pdf", lambda pdf: f"texto de {pdf.name}")
+
+
+def test_o_pdf_do_anterior_nao_vira_fonte(tmp_path, pdf_falso):
+    """Misturado às fontes, o comentário de ontem seria lido como notícia de hoje."""
+    from comentario_matinal.fontes import converte
+
+    origem = tmp_path / "fontes"
+    origem.mkdir()
+    for nome in ("wrap.pdf", "Anterior_2026-09-28.PDF"):
+        (origem / nome).write_bytes(b"%PDF-1.4")
+
+    destino = tmp_path / "saida" / "fontes.txt"
+    conv = converte(origem, destino)
+    assert conv.aproveitados == 1
+    assert "Anterior" not in destino.read_text(encoding="utf-8")
+
+
+def test_o_pdf_do_anterior_e_achado_com_qualquer_caixa(tmp_path, pdf_falso):
+    from comentario_matinal.fontes import anterior_em_pdf
+
+    (tmp_path / "ANTERIOR 28-09.pdf").write_bytes(b"%PDF-1.4")
+    assert anterior_em_pdf(tmp_path) == ("ANTERIOR 28-09.pdf",
+                                         "texto de ANTERIOR 28-09.pdf")
+
+
+def test_sem_pdf_do_anterior_nao_ha_anterior(tmp_path, pdf_falso):
+    from comentario_matinal.fontes import anterior_em_pdf
+
+    (tmp_path / "wrap.pdf").write_bytes(b"%PDF-1.4")
+    assert anterior_em_pdf(tmp_path) is None
+    assert anterior_em_pdf(tmp_path / "nao-existe") is None
+
+
+def _ctx(tmp_path):
+    from comentario_matinal import plantao
+
+    pastas = {n: tmp_path / n for n in ("saida", "fontes", "arquivo")}
+    for p in pastas.values():
+        p.mkdir()
+    return plantao.contexto(asof="2026-09-29T07:40", **pastas)
+
+
+def test_sem_arquivado_o_anterior_vem_do_pdf(tmp_path, pdf_falso):
+    from comentario_matinal import plantao
+
+    ctx = _ctx(tmp_path)
+    (ctx.fontes / "anterior.pdf").write_bytes(b"%PDF-1.4")
+    avisos = []
+    texto = plantao._do_arquivo(ctx, ctx.asof, avisos.append)
+    assert "texto de anterior.pdf" in texto
+    assert any("anterior.pdf" in a for a in avisos)
+
+
+def test_o_arquivado_vence_o_pdf(tmp_path, pdf_falso):
+    from comentario_matinal import plantao
+
+    ctx = _ctx(tmp_path)
+    _arquivo_falso(ctx.arquivo, "20260928")
+    (ctx.fontes / "anterior.pdf").write_bytes(b"%PDF-1.4")
+    texto = plantao._do_arquivo(ctx, ctx.asof, lambda _: None)
+    assert "comentário de 20260928" in texto
+    assert "texto de anterior.pdf" not in texto
+
+
+def test_sem_nenhum_dos_dois_a_etapa_segue_so_com_as_fontes(tmp_path, pdf_falso):
+    from comentario_matinal import plantao
+
+    ctx = _ctx(tmp_path)
+    avisos = []
+    assert plantao._do_arquivo(ctx, ctx.asof, avisos.append) is None
+    assert any("nenhum comentário recente" in a for a in avisos)
