@@ -1310,7 +1310,7 @@ wheels = [
 ]
 
 [[package]]
-name = "mkt-intelligence"
+name = "mkt-intel"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

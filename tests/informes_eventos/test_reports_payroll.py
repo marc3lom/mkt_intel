@@ -1,7 +1,7 @@
 """Testes de caracterização de reports.payroll.
 
 Fixam o comportamento atual antes de o pacote migrar para o repositório
-mkt_intelligence. Nenhum toca Bloomberg, FRED ou BLS.
+mkt_intel. Nenhum toca Bloomberg, FRED ou BLS.
 """
 
 import pandas as pd

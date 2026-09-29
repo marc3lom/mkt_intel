@@ -23,7 +23,7 @@ O repositório reúne vários produtos, cada um espalhado por pasta de tipo na r
 clone; não há mais uma pasta única de nome `comentario_matinal`. Só o que é do matinal:
 
 ```
-mkt_intelligence/
+mkt_intel/
 ├── docs/comentario_matinal/
 │   ├── README.md                 este arquivo — o repositório para quem mexe no código
 │   ├── AGENTS.md                 instruções para quem trabalha no código, humano ou não

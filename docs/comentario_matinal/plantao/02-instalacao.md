@@ -67,11 +67,11 @@ concede **acesso de colaborador** a quem na divisão quiser, e é esse acesso qu
 clone possível. Não há processo além de pedir.
 
 ```
-gh repo clone marc3lom/mkt_intelligence
+gh repo clone marc3lom/mkt_intel
 ```
 
 Sem o GitHub CLI, o equivalente é
-`git clone https://github.com/marc3lom/mkt_intelligence.git`.
+`git clone https://github.com/marc3lom/mkt_intel.git`.
 
 **Este endereço é provisório.** O destino é um espelho no GitHub corporativo da
 instituição, e a URL muda quando ele existir. Se o comando acima falhar por endereço
@@ -82,7 +82,7 @@ O repositório reúne vários produtos da divisão. O comentário matinal é um 
 **todos os comandos abaixo rodam da raiz do clone**:
 
 ```
-cd mkt_intelligence
+cd mkt_intel
 ```
 
 ## A instalação
@@ -161,12 +161,12 @@ também. Não editar convenções nos prompts de etapa — eles apenas referenci
 
 Só quem publica o manual precisa disto — não é parte da instalação de quem só roda o
 plantão. `uv run publica-wiki` copia `docs/comentario_matinal/plantao/` para o Wiki do GitHub, mas o
-GitHub só cria o repositório `mkt_intelligence.wiki.git` **depois que a primeira
+GitHub só cria o repositório `mkt_intel.wiki.git` **depois que a primeira
 página nasce pela interface web**. Antes disso, `git clone` (e portanto o publicador)
 responde que o repositório não existe — verificado em 17/08.
 
 Para destravar: abrir a aba **Wiki** do repositório no GitHub, clicar em **Create the
-first page**, salvar qualquer conteúdo. A partir daí `mkt_intelligence.wiki.git`
+first page**, salvar qualquer conteúdo. A partir daí `mkt_intel.wiki.git`
 existe, e `uv run publica-wiki` funciona — é ele que sobrescreve essa primeira página
 com o manual de verdade.
 

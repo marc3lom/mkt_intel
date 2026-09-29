@@ -1,7 +1,7 @@
 """Testes de caracterização de reports.fomc.
 
 Fixam o comportamento atual antes de o pacote migrar para o repositório
-mkt_intelligence; lá, os mesmos testes provam que a mudança de casa não mudou nada.
+mkt_intel; lá, os mesmos testes provam que a mudança de casa não mudou nada.
 """
 
 import json

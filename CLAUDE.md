@@ -1,4 +1,4 @@
-# CLAUDE.md — mkt_intelligence
+# CLAUDE.md — mkt_intel
 
 @AGENTS.md
 

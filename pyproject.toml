@@ -1,5 +1,5 @@
 [project]
-name = "mkt-intelligence"
+name = "mkt-intel"
 version = "0.1.0"
 description = "Disseminação de informação e inteligência de mercado da Mesa de Investimentos (DEPIN/DIRIN)"
 readme = "README.md"

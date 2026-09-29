@@ -1,4 +1,4 @@
-# AGENTS.md — mkt_intelligence
+# AGENTS.md — mkt_intel
 
 Regras que valem para todos os produtos. As de cada produto estão em
 `docs/<produto>/AGENTS.md`, e prevalecem no que for específico. Antes de mexer num

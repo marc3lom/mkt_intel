@@ -1,4 +1,4 @@
-# mkt_intelligence
+# mkt_intel
 
 Ferramentas de apoio à disseminação de informação e inteligência da Mesa de
 Investimentos (DEPIN/DIRIN — Banco Central do Brasil). Repositório privado: guarda
@@ -20,7 +20,7 @@ da raiz. O manual de quem roda o plantão do matinal está em
 ### Estrutura
 
 ```
-mkt_intelligence/
+mkt_intel/
 ├── pyproject.toml            # projeto único; índice da Bloomberg; ruff; pytest
 ├── uv.lock  .python-version  .gitignore  .gitattributes
 ├── AGENTS.md  CLAUDE.md  README.md

@@ -26,7 +26,7 @@ ENVIRONMENT_ID = os.environ.get("OP_ENVIRONMENT_ID", "vdsbvcx7ijygd2gl3novvn5dhe
 ACCOUNT_NAME = os.environ.get("OP_ACCOUNT_NAME", "my.1password.com")
 TIMEOUT_SECONDS: float = 120
 
-_INTEGRATION_NAME = "mkt_intelligence"
+_INTEGRATION_NAME = "mkt_intel"
 _INTEGRATION_VERSION = "1"
 
 

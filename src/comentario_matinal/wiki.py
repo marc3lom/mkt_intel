@@ -19,11 +19,11 @@ from comentario_matinal.config import MANUAL, RAIZ
 # que um teste possa trocá-lo por um `git init --bare` descartável sem tocar
 # em linha de comando alguma — nenhuma bandeira nova, nenhuma superfície a
 # mais para quem só quer publicar.
-URL_WIKI = "git@github.com:marc3lom/mkt_intelligence.wiki.git"
+URL_WIKI = "git@github.com:marc3lom/mkt_intel.wiki.git"
 
 # O clone do wiki fica ao lado do repositório, nunca dentro: é outro repositório
 # git. `RAIZ` é o topo deste; o clone vai para a pasta que o contém.
-DESTINO_PADRAO = RAIZ.parent / "mkt_intelligence.wiki"
+DESTINO_PADRAO = RAIZ.parent / "mkt_intel.wiki"
 
 FAIXA = (
     "> Gerado a partir de `docs/comentario_matinal/plantao/{origem}` no commit `{sha}`.\n"
@@ -114,7 +114,7 @@ def _clona_ou_atualiza(destino: Path) -> None:
                        check=True, capture_output=True)
     except subprocess.CalledProcessError as erro:
         raise RuntimeError(
-            "Não consegui clonar o Wiki. Se `mkt_intelligence.wiki.git` ainda "
+            "Não consegui clonar o Wiki. Se `mkt_intel.wiki.git` ainda "
             "não existe, crie a primeira página pela aba Wiki no GitHub — ver "
             "a seção do Wiki em docs/comentario_matinal/plantao/02-instalacao.md."
         ) from erro
