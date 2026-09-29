@@ -53,7 +53,7 @@ def test_final_layout():
     assert _paths.INPUT == _paths.ROOT / "input" / "informes_eventos"
     assert _paths.OUTPUT == _paths.ROOT / "output" / "informes_eventos"
     assert _paths.FED_DOCS == _paths.INPUT / "fed"
-    assert not hasattr(_paths, "ENV_FILE"), "segredo não vem mais de arquivo"
+    assert _paths.ENV_FILE == _paths.ROOT / "etc" / ".env"
     assert not hasattr(_paths, "_PRODUCT")
 
 

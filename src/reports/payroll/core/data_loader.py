@@ -12,7 +12,8 @@ from typing import Any
 
 import pandas as pd
 
-from reports._onepassword_env import get_secret
+from reports import _paths
+from reports._env import get_secret
 
 logger = logging.getLogger(__name__)
 
@@ -63,12 +64,15 @@ def _get_fred_client() -> Any:
     """Get FRED API client."""
     from fredapi import Fred
 
-    # Resolvida só aqui, na hora do uso: importar o módulo não toca o 1Password.
+    # Resolvida só aqui, na hora do uso: quem não usa o fallback do FRED não
+    # precisa da chave.
     api_key = get_secret("FRED_API_KEY")
     if api_key is None:
         raise ValueError(
-            "FRED API key not found. Set FRED_API_KEY in the 1Password Environment "
-            "(desktop app open and unlocked) or in the process environment"
+            f"FRED API key not found. Create {_paths.ENV_FILE} from "
+            "etc/env.exemplo with a line FRED_API_KEY=<your key> (free at "
+            "https://fred.stlouisfed.org/docs/api/api_key.html), or set "
+            "FRED_API_KEY in the environment"
         )
     return Fred(api_key=api_key)
 

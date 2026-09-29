@@ -17,13 +17,13 @@ Tudo roda da raiz do repositório.
 
 - pandas 3 e numpy 2.5, as mesmas versões do comentário matinal: o projeto resolve um lock só, e os dois produtos andam juntos. O teto `<3` herdado do py-bcb caiu em 15/09, aferido pela caracterização antes de sair.
 - `is_bloomberg_available()` não existe aqui; chamada real à Bloomberg só com Windows e o terminal logado.
-- A chave do FRED (fallback do payroll) vem da Environment *Development* do 1Password, lida pelo SDK Python em `reports._onepassword_env.get_secret` (app do 1Password aberto e destravado, ou `OP_SERVICE_ACCOUNT_TOKEN`). Nada de `.env` nem `op inject`.
+- A chave do FRED (fallback do payroll) vem da variável `FRED_API_KEY` ou de `etc/.env`, na raiz, lido por `reports._env.get_secret`. Cada máquina tem o seu, fora do git; o modelo é `etc/env.exemplo`.
 
 ## Código
 
 - Identificadores, mensagens de log e de erro em inglês; docstrings, comentários, rótulos de gráfico e commits em pt-BR. Docstrings antigas em inglês ficam como estão.
 - `src/reports/_bloomberg.py` e `src/reports/_style.py` são cópias do `py-bcb`. Nunca importar `classes.*` — `tests/informes_eventos/test_independence.py` falha.
-- Todo caminho sai de `src/reports/_paths.py`: `input/informes_eventos/`, `output/informes_eventos/`, `.env` na raiz, e `input/informes_eventos/fed/` para os documentos do Fed. `tests/informes_eventos/test_paths.py` prende isso.
+- Todo caminho sai de `src/reports/_paths.py`: `input/informes_eventos/`, `output/informes_eventos/`, `etc/.env` (`ENV_FILE`), e `input/informes_eventos/fed/` para os documentos do Fed. `tests/informes_eventos/test_paths.py` prende isso.
 - xbbg 1.x: `abdib` aceita um ticker por chamada e devolve o horário (UTC) numa **coluna** `time`; chamadas sync travam no Jupyter — usar sempre `_run_async`.
 - Fusos: horários do FOMC e do payroll são âncoras em ET (`America/New_York`); exibição em `America/Sao_Paulo`; tirar o fuso só imediatamente antes de plotar.
 - `COPOM[4]` (vermelho) é reservado às linhas de evento no grid.
@@ -70,7 +70,7 @@ importar `comentario_matinal`; `tests/informes_eventos/test_independence.py` fal
 
 ## Não mexer
 
-Nunca ler, imprimir, comitar ou resumir `.env`, `input/informes_eventos/` (pasta do
+Nunca ler, imprimir, comitar ou resumir `etc/.env`, `input/informes_eventos/` (pasta do
 dia do FOMC, `fed/` com os PDFs do Fed e o `email_info/`, `payroll/`, `grid1.xlsx`,
 `emailPayroll.xlsx`) e `output/informes_eventos/`. Referir por caminho apenas. As
 respostas do modelo gravadas ali são minuta de informe: nunca ler nem resumir na

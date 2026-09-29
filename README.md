@@ -24,7 +24,7 @@ mkt_intel/
 ├── pyproject.toml            # projeto único; índice da Bloomberg; ruff; pytest
 ├── uv.lock  .python-version  .gitignore  .gitattributes
 ├── AGENTS.md  CLAUDE.md  README.md
-├── .env                      # fora do git
+├── etc/                      # .env de cada máquina (fora do git) e env.exemplo
 ├── src/
 │   ├── comentario_matinal/
 │   └── reports/              # sem notebooks/ e sem input/ dentro
@@ -64,6 +64,6 @@ documentos do Fed sem data de evento, fora do pacote `src/reports/`.
 
 1. Informe pós-evento de mesma natureza (CPI, BCE, Copom…) → subpacote de `src/reports/`, notebooks em `notebooks/informes_eventos/<evento>/`.
 2. Produto de outra natureza → pacote novo em `src/<nome>/`, acrescentado a `module-name` no `pyproject.toml`, com um módulo único de caminhos e o teste de âncora correspondente; subpasta `<nome>/` em `notebooks/`, `tests/`, `docs/` (com `AGENTS.md`, importado pelo `CLAUDE.md` da raiz) e no que mais usar.
-3. Dados de trabalho em `input/<nome>/` e `output/<nome>/`, que já estão fora do git. Segredo no `.env` da raiz.
+3. Dados de trabalho em `input/<nome>/` e `output/<nome>/`, que já estão fora do git. Segredo no `etc/.env` de cada máquina, com o modelo em `etc/env.exemplo`.
 4. O pacote novo não importa os outros: acrescentar a direção nova a `tests/informes_eventos/test_independence.py`.
 5. Linha nova na tabela acima.

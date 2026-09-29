@@ -28,7 +28,6 @@ dependencies = [
     "fredapi>=0.5.2",
     "nest-asyncio>=1.6",  # _bloomberg.run_async dentro do Jupyter
     "narwhals>=2.0",  # fomc.core.data_loader normaliza o retorno do abdib
-    "onepassword-sdk>=0.4.1",
 ]
 
 [project.scripts]

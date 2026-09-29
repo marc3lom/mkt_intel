@@ -102,20 +102,21 @@ class TestGeneratePayrollReport:
 
 
 class TestProjectRootAnchors:
-    def test_fred_key_comes_from_1password(self, monkeypatch):
-        """A chave do FRED vem de `get_secret`, não de um `.env` em disco."""
-        from reports import _onepassword_env
+    def test_fred_key_comes_from_the_local_env_file(self, monkeypatch, tmp_path):
+        """A chave do FRED vem de `get_secret`, que lê o etc/.env da raiz."""
+        from reports import _paths
 
         monkeypatch.delenv("FRED_API_KEY", raising=False)
-
-        async def fake_fetch():
-            return {"FRED_API_KEY": "abc123"}
-
-        monkeypatch.setattr(_onepassword_env, "_fetch_variables", fake_fetch)
-        _onepassword_env.environment_variables.cache_clear()
-        try:
-            client = data_loader._get_fred_client()
-        finally:
-            _onepassword_env.environment_variables.cache_clear()
+        env_file = tmp_path / ".env"
+        env_file.write_text("FRED_API_KEY=abc123\n", encoding="utf-8")
+        monkeypatch.setattr(_paths, "ENV_FILE", env_file)
+        client = data_loader._get_fred_client()
         assert client.api_key == "abc123"
-        assert not hasattr(data_loader, "_env_path")
+
+    def test_missing_fred_key_says_which_file_to_create(self, monkeypatch, tmp_path):
+        from reports import _paths
+
+        monkeypatch.delenv("FRED_API_KEY", raising=False)
+        monkeypatch.setattr(_paths, "ENV_FILE", tmp_path / "etc" / ".env")
+        with pytest.raises(ValueError, match="env.exemplo"):
+            data_loader._get_fred_client()
