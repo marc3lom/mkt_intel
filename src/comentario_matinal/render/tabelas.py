@@ -77,7 +77,7 @@ class EspecDeTabela:
 # são desenhadas de 0,01 a 0,99, e as colunas começam em 0,02 (ver
 # _compute_x_positions). Somando 1,0, a última coluna terminava em 1,02 — fora
 # da faixa e fora do eixo —, e o cabeçalho REVISADO, que é centralizado nela,
-# saía encostado na borda direita. O teste em tests/test_render.py trava a soma.
+# saía encostado na borda direita. O teste em tests/comentario_matinal/test_render.py trava a soma.
 LARGURA_UTIL = 0.96
 
 ESPEC_ECO = EspecDeTabela(

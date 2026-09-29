@@ -2,7 +2,7 @@
 
 Todo caminho de trabalho sai daqui. Os módulos leem `_paths.NOME` na hora da
 chamada, nunca `from reports._paths import NOME`: é o que deixa um teste trocar
-a pasta por uma temporária. `tests/test_paths.py` prende o arranjo.
+a pasta por uma temporária. `tests/informes_eventos/test_paths.py` prende o arranjo.
 """
 
 from pathlib import Path

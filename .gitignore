@@ -1,5 +1,5 @@
 # --- Saídas do plantão -------------------------------------------------------
-# Painel e calendário gerados por scripts/gera_painel.py: reconstruíveis a cada
+# Painel e calendário gerados pelo `uv run matinal`: reconstruíveis a cada
 # manhã a partir do terminal Bloomberg, e sem valor de histórico no repositório.
 painel.txt
 

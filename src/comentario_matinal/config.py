@@ -17,7 +17,7 @@ from comentario_matinal.render.ativos import ItemDaGrade
 TZ_BR = ZoneInfo("America/Sao_Paulo")
 
 # O topo do repositório. É a única conta de níveis do pacote; o
-# `tests/test_caminhos.py` prende que nenhum outro módulo a repita.
+# `tests/comentario_matinal/test_caminhos.py` prende que nenhum outro módulo a repita.
 RAIZ = Path(__file__).resolve().parents[2]
 PRODUTO = "comentario_matinal"
 
