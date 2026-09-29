@@ -3,44 +3,40 @@
 Cópia enxuta do `modelo.py` do comentário matinal, por decisão: a regra do
 repositório diz que um produto não mexe no outro, e `_bloomberg.py` e
 `_style.py` já são cópias do py-bcb. Trocar de backend é escrever outra classe
-e registrá-la em BACKENDS; nem a montagem das mensagens nem as etapas mudam.
+e registrá-la; nem a montagem das mensagens nem as etapas mudam.
+
+Backends opcionais moram em módulos `_backend_*.py` deste pacote, importados
+aqui, e cada um se registra com `register` no fim do próprio módulo. Um backend
+opcional que responde `available()` verdadeiro vira o padrão; sem nenhum, o
+padrão é o que não depende de programa algum instalado.
 """
 
 from __future__ import annotations
 
+import importlib
 import os
-import shutil
-import subprocess
+import pkgutil
+import re
+import secrets
 import sys
+import time
+from pathlib import Path
 from typing import Protocol
 
+from reports import _paths
+
 # As etapas mandam mensagens longas: guia de estilo, statement, research de
-# bancos. A mensagem vai pela stdin, nunca por argumento — o limite de linha de
-# comando do Windows fica em torno de 32 mil caracteres.
+# bancos.
 TIMEOUT = 900
 
-# Sem ferramenta alguma. Tudo o que a etapa precisa vai injetado na mensagem;
-# acesso a arquivo ou à web só acrescentaria não-determinismo e o risco de o
-# modelo introduzir fato que não está nos insumos do dia.
-BLOCKED_TOOLS = [
-    "Bash",
-    "Read",
-    "Write",
-    "Edit",
-    "NotebookEdit",
-    "Glob",
-    "Grep",
-    "Task",
-    "WebSearch",
-    "WebFetch",
-]
+SEPARATOR = "\n\n" + "=" * 70 + "\n\n"
 
 ENV_BACKEND = "INFORMES_EVENTOS_BACKEND"
 MISSING_INPUT_MARK = "ENTRADA OBRIGATÓRIA AUSENTE"
 
-# A CLI do Claude Code roda por padrão como agente de programação: descobre
-# CLAUDE.md, carrega skills e narra o que vai fazer. O papel é substituído por
-# inteiro.
+# As regras de uma execução automatizada. Valem para todo backend: o que roda
+# um programa as passa como papel do sistema; o que conversa por arquivo as põe
+# no topo do arquivo.
 SYSTEM_PROMPT = f"""
 Você é assistente de análise da Mesa de Investimentos do DEPIN/DIRIN, do Banco
 Central do Brasil, e redige e revisa informes pós-evento (FOMC). Esta é uma
@@ -73,74 +69,39 @@ class Backend(Protocol):
     def run(self, message: str, *, stage: str, model: str | None) -> str: ...
 
 
-class ClaudeCode:
-    """Backend padrão: o Claude Code em modo não interativo."""
-
-    name = "claude-code"
-
-    def run(self, message: str, *, stage: str, model: str | None) -> str:
-        executable = shutil.which("claude")
-        if not executable:
-            raise ModelError(
-                "The `claude` executable is not on PATH. Install Claude Code "
-                f"or point {ENV_BACKEND} to another backend."
-            )
-
-        # --safe-mode pula CLAUDE.md, hooks, skills, plugins, MCP e agentes do
-        # ambiente do usuário: a etapa tem de render o mesmo em qualquer
-        # máquina. (--bare faria o mesmo, mas restringe a autenticação à chave
-        # de API, e aqui a autenticação é a sessão do Claude Code.)
-        command = [
-            executable,
-            "-p",
-            "--safe-mode",
-            "--system-prompt",
-            SYSTEM_PROMPT,
-            "--disallowed-tools",
-            *BLOCKED_TOOLS,
-        ]
-        # Sem --model vale a configuração da CLI do usuário: fixar o modelo
-        # aqui esconderia uma decisão de custo dentro do código.
-        if model:
-            command += ["--model", model]
-
-        # Uma chave de API esquecida no ambiente tem precedência sobre a sessão
-        # e, sem saldo, derruba a etapa em silêncio. Fora do subprocesso.
-        env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
-
-        try:
-            r = subprocess.run(
-                command,
-                input=message,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=TIMEOUT,
-                env=env,
-            )
-        except subprocess.TimeoutExpired:
-            raise ModelError(f"Stage {stage} did not answer within {TIMEOUT}s.") from None
-
-        if r.returncode != 0:
-            # Ao falhar, a CLI escreve o motivo no stdout ("Not logged in",
-            # "Credit balance is too low") e deixa o stderr vazio.
-            reason = " ".join(t for t in ((r.stderr or "").strip(), (r.stdout or "").strip()) if t)
-            raise ModelError(f"`claude` exited with code {r.returncode}. {reason[-600:]}")
-
-        output = (r.stdout or "").strip()
-        if not output:
-            raise ModelError(f"Stage {stage} returned an empty response.")
-        return output
+BACKENDS: dict[str, type[Backend]] = {}
 
 
-BACKENDS: dict[str, type[Backend]] = {
-    "claude-code": ClaudeCode,
-}
+def register(cls: type[Backend]) -> None:
+    """Põe um backend no registro. Os opcionais chamam isto no fim do módulo."""
+    BACKENDS.setdefault(cls.name, cls)
+
+
+def _import_optional() -> None:
+    """Importa cada `_backend_*.py` do pacote, que se registra sozinho.
+
+    O registro é do próprio módulo, e não daqui, por causa da importação
+    circular: quem importa um backend opcional primeiro faz este arquivo rodar
+    com aquele módulo ainda pela metade, e ler um atributo dele aqui falharia.
+    """
+    import reports
+
+    for info in pkgutil.iter_modules(reports.__path__):
+        if info.name.startswith("_backend_"):
+            importlib.import_module(f"reports.{info.name}")
+
+
+def default_backend() -> str:
+    """Sem variável de ambiente: o opcional disponível, senão o copilot."""
+    for name, cls in BACKENDS.items():
+        available = getattr(cls, "available", None)
+        if available is not None and available():
+            return name
+    return "copilot"
 
 
 def active_backend() -> Backend:
-    name = os.environ.get(ENV_BACKEND, "claude-code")
+    name = os.environ.get(ENV_BACKEND) or default_backend()
     if name not in BACKENDS:
         raise ModelError(f"Unknown backend: {name!r}. Available: {', '.join(sorted(BACKENDS))}.")
     return BACKENDS[name]()
@@ -155,3 +116,108 @@ def run(message: str, *, stage: str, model: str | None = None) -> str:
         file=sys.stderr,
     )
     return b.run(message, stage=stage, model=model)
+
+
+# --- Copilot: a conversa é por arquivo -----------------------------------------
+
+# Pasta fixa porque os prompt files de `.github/prompts/` a citam por caminho: o
+# agente do Copilot não recebe argumento, lê e grava onde o prompt manda.
+COPILOT_DIR: Path = _paths.OUTPUT / "copilot"
+COMMAND = "fomc"
+
+# Olhar o arquivo a cada segundo, e só aceitá-lo depois de dois segundos sem
+# mudar de tamanho: o agente pode gravar a resposta em mais de um passo.
+POLL_INTERVAL = 1.0
+STABLE_FOR = 2.0
+
+READ_MARK = re.compile(r"<!--\s*leitura:\s*([0-9a-f]+)\s*-->")
+
+
+def copilot_message(message: str, code: str) -> str:
+    """O arquivo que o agente lê: as regras, o pedido e, no fim, o código.
+
+    O código vai na última linha: só quem leu o arquivo inteiro o conhece. O
+    texto vai em português porque chega ao modelo junto com o prompt da etapa.
+    """
+    return (
+        SYSTEM_PROMPT + SEPARATOR + message.rstrip() + SEPARATOR + "## FIM DA MENSAGEM\n\n"
+        "A primeira linha do arquivo de resposta é exatamente "
+        f"`<!-- leitura: {code} -->`; a saída pedida começa na linha seguinte.\n"
+    )
+
+
+def strip_read_mark(response: str, code: str, stage: str) -> str:
+    """Confere o código de leitura e o tira da resposta."""
+    text = response.lstrip("﻿")
+    found = READ_MARK.search(text[:500])
+    if found is None:
+        raise ModelError(
+            f"Stage {stage} response has no read mark: the message was not read "
+            "to the end. Run the cell again and repeat the command in chat."
+        )
+    if found.group(1) != code:
+        raise ModelError(
+            f"Stage {stage} response carries the code of another run. Run the "
+            "cell again and repeat the command in chat."
+        )
+    body = (text[: found.start()] + text[found.end() :]).strip()
+    if not body:
+        raise ModelError(f"Stage {stage} returned an empty response.")
+    return body
+
+
+def wait_for_response(path: Path, stage: str) -> str:
+    """Espera o arquivo de resposta aparecer e parar de crescer."""
+    deadline = time.monotonic() + TIMEOUT
+    size, since = -1, 0.0
+    while time.monotonic() < deadline:
+        if path.is_file():
+            current = path.stat().st_size
+            if current > 0 and current == size:
+                if time.monotonic() - since >= STABLE_FOR:
+                    return path.read_text(encoding="utf-8")
+            else:
+                size, since = current, time.monotonic()
+        time.sleep(POLL_INTERVAL)
+    raise ModelError(
+        f"No response for stage {stage} within {TIMEOUT}s. In Copilot chat, "
+        f"agent mode, the command is /{COMMAND}-{stage}."
+    )
+
+
+class Copilot:
+    """O GitHub Copilot do VS Code, pelo chat em modo agente.
+
+    Não há programa a chamar: a mensagem vai para um arquivo, a pessoa roda o
+    comando da etapa no chat, e o agente grava a resposta noutro. A célula fica
+    esperando enquanto isso — interromper o kernel cancela a espera.
+    """
+
+    name = "copilot"
+
+    def run(self, message: str, *, stage: str, model: str | None) -> str:
+        COPILOT_DIR.mkdir(parents=True, exist_ok=True)
+        request = COPILOT_DIR / f"{stage}.mensagem.md"
+        response = COPILOT_DIR / f"{stage}.resposta.md"
+        # A de uma execução anterior passaria pela de agora.
+        response.unlink(missing_ok=True)
+
+        code = secrets.token_hex(4)
+        request.write_text(copilot_message(message, code), encoding="utf-8")
+        if model:
+            print(f"Warning: model {model!r} is chosen in Copilot chat, not here.", file=sys.stderr)
+        print(
+            f"\nIn Copilot chat (Ctrl+Alt+I), agent mode, type /{COMMAND}-{stage} "
+            f"and wait. The response lands in {response}.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return strip_read_mark(wait_for_response(response, stage), code, stage)
+
+
+register(Copilot)
+
+# Na última linha de propósito: os backends opcionais importam daqui o
+# SYSTEM_PROMPT, o TIMEOUT, o ModelError e o register, que a esta altura já
+# existem.
+_import_optional()

@@ -4,7 +4,7 @@ import subprocess
 
 import pytest
 
-from reports import _modelo
+from reports import _backend_claude, _modelo
 
 
 class FakeBackend:
@@ -35,16 +35,27 @@ class TestRegistry:
         with pytest.raises(_modelo.ModelError, match="nao-existe"):
             _modelo.active_backend()
 
-    def test_default_is_claude_code(self, monkeypatch):
+    def test_default_is_the_local_backend_when_available(self, monkeypatch):
         monkeypatch.delenv("INFORMES_EVENTOS_BACKEND", raising=False)
+        monkeypatch.setattr(_backend_claude.ClaudeCode, "available", staticmethod(lambda: True))
         assert _modelo.active_backend().name == "claude-code"
+
+    def test_default_is_copilot_without_a_local_backend(self, monkeypatch):
+        monkeypatch.delenv("INFORMES_EVENTOS_BACKEND", raising=False)
+        monkeypatch.setattr(_backend_claude.ClaudeCode, "available", staticmethod(lambda: False))
+        assert _modelo.default_backend() == "copilot"
+
+    def test_registry_module_does_not_name_the_local_backend(self):
+        from pathlib import Path
+
+        assert "claude" not in Path(_modelo.__file__).read_text(encoding="utf-8").lower()
 
 
 class TestClaudeCode:
     def test_missing_executable_raises(self, monkeypatch):
-        monkeypatch.setattr(_modelo.shutil, "which", lambda name: None)
+        monkeypatch.setattr(_backend_claude.shutil, "which", lambda name: None)
         with pytest.raises(_modelo.ModelError, match="PATH"):
-            _modelo.ClaudeCode().run("m", stage="resumo", model=None)
+            _backend_claude.ClaudeCode().run("m", stage="resumo", model=None)
 
     def test_message_on_stdin_safe_mode_and_no_api_key(self, monkeypatch):
         """Mensagem pela stdin, --safe-mode, ferramentas bloqueadas, chave fora do ambiente."""
@@ -55,16 +66,16 @@ class TestClaudeCode:
             seen["kwargs"] = kwargs
             return subprocess.CompletedProcess(cmd, 0, stdout="ok\n", stderr="")
 
-        monkeypatch.setattr(_modelo.shutil, "which", lambda name: "C:/claude.exe")
-        monkeypatch.setattr(_modelo.subprocess, "run", fake_run)
+        monkeypatch.setattr(_backend_claude.shutil, "which", lambda name: "C:/claude.exe")
+        monkeypatch.setattr(_backend_claude.subprocess, "run", fake_run)
         monkeypatch.setenv("ANTHROPIC_API_KEY", "segredo")
 
-        assert _modelo.ClaudeCode().run("mensagem", stage="resumo", model=None) == "ok"
+        assert _backend_claude.ClaudeCode().run("mensagem", stage="resumo", model=None) == "ok"
         cmd = seen["cmd"]
         assert cmd[:3] == ["C:/claude.exe", "-p", "--safe-mode"]
         assert "--system-prompt" in cmd and _modelo.SYSTEM_PROMPT in cmd
         assert "--disallowed-tools" in cmd
-        assert set(_modelo.BLOCKED_TOOLS) <= set(cmd)
+        assert set(_backend_claude.BLOCKED_TOOLS) <= set(cmd)
         assert "--model" not in cmd
         assert seen["kwargs"]["input"] == "mensagem"
         assert "ANTHROPIC_API_KEY" not in seen["kwargs"]["env"]
@@ -77,9 +88,9 @@ class TestClaudeCode:
             seen["cmd"] = cmd
             return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
 
-        monkeypatch.setattr(_modelo.shutil, "which", lambda name: "claude")
-        monkeypatch.setattr(_modelo.subprocess, "run", fake_run)
-        _modelo.ClaudeCode().run("m", stage="resumo", model="claude-sonnet-5")
+        monkeypatch.setattr(_backend_claude.shutil, "which", lambda name: "claude")
+        monkeypatch.setattr(_backend_claude.subprocess, "run", fake_run)
+        _backend_claude.ClaudeCode().run("m", stage="resumo", model="claude-sonnet-5")
         assert seen["cmd"][-2:] == ["--model", "claude-sonnet-5"]
 
     def test_nonzero_exit_reports_stdout_reason(self, monkeypatch):
@@ -88,25 +99,25 @@ class TestClaudeCode:
         def fake_run(cmd, **kwargs):
             return subprocess.CompletedProcess(cmd, 1, stdout="Not logged in", stderr="")
 
-        monkeypatch.setattr(_modelo.shutil, "which", lambda name: "claude")
-        monkeypatch.setattr(_modelo.subprocess, "run", fake_run)
+        monkeypatch.setattr(_backend_claude.shutil, "which", lambda name: "claude")
+        monkeypatch.setattr(_backend_claude.subprocess, "run", fake_run)
         with pytest.raises(_modelo.ModelError, match="Not logged in"):
-            _modelo.ClaudeCode().run("m", stage="resumo", model=None)
+            _backend_claude.ClaudeCode().run("m", stage="resumo", model=None)
 
     def test_empty_response_raises(self, monkeypatch):
         def fake_run(cmd, **kwargs):
             return subprocess.CompletedProcess(cmd, 0, stdout="  \n", stderr="")
 
-        monkeypatch.setattr(_modelo.shutil, "which", lambda name: "claude")
-        monkeypatch.setattr(_modelo.subprocess, "run", fake_run)
+        monkeypatch.setattr(_backend_claude.shutil, "which", lambda name: "claude")
+        monkeypatch.setattr(_backend_claude.subprocess, "run", fake_run)
         with pytest.raises(_modelo.ModelError, match="empty"):
-            _modelo.ClaudeCode().run("m", stage="resumo", model=None)
+            _backend_claude.ClaudeCode().run("m", stage="resumo", model=None)
 
     def test_timeout_raises(self, monkeypatch):
         def fake_run(cmd, **kwargs):
             raise subprocess.TimeoutExpired(cmd, kwargs["timeout"])
 
-        monkeypatch.setattr(_modelo.shutil, "which", lambda name: "claude")
-        monkeypatch.setattr(_modelo.subprocess, "run", fake_run)
+        monkeypatch.setattr(_backend_claude.shutil, "which", lambda name: "claude")
+        monkeypatch.setattr(_backend_claude.subprocess, "run", fake_run)
         with pytest.raises(_modelo.ModelError, match="900"):
-            _modelo.ClaudeCode().run("m", stage="resumo", model=None)
+            _backend_claude.ClaudeCode().run("m", stage="resumo", model=None)

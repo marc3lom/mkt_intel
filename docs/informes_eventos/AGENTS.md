@@ -43,9 +43,14 @@ Resumo, comentários dos bancos e revisão de coerência são etapas de modelo e
 `src/reports/_modelo.py`, **cópia** do `modelo.py` do comentário matinal — nunca
 importar `comentario_matinal`; `tests/informes_eventos/test_independence.py` falha.
 
-- Chama `claude -p --safe-mode` sem ferramentas, mensagem pela stdin, autenticação
-  pela sessão do Claude Code; `ANTHROPIC_API_KEY` sai do ambiente do subprocesso.
-  Variável: `INFORMES_EVENTOS_BACKEND` (padrão `claude-code`).
+- Dois backends. O local (`src/reports/_backend_claude.py`, que se registra
+  sozinho: o `_modelo.py` importa todo `_backend_*.py` do pacote sem citá-lo) chama
+  `claude -p --safe-mode` sem ferramentas, mensagem pela stdin, autenticação pela
+  sessão do Claude Code, `ANTHROPIC_API_KEY` fora do ambiente do subprocesso. O
+  `copilot` grava a mensagem em `output/informes_eventos/copilot/`, espera o
+  `/fomc-<etapa>` rodar no chat do VS Code e confere o código de leitura.
+  Variável: `INFORMES_EVENTOS_BACKEND`; sem ela, o local se o `claude` estiver no
+  PATH, senão o `copilot`.
 - **Os prompts em `prompts/` são a fonte de verdade editorial.** Para mudar como o
   texto lê, editar `00_guia_de_estilo.md`; o prompt da etapa só quando a mecânica
   mudar. Nada de estilo fixo no Python.
