@@ -125,49 +125,94 @@ def run(message: str, *, stage: str, model: str | None = None) -> str:
 COPILOT_DIR: Path = _paths.OUTPUT / "copilot"
 COMMAND = "fomc"
 
-# Olhar o arquivo a cada segundo, e só aceitá-lo depois de dois segundos sem
-# mudar de tamanho: o agente pode gravar a resposta em mais de um passo.
+# Olhar o arquivo a cada segundo. A resposta só está pronta quando traz a linha
+# de fim e fica dois segundos sem mudar de tamanho: o agente pode gravá-la em
+# mais de um passo, e entre um e outro passam os segundos que o modelo leva
+# gerando o resto — a estabilidade sozinha aceitaria a primeira metade.
 POLL_INTERVAL = 1.0
 STABLE_FOR = 2.0
 
+# O código de leitura vai em quatro trechos: três espalhados pelo corpo da
+# mensagem e o último no fim. Só quem leu tudo junta o código inteiro.
+CODE_PIECES = 4
+
 READ_MARK = re.compile(r"<!--\s*leitura:\s*([0-9a-f]+)\s*-->")
+END_MARK = re.compile(r"<!--\s*fim:\s*([0-9a-f]+)\s*-->")
+
+
+def _piece(n: int, part: str) -> str:
+    return f"<!-- trecho de leitura {n}/{CODE_PIECES}: {part} -->"
 
 
 def copilot_message(message: str, code: str) -> str:
-    """O arquivo que o agente lê: as regras, o pedido e, no fim, o código.
+    """O arquivo que o agente lê: as regras, o pedido e o código em trechos.
 
-    O código vai na última linha: só quem leu o arquivo inteiro o conhece. O
-    texto vai em português porque chega ao modelo junto com o prompt da etapa.
+    Pôr o código só no fim provaria apenas que o agente chegou ao fim. Com os
+    trechos a um quarto, à metade e a três quartos do texto, e o último no fim,
+    o código inteiro só sai de quem leu o corpo todo. Cada trecho entra numa
+    linha em branco, entre parágrafos, nunca no meio de uma tabela. O texto vai
+    em português porque chega ao modelo junto com o prompt da etapa.
     """
+    size = len(code) // CODE_PIECES
+    parts = [code[i * size : (i + 1) * size] for i in range(CODE_PIECES)]
+    lines = message.rstrip().splitlines()
+
+    positions = []
+    for k in range(1, CODE_PIECES):
+        target = len(lines) * k // CODE_PIECES
+        positions.append(
+            next((i for i in range(target, len(lines)) if not lines[i].strip()), target)
+        )
+    # De trás para a frente, para que inserir um não desloque os seguintes.
+    for k, pos in reversed(list(enumerate(positions, 1))):
+        lines[pos:pos] = ["", _piece(k, parts[k - 1]), ""]
+
     return (
-        SYSTEM_PROMPT + SEPARATOR + message.rstrip() + SEPARATOR + "## FIM DA MENSAGEM\n\n"
-        "A primeira linha do arquivo de resposta é exatamente "
-        f"`<!-- leitura: {code} -->`; a saída pedida começa na linha seguinte.\n"
+        SYSTEM_PROMPT
+        + SEPARATOR
+        + "\n".join(lines)
+        + SEPARATOR
+        + "## FIM DA MENSAGEM\n\n"
+        + _piece(CODE_PIECES, parts[-1])
+        + "\n\n"
+        f"O código de leitura é a junção, na ordem, dos {CODE_PIECES} trechos de "
+        "leitura espalhados por esta mensagem. A primeira linha do arquivo de "
+        "resposta é exatamente `<!-- leitura: CÓDIGO -->` e a última é exatamente "
+        "`<!-- fim: CÓDIGO -->`, com o código no lugar de CÓDIGO; a saída pedida "
+        "vai entre as duas.\n"
     )
 
 
 def strip_read_mark(response: str, code: str, stage: str) -> str:
-    """Confere o código de leitura e o tira da resposta."""
-    text = response.lstrip("﻿")
-    found = READ_MARK.search(text[:500])
-    if found is None:
+    """Confere as linhas de leitura e de fim e devolve o que está entre elas."""
+    text = response.lstrip("\ufeff")
+    read = READ_MARK.search(text[:500])
+    if read is None:
         raise ModelError(
             f"Stage {stage} response has no read mark: the message was not read "
             "to the end. Run the cell again and repeat the command in chat."
         )
-    if found.group(1) != code:
+    ends = list(END_MARK.finditer(text))
+    if not ends:
         raise ModelError(
-            f"Stage {stage} response carries the code of another run. Run the "
-            "cell again and repeat the command in chat."
+            f"Stage {stage} response has no end mark: it arrived incomplete. Run "
+            "the cell again and repeat the command in chat."
         )
-    body = (text[: found.start()] + text[found.end() :]).strip()
+    end = ends[-1]
+    if read.group(1) != code or end.group(1) != code:
+        raise ModelError(
+            f"Stage {stage} response carries the code of another run, or a code "
+            "put together without reading the whole message. Run the cell again "
+            "and repeat the command in chat."
+        )
+    body = text[read.end() : end.start()].strip()
     if not body:
         raise ModelError(f"Stage {stage} returned an empty response.")
     return body
 
 
 def wait_for_response(path: Path, stage: str) -> str:
-    """Espera o arquivo de resposta aparecer e parar de crescer."""
+    """Espera a resposta trazer a linha de fim e parar de crescer."""
     deadline = time.monotonic() + TIMEOUT
     size, since = -1, 0.0
     while time.monotonic() < deadline:
@@ -175,10 +220,17 @@ def wait_for_response(path: Path, stage: str) -> str:
             current = path.stat().st_size
             if current > 0 and current == size:
                 if time.monotonic() - since >= STABLE_FOR:
-                    return path.read_text(encoding="utf-8")
+                    text = path.read_text(encoding="utf-8")
+                    if END_MARK.search(text):
+                        return text
             else:
                 size, since = current, time.monotonic()
         time.sleep(POLL_INTERVAL)
+    if path.is_file():
+        raise ModelError(
+            f"Stage {stage} response is incomplete: no end mark within {TIMEOUT}s. "
+            f"Run the cell again and repeat /{COMMAND}-{stage} in chat."
+        )
     raise ModelError(
         f"No response for stage {stage} within {TIMEOUT}s. In Copilot chat, "
         f"agent mode, the command is /{COMMAND}-{stage}."

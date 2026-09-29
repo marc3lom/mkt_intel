@@ -13,5 +13,6 @@ Esta é uma etapa automatizada. Não converse: execute os passos abaixo, na orde
 2. Siga as instruções desse arquivo como se fossem o seu pedido. Todo o material de
    trabalho está nele: não abra nenhum outro arquivo e não busque nada fora dele.
 3. Grave a sua resposta, e somente ela, em `output/informes_eventos/copilot/revisao.resposta.md`. A
-   primeira linha é a linha de leitura pedida no fim da mensagem.
+   primeira linha é a de leitura e a última linha é a de fim, pedidas no fim
+   da mensagem, com o código montado dos trechos de leitura espalhados por ela.
 4. Não altere nenhum outro arquivo. No chat, responda apenas "Resposta gravada."

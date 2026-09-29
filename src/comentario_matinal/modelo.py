@@ -128,54 +128,94 @@ def executa(mensagem: str, *, etapa: str, web: bool = False,
 PASTA_COPILOT = SAIDA_PADRAO / "copilot"
 COMANDO = "matinal"
 
-# Olhar o arquivo a cada segundo, e só aceitá-lo depois de dois segundos sem
-# mudar de tamanho: o agente pode gravar a resposta em mais de um passo, e ler
-# no meio entregaria metade dela à etapa seguinte.
+# Olhar o arquivo a cada segundo. A resposta só está pronta quando traz a linha
+# de fim e fica dois segundos sem mudar de tamanho: o agente pode gravá-la em
+# mais de um passo, e entre um e outro passam os segundos que o modelo leva
+# gerando o resto — a estabilidade sozinha aceitaria a primeira metade.
 INTERVALO = 1.0
 ESTAVEL = 2.0
 
+# O código de leitura vai em quatro trechos: três espalhados pelo corpo da
+# mensagem e o último no fim. Só quem leu tudo junta o código inteiro.
+PARTES_DO_CODIGO = 4
+
 RE_LEITURA = re.compile(r"<!--\s*leitura:\s*([0-9a-f]+)\s*-->")
+RE_FIM = re.compile(r"<!--\s*fim:\s*([0-9a-f]+)\s*-->")
+
+
+def _trecho(n: int, parte: str) -> str:
+    return f"<!-- trecho de leitura {n}/{PARTES_DO_CODIGO}: {parte} -->"
 
 
 def mensagem_para_o_copilot(mensagem: str, codigo: str) -> str:
-    """O arquivo que o agente lê: as regras, o pedido e, no fim, o código.
+    """O arquivo que o agente lê: as regras, o pedido e o código em trechos.
 
-    O código vai na última linha de propósito. O arquivo é longo, o agente o lê
-    em trechos, e só quem chegou ao fim sabe qual código devolver — é a prova
-    de que as fontes do dia foram lidas inteiras, e não só o começo.
+    O arquivo é longo, e o agente o lê em pedaços. Pôr o código só no fim
+    provaria apenas que ele chegou ao fim — um agente que lesse o começo e
+    saltasse para a última linha passaria. Com os trechos a um quarto, à metade
+    e a três quartos do texto, e o último no fim, o código inteiro só sai de
+    quem leu o corpo todo, que é onde estão as fontes do dia.
+
+    Cada trecho entra numa linha em branco — entre parágrafos, nunca no meio de
+    uma tabela, que ele desmancharia para o modelo.
     """
+    tamanho = len(codigo) // PARTES_DO_CODIGO
+    partes = [codigo[i * tamanho:(i + 1) * tamanho]
+              for i in range(PARTES_DO_CODIGO)]
+    linhas = mensagem.rstrip().splitlines()
+
+    posicoes = []
+    for k in range(1, PARTES_DO_CODIGO):
+        alvo = len(linhas) * k // PARTES_DO_CODIGO
+        posicoes.append(next((i for i in range(alvo, len(linhas))
+                              if not linhas[i].strip()), alvo))
+    # De trás para a frente, para que inserir um não desloque os seguintes.
+    for k, pos in reversed(list(enumerate(posicoes, 1))):
+        linhas[pos:pos] = ["", _trecho(k, partes[k - 1]), ""]
+
     return (
-        SYSTEM_PROMPT + SEPARADOR + mensagem.rstrip() + SEPARADOR
+        SYSTEM_PROMPT + SEPARADOR + "\n".join(linhas) + SEPARADOR
         + "## FIM DA MENSAGEM\n\n"
-        "A primeira linha do arquivo de resposta é exatamente "
-        f"`<!-- leitura: {codigo} -->`; a saída pedida começa na linha "
-        "seguinte.\n"
+        + _trecho(PARTES_DO_CODIGO, partes[-1]) + "\n\n"
+        f"O código de leitura é a junção, na ordem, dos {PARTES_DO_CODIGO} "
+        "trechos de leitura espalhados por esta mensagem. A primeira linha do "
+        "arquivo de resposta é exatamente `<!-- leitura: CÓDIGO -->` e a "
+        "última é exatamente `<!-- fim: CÓDIGO -->`, com o código no lugar de "
+        "CÓDIGO; a saída pedida vai entre as duas.\n"
     )
 
 
 def tira_codigo(resposta: str, codigo: str, etapa: str) -> str:
-    """Confere o código de leitura e o tira da resposta."""
+    """Confere as linhas de leitura e de fim e devolve o que está entre elas."""
     texto = resposta.lstrip("\ufeff")
-    achado = RE_LEITURA.search(texto[:500])
-    if achado is None:
+    leitura = RE_LEITURA.search(texto[:500])
+    if leitura is None:
         raise ErroDoModelo(
             f"A resposta da etapa {etapa} não traz a linha de leitura: a "
             "mensagem não foi lida até o fim. Rodar a célula de novo e, no "
             "chat, repetir o comando."
         )
-    if achado.group(1) != codigo:
+    fins = list(RE_FIM.finditer(texto))
+    if not fins:
         raise ErroDoModelo(
-            f"A resposta da etapa {etapa} traz o código de outra execução. "
-            "Rodar a célula de novo e repetir o comando no chat."
+            f"A resposta da etapa {etapa} não traz a linha de fim: chegou "
+            "incompleta. Rodar a célula de novo e repetir o comando no chat."
         )
-    corpo = (texto[:achado.start()] + texto[achado.end():]).strip()
+    fim = fins[-1]
+    if leitura.group(1) != codigo or fim.group(1) != codigo:
+        raise ErroDoModelo(
+            f"A resposta da etapa {etapa} traz o código de outra execução, ou "
+            "um código montado sem ler a mensagem inteira. Rodar a célula de "
+            "novo e repetir o comando no chat."
+        )
+    corpo = texto[leitura.end():fim.start()].strip()
     if not corpo:
         raise ErroDoModelo(f"A etapa {etapa} devolveu resposta vazia.")
     return corpo
 
 
 def espera_resposta(caminho: Path, etapa: str) -> str:
-    """Espera o arquivo de resposta aparecer e parar de crescer."""
+    """Espera a resposta trazer a linha de fim e parar de crescer."""
     limite = time.monotonic() + TEMPO_LIMITE
     tamanho, desde = -1, 0.0
     while time.monotonic() < limite:
@@ -183,10 +223,18 @@ def espera_resposta(caminho: Path, etapa: str) -> str:
             atual = caminho.stat().st_size
             if atual > 0 and atual == tamanho:
                 if time.monotonic() - desde >= ESTAVEL:
-                    return caminho.read_text(encoding="utf-8")
+                    texto = caminho.read_text(encoding="utf-8")
+                    if RE_FIM.search(texto):
+                        return texto
             else:
                 tamanho, desde = atual, time.monotonic()
         time.sleep(INTERVALO)
+    if caminho.is_file():
+        raise ErroDoModelo(
+            f"A resposta da etapa {etapa} ficou incompleta: em {TEMPO_LIMITE}s "
+            "não chegou a linha de fim. Rodar a célula de novo e repetir o "
+            f"comando /{COMANDO}-{etapa} no chat."
+        )
     raise ErroDoModelo(
         f"Nenhuma resposta da etapa {etapa} em {TEMPO_LIMITE}s. No chat do "
         f"Copilot, em modo agente, o comando é /{COMANDO}-{etapa}."
