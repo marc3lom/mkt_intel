@@ -16,6 +16,7 @@ OUTPUT: Path = ROOT / "output" / PRODUCT
 # Documentos do Fed (committee_meeting_docs/) e planilhas de e-mail (email_info/).
 FED_DOCS: Path = INPUT / "fed"
 PROMPTS: Path = ROOT / "prompts" / PRODUCT
+TEMPLATES: Path = ROOT / "templates" / PRODUCT
 # Segredos locais (a chave do FRED), um arquivo por máquina, fora do git. Cada
 # um administra o seu; o formato está em etc/env.exemplo.
 ENV_FILE: Path = ROOT / "etc" / ".env"

@@ -2,12 +2,14 @@
 Gerador de relatório Word para reuniões do FOMC.
 
 Gera o documento .docx "Mesa de Investimentos / Depin - Reunião do FOMC"
-usando o .docx mais recente como template base (preserva header/footer/estilos),
-limpa o conteúdo e preenche programaticamente.
+usando templates/informes_eventos/fomc.dotx como base (preserva
+header/footer/estilos), limpa o conteúdo e preenche programaticamente.
 """
 
+import io
 import logging
 import re
+import zipfile
 from pathlib import Path
 
 import pandas as pd
@@ -22,10 +24,11 @@ from reports import _paths
 logger = logging.getLogger(__name__)
 
 # === Constantes ===
-TEMPLATE_SOURCE = Path(
-    r"c:/Users/mmart/OneDrive/BCB/dirin/15_informes/fomc/"
-    r"Mesa de Investimentos - FOMC_20260128.docx"
-)
+# O template mora no repositório: um .docx de referência numa pasta pessoal do
+# autor não existe na máquina de mais ninguém. É um .dotx, como o do matinal.
+TEMPLATE_NAME = "fomc.dotx"
+_DOTX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.template.main+xml"
+_DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
 FONT_NAME = "Aptos"
 TITLE_SIZE = Pt(14)
 BODY_SIZE = Pt(11)
@@ -71,16 +74,37 @@ HAWKISH_WHEN_UP: dict[str, bool] = {
 }
 
 
+def _open_dotx(path: Path) -> Document:
+    """Abre o .dotx como documento editável.
+
+    O python-docx recusa .dotx pelo content type; a conversão é só a troca dessa
+    declaração no [Content_Types].xml. Cópia do `abre_template` do matinal — os
+    pacotes não se importam.
+    """
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(path) as src, zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as dst:
+        for item in src.infolist():
+            data = src.read(item.filename)
+            if item.filename == "[Content_Types].xml":
+                data = data.replace(_DOTX_TYPE.encode(), _DOCX_TYPE.encode())
+            dst.writestr(item, data)
+    buffer.seek(0)
+    return Document(buffer)
+
+
 def _load_template(template_path: Path | str | None = None) -> Document:
-    """Abre o .docx de referência, limpa parágrafos mantendo header/footer/styles."""
-    template_path = Path(template_path) if template_path else TEMPLATE_SOURCE
+    """Abre o template, limpa parágrafos mantendo header/footer/styles."""
+    template_path = Path(template_path) if template_path else _paths.TEMPLATES / TEMPLATE_NAME
 
     if not template_path.exists():
         logger.warning(f"Template não encontrado: {template_path}. Criando documento em branco.")
         return _create_blank_document()
 
     logger.info(f"Carregando template: {template_path}")
-    doc = Document(str(template_path))
+    if template_path.suffix == ".dotx":
+        doc = _open_dotx(template_path)
+    else:
+        doc = Document(str(template_path))
 
     # Limpa todos os parágrafos do body (mantém headers/footers)
     body = doc.element.body

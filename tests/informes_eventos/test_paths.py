@@ -54,6 +54,7 @@ def test_final_layout():
     assert _paths.OUTPUT == _paths.ROOT / "output" / "informes_eventos"
     assert _paths.FED_DOCS == _paths.INPUT / "fed"
     assert _paths.ENV_FILE == _paths.ROOT / "etc" / ".env"
+    assert _paths.TEMPLATES == _paths.ROOT / "templates" / "informes_eventos"
     assert not hasattr(_paths, "_PRODUCT")
 
 

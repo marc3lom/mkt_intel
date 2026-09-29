@@ -23,7 +23,7 @@ Tudo roda da raiz do repositório.
 
 - Identificadores, mensagens de log e de erro em inglês; docstrings, comentários, rótulos de gráfico e commits em pt-BR. Docstrings antigas em inglês ficam como estão.
 - `src/reports/_bloomberg.py` e `src/reports/_style.py` são cópias do `py-bcb`. Nunca importar `classes.*` — `tests/informes_eventos/test_independence.py` falha.
-- Todo caminho sai de `src/reports/_paths.py`: `input/informes_eventos/`, `output/informes_eventos/`, `etc/.env` (`ENV_FILE`), e `input/informes_eventos/fed/` para os documentos do Fed. `tests/informes_eventos/test_paths.py` prende isso.
+- Todo caminho sai de `src/reports/_paths.py`: `input/informes_eventos/`, `output/informes_eventos/`, `etc/.env` (`ENV_FILE`), `input/informes_eventos/fed/` para os documentos do Fed, e `templates/informes_eventos/` (`TEMPLATES`) para o `fomc.dotx`, o template do informe, sem corpo e só com as faixas do cabeçalho e do rodapé. `tests/informes_eventos/test_paths.py` e `test_fomc_template.py` prendem isso.
 - xbbg 1.x: `abdib` aceita um ticker por chamada e devolve o horário (UTC) numa **coluna** `time`; chamadas sync travam no Jupyter — usar sempre `_run_async`.
 - Fusos: horários do FOMC e do payroll são âncoras em ET (`America/New_York`); exibição em `America/Sao_Paulo`; tirar o fuso só imediatamente antes de plotar.
 - `COPOM[4]` (vermelho) é reservado às linhas de evento no grid.
@@ -63,7 +63,8 @@ importar `comentario_matinal`; `tests/informes_eventos/test_independence.py` fal
   os headlines direto no Word). A transcrição da coletiva é o
   `FOMCpresconf<data>.pdf` do Fed, em `input/informes_eventos/fed/committee_meeting_docs/`,
   baixado pela célula 3; a etapa pós-coletiva aceita a transcrição, os headlines ou
-  os dois. Saídas em `output/informes_eventos/reports/fomc/<AAAAMMDD>/`. Tudo fora do
+  os dois. A captura `market_reaction.png` (só se o Bloomberg falhar) e a `dot_plot.png`
+  (reuniões com SEP) também ficam na pasta do dia. Saídas em `output/informes_eventos/reports/fomc/<AAAAMMDD>/`. Tudo fora do
   git e sob a regra de sigilo abaixo.
 - Nenhum teste chama o `claude`: `subprocess.run` e o registro `BACKENDS` recebem
   dublês.
@@ -75,7 +76,3 @@ dia do FOMC, `fed/` com os PDFs do Fed e o `email_info/`, `payroll/`, `grid1.xls
 `emailPayroll.xlsx`) e `output/informes_eventos/`. Referir por caminho apenas. As
 respostas do modelo gravadas ali são minuta de informe: nunca ler nem resumir na
 conversa.
-
-## Questões em aberto
-
-- O template do FOMC é um caminho absoluto no OneDrive (`fomc/core/word_report.py:22`). Trazer um `.dotx` para `templates/`, como o matinal, ou manter?
