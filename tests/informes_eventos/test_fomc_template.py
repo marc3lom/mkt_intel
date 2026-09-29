@@ -44,3 +44,19 @@ def test_no_personal_paths_in_code_or_notebooks():
         if re.search(r"OneDrive|Users[\\/]+mmart", f.read_text(encoding="utf-8"))
     )
     assert offenders == []
+
+
+def test_template_metadata_carries_no_person_or_source_report():
+    """Todo informe gerado herda os metadados do template."""
+    import xml.etree.ElementTree as ET
+
+    with zipfile.ZipFile(_template()) as z:
+        core = ET.fromstring(z.read("docProps/core.xml"))
+        app = ET.fromstring(z.read("docProps/app.xml"))
+    texts = {el.tag.split("}")[1]: (el.text or "") for el in core}
+    assert texts.get("creator", "") == ""
+    assert texts.get("lastModifiedBy", "") == ""
+    assert "lastPrinted" not in texts
+    counts = {el.tag.split("}")[1]: (el.text or "") for el in app}
+    for tag in ("Pages", "Words", "Characters", "Lines", "Paragraphs", "TotalTime"):
+        assert counts.get(tag, "0") == "0", tag
