@@ -7,7 +7,7 @@ produto, ler o dele.
 ## Estrutura
 
 - Um projeto uv só: um `pyproject.toml`, um `uv.lock` e uma `.venv`, os três na raiz. **Instalar é `uv sync`, na raiz.**
-- As pastas da raiz são por tipo, com subpasta por produto onde couber: `src/` (pacotes `comentario_matinal` e `reports`), `notebooks/`, `tests/`, `config/`, `prompts/`, `templates/`, `arquivo/`, `exemplos/`, `docs/`, `etc/` (o `etc/.env` de cada máquina, fora do git, e o modelo `etc/env.exemplo`).
+- As pastas da raiz são por tipo, com subpasta por produto onde couber: `src/` (pacotes `comentario_matinal` e `reports`), `notebooks/`, `tests/`, `config/`, `prompts/`, `templates/`, `arquivo/`, `exemplos/`, `docs/`, `etc/` (o `etc/.env` de cada máquina, fora do git, e o modelo `etc/env.exemplo`), `scripts/` (o gerador do branch empresarial).
 - `input/<produto>/` é tudo o que entra e `output/<produto>/` é tudo o que sai; as duas ficam fora do git, inteiras. `arquivo/` não é saída: é o registro versionado do que foi enviado.
 - Um pacote não importa o outro. Código igual nos dois é cópia (`reports/_modelo.py`), e `tests/informes_eventos/test_independence.py` cobra. Se uma mudança num produto pedir mexer no outro, é sinal de acoplamento — parar e perguntar.
 - Caminho se acha num lugar por pacote: `comentario_matinal/config.py` e `reports/_paths.py`. Nenhum outro módulo lê `__file__`; os testes de âncora cobram.
@@ -29,3 +29,12 @@ produto, ler o dele.
 
 - Nunca comitar nem empurrar sem pedido. Quando pedirem, commit direto na `main`; mostrar o diff e a mensagem e esperar antes de empurrar. Divergência entre local e remoto: apontar e perguntar.
 - Mensagem em português, terceira pessoa do presente, até 72 caracteres, sem prefixo nem ponto final; corpo em prosa explicando o porquê. Trailers `Co-Authored-By:` e `Claude-Session:` mantidos.
+
+## Branch empresarial
+
+O branch órfão `empresarial` é a cópia que vai ao GitHub do BC: só o que os notebooks
+precisam, sem nada que cite o backend local. Regenerar com
+`uv run python scripts/build_enterprise_branch.py` (`--dry-run`, `--bundle`); a regra
+de seleção vive só no script, e o README de lá é o `README_empresarial.md` daqui. O
+e-mail dos commits vem de `git config empresarial.email`. O push ao BC é do autor, pelo
+bundle, a partir da máquina do BC.
