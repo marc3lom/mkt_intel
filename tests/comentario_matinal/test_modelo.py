@@ -206,7 +206,6 @@ def test_sem_variavel_e_sem_backend_local_vale_o_copilot(monkeypatch):
     assert modelo.padrao() == "copilot"
 
 
-@pytest.mark.xfail(reason="o backend copilot nasce na Task 2", strict=True)
 def test_a_variavel_vence_a_deteccao(monkeypatch):
     monkeypatch.setenv("COMENTARIO_MATINAL_BACKEND", "copilot")
     _desliga_opcionais(monkeypatch, True)
