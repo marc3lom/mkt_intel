@@ -120,3 +120,14 @@ class TestProjectRootAnchors:
         monkeypatch.setattr(_paths, "ENV_FILE", tmp_path / "etc" / ".env")
         with pytest.raises(ValueError, match="env.exemplo"):
             data_loader._get_fred_client()
+
+    def test_misnamed_env_file_is_named_in_the_error(self, monkeypatch, tmp_path):
+        from reports import _paths
+
+        monkeypatch.delenv("FRED_API_KEY", raising=False)
+        env_file = tmp_path / "etc" / ".env"
+        env_file.parent.mkdir(parents=True)
+        env_file.with_name(".env.txt").write_text("FRED_API_KEY=abc\n", encoding="utf-8")
+        monkeypatch.setattr(_paths, "ENV_FILE", env_file)
+        with pytest.raises(ValueError, match=r"\.env\.txt"):
+            data_loader._get_fred_client()

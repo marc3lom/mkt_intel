@@ -13,7 +13,7 @@ from typing import Any
 import pandas as pd
 
 from reports import _paths
-from reports._env import get_secret
+from reports._env import get_secret, misnamed_env_file
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +68,13 @@ def _get_fred_client() -> Any:
     # precisa da chave.
     api_key = get_secret("FRED_API_KEY")
     if api_key is None:
+        wrong = misnamed_env_file()
+        if wrong is not None:
+            raise ValueError(
+                f"FRED API key not found: the file is named {wrong.name}, not "
+                f"{_paths.ENV_FILE.name}. Rename {wrong} to {_paths.ENV_FILE} "
+                "(Windows Explorer hides the .txt extension)"
+            )
         raise ValueError(
             f"FRED API key not found. Create {_paths.ENV_FILE} from "
             "etc/env.exemplo with a line FRED_API_KEY=<your key> (free at "

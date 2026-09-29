@@ -45,6 +45,32 @@ def test_empty_value_is_none():
     assert _env.get_secret("FRED_API_KEY") is None
 
 
+def test_notepad_unicode_file_is_read():
+    """O "Unicode" do Bloco de Notas é UTF-16 com BOM."""
+    _paths.ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _paths.ENV_FILE.write_bytes("FRED_API_KEY=abc123\r\n".encode("utf-16"))
+    assert _env.get_secret("FRED_API_KEY") == "abc123"
+
+
+def test_inline_comment_is_not_part_of_the_value():
+    write_env("FRED_API_KEY=abc123   # minha chave do FRED\n")
+    assert _env.get_secret("FRED_API_KEY") == "abc123"
+
+
+def test_hash_inside_quotes_is_kept():
+    write_env('FRED_API_KEY="ab#c"  # comentário\n')
+    assert _env.get_secret("FRED_API_KEY") == "ab#c"
+
+
+def test_misnamed_env_file_is_found():
+    """Com a extensão escondida no Explorer, o Bloco de Notas salva `.env.txt`."""
+    _paths.ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
+    wrong = _paths.ENV_FILE.with_name(".env.txt")
+    wrong.write_text("FRED_API_KEY=abc123\n", encoding="utf-8")
+    assert _env.misnamed_env_file() == wrong
+    assert _env.get_secret("FRED_API_KEY") is None
+
+
 def test_example_is_versioned_and_real_file_is_ignored():
     root = _paths.ROOT
     ignored = subprocess.run(["git", "check-ignore", "-q", "etc/.env"], cwd=root)

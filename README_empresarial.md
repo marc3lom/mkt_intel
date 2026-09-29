@@ -63,6 +63,9 @@ coisa que saia da máquina.
   célula de novo e repetir o comando no chat.
 - **O comando `/matinal-…` não aparece no chat:** conferir que a pasta aberta no VS
   Code é a raiz do repositório e que o chat está no modo Agente.
+- **"FRED API key not found" com o `etc/.env` criado:** o Bloco de Notas costuma
+  salvar como `etc/.env.txt`, e o Explorer esconde o `.txt`. O erro diz o nome real;
+  renomear para `.env`.
 - **Bloomberg sem dados (`no cached response`):** o terminal pode abrir sem o
   `bbcomm`; iniciar o `bbcomm.exe` de `C:\blp\` à mão e rodar a célula de novo.
 - **O git não alcança o GitHub pela rede do BC:** configurar o proxy no repositório
