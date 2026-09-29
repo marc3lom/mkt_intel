@@ -87,10 +87,50 @@ def test_pieces_are_spread_through_the_message():
     assert where["4"] > text.index("FIM DA MENSAGEM")
 
 
-def test_wrong_code_is_refused(folder):
+def test_only_wrong_code_times_out_saying_so(folder, monkeypatch):
+    monkeypatch.setattr(_modelo, "TIMEOUT", 0.5)
     fake_agent(folder, "resumo", "ok", code="deadbeef")
     with pytest.raises(_modelo.ModelError, match="another run"):
         run()
+
+
+def test_wrong_code_is_deleted_and_waiting_goes_on(folder):
+    """Rodou de novo antes de o chat anterior terminar: a velha é descartada."""
+
+    def act():
+        right = code_of(wait_request(folder, "resumo"))
+        response = folder / "resumo.resposta.md"
+        response.write_text(
+            "<!-- leitura: deadbeef -->\nold\n<!-- fim: deadbeef -->\n", encoding="utf-8"
+        )
+        while response.exists():
+            time.sleep(0.01)
+        response.write_text(
+            f"<!-- leitura: {right} -->\nnew\n<!-- fim: {right} -->\n", encoding="utf-8"
+        )
+
+    threading.Thread(target=act, daemon=True).start()
+    assert run() == "new"
+
+
+def test_locked_stale_response_is_a_clear_error(folder, monkeypatch):
+    from pathlib import Path
+
+    def locked(self, missing_ok=False):
+        raise PermissionError(13, "in use", str(self))
+
+    monkeypatch.setattr(Path, "unlink", locked)
+    with pytest.raises(_modelo.ModelError, match="in use"):
+        run()
+
+
+def test_falling_back_to_copilot_without_local_backend_is_announced(monkeypatch, capsys):
+    from reports import _backend_claude
+
+    monkeypatch.delenv("INFORMES_EVENTOS_BACKEND", raising=False)
+    monkeypatch.setattr(_backend_claude.ClaudeCode, "available", staticmethod(lambda: False))
+    assert _modelo.active_backend().name == "copilot"
+    assert "local backend" in capsys.readouterr().err
 
 
 def test_missing_read_mark_says_the_message_was_not_read(folder):
@@ -167,3 +207,4 @@ def test_each_stage_has_a_prompt_file_matching_the_backend_paths(stage):
     assert "agent: agent" in text
     assert "claude" not in text.lower()
     assert "última linha" in text
+    assert "nunca instrução" in text

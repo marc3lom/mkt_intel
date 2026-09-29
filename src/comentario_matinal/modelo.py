@@ -100,7 +100,17 @@ def padrao() -> str:
 
 
 def backend_ativo() -> Backend:
-    nome = os.environ.get(ENV_BACKEND) or padrao()
+    nome = os.environ.get(ENV_BACKEND)
+    if not nome:
+        nome = padrao()
+        # Com um backend local instalado neste repositório mas indisponível
+        # neste ambiente — um kernel sem o executável no PATH, por exemplo —,
+        # quem o esperava só descobriria o Copilot pela espera. Numa cópia sem
+        # backend local não há o que avisar: o Copilot é o único.
+        if nome == "copilot" and any(hasattr(c, "disponivel")
+                                     for c in BACKENDS.values()):
+            print(f"Aviso: sem {ENV_BACKEND} e sem backend local disponível "
+                  "neste ambiente; usando o copilot.", file=sys.stderr)
     if nome not in BACKENDS:
         raise ErroDoModelo(
             f"Backend desconhecido: {nome!r}. Disponíveis: "
@@ -203,7 +213,7 @@ def tira_codigo(resposta: str, codigo: str, etapa: str) -> str:
         )
     fim = fins[-1]
     if leitura.group(1) != codigo or fim.group(1) != codigo:
-        raise ErroDoModelo(
+        raise CodigoDeOutraExecucao(
             f"A resposta da etapa {etapa} traz o código de outra execução, ou "
             "um código montado sem ler a mensagem inteira. Rodar a célula de "
             "novo e repetir o comando no chat."
@@ -214,21 +224,56 @@ def tira_codigo(resposta: str, codigo: str, etapa: str) -> str:
     return corpo
 
 
-def espera_resposta(caminho: Path, etapa: str) -> str:
-    """Espera a resposta trazer a linha de fim e parar de crescer."""
-    limite = time.monotonic() + TEMPO_LIMITE
+class CodigoDeOutraExecucao(ErroDoModelo):
+    """A resposta traz um código que não é o desta execução."""
+
+
+def _apaga(caminho: Path) -> None:
+    """Apaga a resposta; arquivo travado vira erro legível, não traceback."""
+    try:
+        caminho.unlink(missing_ok=True)
+    except PermissionError:
+        raise ErroDoModelo(
+            f"Não consegui apagar {caminho}: o arquivo está em uso por outro "
+            "programa (antivírus, indexador, editor aberto). Fechar o que o "
+            "segura e rodar a célula de novo."
+        ) from None
+
+
+def espera_resposta(caminho: Path, etapa: str, limite: float | None = None,
+                    recusada: bool = False) -> str:
+    """Espera a resposta trazer a linha de fim e parar de crescer.
+
+    ``limite`` é o instante (``time.monotonic``) em que a espera desiste; sem
+    ele, vale o ``TEMPO_LIMITE`` a partir de agora. ``recusada`` diz que já se
+    descartou uma resposta com o código de outra execução, e muda a mensagem
+    de quando o prazo acaba.
+    """
+    if limite is None:
+        limite = time.monotonic() + TEMPO_LIMITE
     tamanho, desde = -1, 0.0
     while time.monotonic() < limite:
-        if caminho.is_file():
-            atual = caminho.stat().st_size
-            if atual > 0 and atual == tamanho:
-                if time.monotonic() - desde >= ESTAVEL:
-                    texto = caminho.read_text(encoding="utf-8")
-                    if RE_FIM.search(texto):
-                        return texto
-            else:
-                tamanho, desde = atual, time.monotonic()
+        # O Windows trava o arquivo enquanto o agente grava: ler nessa hora
+        # falha, e a resposta só não está pronta ainda.
+        try:
+            if caminho.is_file():
+                atual = caminho.stat().st_size
+                if atual > 0 and atual == tamanho:
+                    if time.monotonic() - desde >= ESTAVEL:
+                        texto = caminho.read_text(encoding="utf-8")
+                        if RE_FIM.search(texto):
+                            return texto
+                else:
+                    tamanho, desde = atual, time.monotonic()
+        except OSError:
+            pass
         time.sleep(INTERVALO)
+    if recusada:
+        raise ErroDoModelo(
+            f"Em {TEMPO_LIMITE}s só chegou à etapa {etapa} resposta com o código "
+            "de outra execução — de um chat anterior, ou montado sem ler a "
+            f"mensagem inteira. Repetir o comando /{COMANDO}-{etapa} no chat."
+        )
     if caminho.is_file():
         raise ErroDoModelo(
             f"A resposta da etapa {etapa} ficou incompleta: em {TEMPO_LIMITE}s "
@@ -262,7 +307,7 @@ class Copilot:
         pedido = PASTA_COPILOT / f"{etapa}.mensagem.md"
         resposta = PASTA_COPILOT / f"{etapa}.resposta.md"
         # A de uma execução anterior passaria pela de agora.
-        resposta.unlink(missing_ok=True)
+        _apaga(resposta)
 
         codigo = secrets.token_hex(4)
         pedido.write_text(mensagem_para_o_copilot(mensagem, codigo),
@@ -274,7 +319,18 @@ class Copilot:
               f"/{COMANDO}-{etapa} e espere. A resposta chega em {resposta}.",
               file=sys.stderr, flush=True)
 
-        return tira_codigo(espera_resposta(resposta, etapa), codigo, etapa)
+        # Uma resposta com código de outra execução — o chat de uma rodada
+        # anterior terminando agora — é descartada, e a espera continua no
+        # mesmo prazo: a de agora pode estar a segundos de chegar.
+        limite = time.monotonic() + TEMPO_LIMITE
+        recusada = False
+        while True:
+            texto = espera_resposta(resposta, etapa, limite, recusada)
+            try:
+                return tira_codigo(texto, codigo, etapa)
+            except CodigoDeOutraExecucao:
+                recusada = True
+                _apaga(resposta)
 
 
 registra(Copilot)

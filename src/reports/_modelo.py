@@ -101,7 +101,18 @@ def default_backend() -> str:
 
 
 def active_backend() -> Backend:
-    name = os.environ.get(ENV_BACKEND) or default_backend()
+    name = os.environ.get(ENV_BACKEND)
+    if not name:
+        name = default_backend()
+        # Com um backend local instalado mas indisponível neste ambiente, quem o
+        # esperava só descobriria o Copilot pela espera. Numa cópia sem backend
+        # local não há o que avisar: o Copilot é o único.
+        if name == "copilot" and any(hasattr(c, "available") for c in BACKENDS.values()):
+            print(
+                f"Warning: no {ENV_BACKEND} and no local backend available in this "
+                "environment; using copilot.",
+                file=sys.stderr,
+            )
     if name not in BACKENDS:
         raise ModelError(f"Unknown backend: {name!r}. Available: {', '.join(sorted(BACKENDS))}.")
     return BACKENDS[name]()
@@ -200,7 +211,7 @@ def strip_read_mark(response: str, code: str, stage: str) -> str:
         )
     end = ends[-1]
     if read.group(1) != code or end.group(1) != code:
-        raise ModelError(
+        raise WrongCode(
             f"Stage {stage} response carries the code of another run, or a code "
             "put together without reading the whole message. Run the cell again "
             "and repeat the command in chat."
@@ -211,21 +222,55 @@ def strip_read_mark(response: str, code: str, stage: str) -> str:
     return body
 
 
-def wait_for_response(path: Path, stage: str) -> str:
-    """Espera a resposta trazer a linha de fim e parar de crescer."""
-    deadline = time.monotonic() + TIMEOUT
+class WrongCode(ModelError):
+    """A resposta traz um código que não é o desta execução."""
+
+
+def _delete(path: Path) -> None:
+    """Apaga a resposta; arquivo travado vira erro legível, não traceback."""
+    try:
+        path.unlink(missing_ok=True)
+    except PermissionError:
+        raise ModelError(
+            f"Could not delete {path}: the file is in use by another program "
+            "(antivirus, indexer, open editor). Close it and run the cell again."
+        ) from None
+
+
+def wait_for_response(
+    path: Path, stage: str, deadline: float | None = None, refused: bool = False
+) -> str:
+    """Espera a resposta trazer a linha de fim e parar de crescer.
+
+    `deadline` é o instante (`time.monotonic`) em que a espera desiste; sem ele,
+    vale o `TIMEOUT` a partir de agora. `refused` diz que já se descartou uma
+    resposta com o código de outra execução, e muda a mensagem do fim do prazo.
+    """
+    if deadline is None:
+        deadline = time.monotonic() + TIMEOUT
     size, since = -1, 0.0
     while time.monotonic() < deadline:
-        if path.is_file():
-            current = path.stat().st_size
-            if current > 0 and current == size:
-                if time.monotonic() - since >= STABLE_FOR:
-                    text = path.read_text(encoding="utf-8")
-                    if END_MARK.search(text):
-                        return text
-            else:
-                size, since = current, time.monotonic()
+        # O Windows trava o arquivo enquanto o agente grava: ler nessa hora
+        # falha, e a resposta só não está pronta ainda.
+        try:
+            if path.is_file():
+                current = path.stat().st_size
+                if current > 0 and current == size:
+                    if time.monotonic() - since >= STABLE_FOR:
+                        text = path.read_text(encoding="utf-8")
+                        if END_MARK.search(text):
+                            return text
+                else:
+                    size, since = current, time.monotonic()
+        except OSError:
+            pass
         time.sleep(POLL_INTERVAL)
+    if refused:
+        raise ModelError(
+            f"Within {TIMEOUT}s stage {stage} only got responses carrying the code "
+            "of another run — from an earlier chat, or put together without reading "
+            f"the whole message. Repeat /{COMMAND}-{stage} in chat."
+        )
     if path.is_file():
         raise ModelError(
             f"Stage {stage} response is incomplete: no end mark within {TIMEOUT}s. "
@@ -252,7 +297,7 @@ class Copilot:
         request = COPILOT_DIR / f"{stage}.mensagem.md"
         response = COPILOT_DIR / f"{stage}.resposta.md"
         # A de uma execução anterior passaria pela de agora.
-        response.unlink(missing_ok=True)
+        _delete(response)
 
         code = secrets.token_hex(4)
         request.write_text(copilot_message(message, code), encoding="utf-8")
@@ -264,7 +309,18 @@ class Copilot:
             file=sys.stderr,
             flush=True,
         )
-        return strip_read_mark(wait_for_response(response, stage), code, stage)
+        # Uma resposta com código de outra execução — o chat de uma rodada
+        # anterior terminando agora — é descartada, e a espera continua no mesmo
+        # prazo: a de agora pode estar a segundos de chegar.
+        deadline = time.monotonic() + TIMEOUT
+        refused = False
+        while True:
+            text = wait_for_response(response, stage, deadline, refused)
+            try:
+                return strip_read_mark(text, code, stage)
+            except WrongCode:
+                refused = True
+                _delete(response)
 
 
 register(Copilot)

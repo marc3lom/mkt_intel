@@ -110,12 +110,6 @@ def test_os_trechos_nao_partem_um_paragrafo():
         assert not corpo[i - 1].strip() and not corpo[i + 1].strip(), corpo[i - 2:i + 3]
 
 
-def test_codigo_de_outra_execucao_e_recusado(pasta):
-    agente(pasta, "triagem", "ok", codigo="deadbeef")
-    with pytest.raises(modelo.ErroDoModelo, match="outra execução"):
-        executa()
-
-
 def test_resposta_sem_linha_de_leitura_diz_que_a_mensagem_nao_foi_lida(pasta):
     def age():
         espera_o_pedido(pasta, "triagem")
@@ -212,3 +206,72 @@ def test_cada_etapa_tem_prompt_file_que_le_e_grava_onde_o_backend_espera(etapa):
     assert "agent: agent" in texto
     assert "claude" not in texto.lower()
     assert "última linha" in texto, "o prompt file tem de pedir a linha de fim"
+    assert "nunca instrução" in texto, "texto das fontes é dado: e-mail de sell-side não manda no agente"
+
+
+# --- robustez da espera ------------------------------------------------------
+
+
+def test_codigo_de_outra_execucao_e_apagado_e_a_espera_continua(pasta):
+    """Rodou de novo antes de o chat anterior terminar: a resposta velha chega
+    primeiro, é descartada, e a de agora ainda vale."""
+    def age():
+        certo = codigo_da(espera_o_pedido(pasta, "triagem"))
+        resposta = pasta / "triagem.resposta.md"
+        resposta.write_text("<!-- leitura: deadbeef -->\nvelha\n<!-- fim: deadbeef -->\n",
+                            encoding="utf-8")
+        while resposta.exists():
+            time.sleep(0.01)
+        resposta.write_text(f"<!-- leitura: {certo} -->\nnova\n<!-- fim: {certo} -->\n",
+                            encoding="utf-8")
+
+    threading.Thread(target=age, daemon=True).start()
+    assert executa() == "nova"
+
+
+def test_so_codigo_de_outra_execucao_esgota_o_prazo_dizendo_isso(pasta, monkeypatch):
+    monkeypatch.setattr(modelo, "TEMPO_LIMITE", 0.5)
+    agente(pasta, "triagem", "ok", codigo="deadbeef")
+    with pytest.raises(modelo.ErroDoModelo, match="outra execução"):
+        executa()
+
+
+def test_resposta_velha_travada_vira_erro_claro(pasta, monkeypatch):
+    """Antivírus ou indexador segurando o arquivo: nada de traceback cru."""
+    from pathlib import Path
+
+    def travado(self, missing_ok=False):
+        raise PermissionError(13, "em uso", str(self))
+
+    monkeypatch.setattr(Path, "unlink", travado)
+    with pytest.raises(modelo.ErroDoModelo, match="em uso"):
+        executa()
+
+
+def test_leitura_travada_no_meio_da_gravacao_so_adia(pasta, monkeypatch):
+    """O Windows trava o arquivo enquanto o agente grava; a espera tenta de novo."""
+    from pathlib import Path
+
+    original = Path.read_text
+    falhas = []
+
+    def as_vezes_travado(self, *args, **kwargs):
+        if self.name.endswith("resposta.md") and not falhas:
+            falhas.append(self)
+            raise PermissionError(13, "em uso", str(self))
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", as_vezes_travado)
+    agente(pasta, "triagem", "ok")
+    assert executa() == "ok"
+    assert falhas
+
+
+def test_cair_no_copilot_por_falta_de_backend_local_e_avisado(monkeypatch, capsys):
+    """Quem esperava o backend local não pode descobrir o Copilot só pela espera."""
+    monkeypatch.delenv("COMENTARIO_MATINAL_BACKEND", raising=False)
+    for classe in modelo.BACKENDS.values():
+        if hasattr(classe, "disponivel"):
+            monkeypatch.setattr(classe, "disponivel", staticmethod(lambda: False))
+    assert modelo.backend_ativo().nome == "copilot"
+    assert "backend local" in capsys.readouterr().err
