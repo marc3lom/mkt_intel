@@ -104,3 +104,21 @@ def test_pyproject_loses_the_wiki_publisher_only():
 )
 def test_mentions_claude(path, content, expected):
     assert build_enterprise.mentions_claude(path, content) is expected
+
+
+def test_pyproject_loses_the_personal_email():
+    """O repositório do BC não recebe o e-mail pessoal do autor."""
+    text = (
+        '[project]\nname = "mkt-intel"\n'
+        'authors = [{ name = "Marcelo Martinelli", email = "mmartinelli@gmail.com" }]\n'
+    )
+    out = build_enterprise.pyproject_for_branch(text)
+    assert "mmartinelli@gmail.com" not in out
+    assert 'authors = [{ name = "Marcelo Martinelli" }]' in out
+
+
+def test_without_corporate_email_the_branch_is_not_committed(monkeypatch):
+    """Sem o e-mail corporativo, o commit sairia com a identidade pessoal."""
+    monkeypatch.setattr(build_enterprise, "_config", lambda *args: None)
+    with pytest.raises(SystemExit, match="empresarial.email"):
+        build_enterprise._identity_env()

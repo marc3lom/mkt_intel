@@ -48,6 +48,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -159,11 +160,24 @@ def gitignore_for_branch(text: str) -> str:
     return strip_claude_lines(text).rstrip("\n") + "\n" + BRANCH_IGNORE
 
 
+_AUTHOR_EMAIL = re.compile(r',\s*email\s*=\s*"[^"]*"')
+
+
 def pyproject_for_branch(text: str) -> str:
-    """Tira o publicador do manual: ele escreve no GitHub pessoal do autor."""
-    return "".join(
-        line for line in text.splitlines(keepends=True) if not line.startswith("publica-wiki =")
-    )
+    """Tira o publicador do manual e o e-mail pessoal dos autores.
+
+    O publicador escreve no GitHub pessoal do autor, e o e-mail pessoal não
+    deve chegar ao repositório do BC — pela mesma razão que os commits do
+    branch saem com o e-mail corporativo.
+    """
+    lines = []
+    for line in text.splitlines(keepends=True):
+        if line.startswith("publica-wiki ="):
+            continue
+        if line.startswith("authors ="):
+            line = _AUTHOR_EMAIL.sub("", line)
+        lines.append(line)
+    return "".join(lines)
 
 
 def mentions_claude(path: str, content: bytes) -> bool:
@@ -206,18 +220,20 @@ def _config(*args: str) -> str | None:
         return None
 
 
-def _identity_env() -> dict[str, str] | None:
+def _identity_env() -> dict[str, str]:
     """Ambiente com o e-mail do autor para os commits do branch.
 
     O repositório do BC não deve receber o e-mail pessoal que assina a
     ``main``. O e-mail vem de ``git config empresarial.email`` — config local
     do clone, nunca versionada — e vale para autor e committer. Sem a chave, o
-    commit sai com a identidade padrão do clone.
+    commit sairia com a identidade pessoal do clone, e por isso não sai.
     """
     email = _config("empresarial.email")
     if not email:
-        print("WARNING: empresarial.email not set; using the default identity", file=sys.stderr)
-        return None
+        raise SystemExit(
+            "empresarial.email is not set; run `git config empresarial.email <corporate "
+            "e-mail>` first — without it the commit would carry the personal identity"
+        )
     return {**os.environ, "GIT_AUTHOR_EMAIL": email, "GIT_COMMITTER_EMAIL": email}
 
 
