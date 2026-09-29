@@ -59,7 +59,7 @@ se delega.
 ## As duas formas de rodar
 
 O [runbook](03-runbook.md) é contado no terminal, com `uv run matinal`.
-`notebooks/comentario_matinal/plantao.ipynb`
+`notebooks/comentario_matinal/plantao_claude.ipynb`
 é a outra forma, com os mesmos passos em células: quem prefere ver o painel e as
 tabelas na própria página, ou quer inspecionar o `DataFrame` que virou o bloco
 direcional, roda por lá.

@@ -62,7 +62,8 @@ mkt_intel/
 │   ├── wiki.py                   fora do plantão — publica `docs/comentario_matinal/plantao/` no Wiki
 │   └── render/                   painel, tabelas do calendário e o que elas precisam
 ├── notebooks/comentario_matinal/
-│   ├── plantao.ipynb             fachada de notebook — as mesmas funções, em células
+│   ├── plantao_claude.ipynb      fachada de notebook — as mesmas funções, em células
+│   ├── plantao_copilot.ipynb     a mesma fachada, com o GitHub Copilot nas etapas de IA
 │   └── imagens.ipynb             só o painel e o calendário, sem o bloco direcional
 ├── tests/comentario_matinal/     o portão: `uv run pytest tests/comentario_matinal`
 ├── config/comentario_matinal/
@@ -88,7 +89,7 @@ padrão que o comando lê.
 ## As duas fachadas, e o que as prende
 
 O plantão roda de duas formas — `uv run matinal`, no terminal, e
-`notebooks/comentario_matinal/plantao.ipynb`. Nenhuma das duas o implementa: as duas são fachadas sobre
+`notebooks/comentario_matinal/plantao_claude.ipynb`. Nenhuma das duas o implementa: as duas são fachadas sobre
 `src/comentario_matinal/plantao.py` e chamam as mesmas funções, então não podem
 divergir no que fazem. O que poderia divergir é a **sequência** — ela existe duas
 vezes, no argparse e nas células —, e é isso que `tests/comentario_matinal/test_notebook.py` prende:

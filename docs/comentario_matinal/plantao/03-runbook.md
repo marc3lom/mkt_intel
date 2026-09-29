@@ -4,7 +4,7 @@ Os nove passos, contados no terminal, mais [o envio](#o-envio) — que não tem 
 porque nenhuma linha de código participa dele, e que fica entre o Passo 8 e o Passo 9.
 O quanto cada um demora e por que o roteiro é
 contado em tempo relativo estão em [O primeiro dia](01-primeiro-dia.md#quanto-tempo-leva);
-o que muda ao rodar por `notebooks/comentario_matinal/plantao.ipynb` está em
+o que muda ao rodar por `notebooks/comentario_matinal/plantao_claude.ipynb` está em
 [As duas formas de rodar](01-primeiro-dia.md#as-duas-formas-de-rodar).
 
 ## Passo 1 — Coleta (T0)

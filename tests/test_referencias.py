@@ -12,8 +12,8 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 CITACAO = re.compile(r"tests/[\w/]+\.py")
 
-# O notebook que o autor pediu para ficar intacto, como estava em 29/09/2026.
-INTOCADOS = {"notebooks/comentario_matinal/plantao.ipynb"}
+# O notebook que o autor pediu para ficar intacto (renomeado, sem outra mudança, em 29/09/2026).
+INTOCADOS = {"notebooks/comentario_matinal/plantao_claude.ipynb"}
 
 
 def test_todo_teste_citado_existe():

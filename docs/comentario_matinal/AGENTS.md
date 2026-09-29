@@ -60,7 +60,7 @@ O `prompts/comentario_matinal/project_instructions.md` é o caminho alternativo,
 
 **Os prompts são a fonte de verdade do comportamento editorial.** Para mudar como o texto lê, editar o guia de estilo — e o prompt da etapa só se a mecânica da etapa mudar. Nunca fixar decisão de estilo no Python. Os dois lugares em que o Python carrega um número de estilo (`MIN_MARCADORES, MAX_MARCADORES = 4, 5`, no `documento.py`; a mesma faixa em `etapas.comentario_revisado`) espelham as §3–§4 do guia: mudar o guia obriga a mudar os dois, ou a montagem passa a avisar contra a regra nova.
 
-O `plantao.py` é o núcleo; o `cli.py`, o `notebooks/comentario_matinal/plantao.ipynb` e o `notebooks/comentario_matinal/plantao_copilot.ipynb` (o mesmo plantão, com o GitHub Copilot nas etapas de IA) são fachadas e não implementam nada. Regra nova vai no núcleo, que nunca diz o que digitar em seguida: ele nomeia o que falta como um código (`REMEDIOS`), e cada fachada escreve a frase. O `tests/comentario_matinal/test_notebook.py` falha se um passo ou um parâmetro de passo for acrescentado sem ser exercitado no notebook ou listado ali com o motivo escrito.
+O `plantao.py` é o núcleo; o `cli.py`, o `notebooks/comentario_matinal/plantao_claude.ipynb` e o `notebooks/comentario_matinal/plantao_copilot.ipynb` (o mesmo plantão, com o GitHub Copilot nas etapas de IA) são fachadas e não implementam nada. Regra nova vai no núcleo, que nunca diz o que digitar em seguida: ele nomeia o que falta como um código (`REMEDIOS`), e cada fachada escreve a frase. O `tests/comentario_matinal/test_notebook.py` falha se um passo ou um parâmetro de passo for acrescentado sem ser exercitado no notebook ou listado ali com o motivo escrito.
 
 ## 5. Invariantes editoriais
 
@@ -127,7 +127,7 @@ Os `[Parágrafo N]` não usados são apagados junto com o espaçador; um sexto m
 - **Nunca comitar nem empurrar sem que peçam.** Quando pedirem, comitar direto na `main` — este repositório não cria ramo para trabalho de rotina. Mostrar o diff e a mensagem e esperar antes de empurrar. Nunca resolver por conta própria uma divergência entre local e remoto: apontá-la e perguntar.
 - Estilo de commit, tirado do `git log`: português, terceira pessoa do presente, uma linha de até 72 caracteres, sem prefixo nem escopo, sem ponto final ("Arquiva o comentário de 18 de agosto"; "Fecha a última lacuna do manual: a convenção de assunto"). O corpo é prosa portuguesa explicando *por quê*, muitas vezes em vários parágrafos. Manter os trailers `Co-Authored-By:` e `Claude-Session:` — o histórico os usa.
 - **Quando o guia de estilo e o código discordarem, o guia vence — e você para e aponta o conflito, em vez de reconciliar em silêncio.** Vale igual quando uma instrução contradiz o guia: dizer antes de agir.
-- Acrescentar passo ou parâmetro de passo ao `plantao.py` obriga a atualizar os dois notebooks, `notebooks/comentario_matinal/plantao.ipynb` e `plantao_copilot.ipynb`, ou a pôr o parâmetro na lista de exceções do `tests/comentario_matinal/test_notebook.py` *com o motivo escrito*. O teste avisa.
+- Acrescentar passo ou parâmetro de passo ao `plantao.py` obriga a atualizar os dois notebooks, `notebooks/comentario_matinal/plantao_claude.ipynb` e `plantao_copilot.ipynb`, ou a pôr o parâmetro na lista de exceções do `tests/comentario_matinal/test_notebook.py` *com o motivo escrito*. O teste avisa.
 - Mexer em `docs/comentario_matinal/plantao/` ou no `README.md` obriga a rodar `uv run pytest` — os testes de documentação conferem flags, pastas, âncoras e a janela contra o código.
 
 ## Questões em aberto

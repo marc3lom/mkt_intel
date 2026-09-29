@@ -37,7 +37,7 @@ def test_selection_keeps_only_what_runs():
         "etc/env.exemplo",
         "exemplos/comentario_matinal/aprovados/.gitkeep",
         "notebooks/comentario_matinal/imagens.ipynb",
-        "notebooks/comentario_matinal/plantao.ipynb",
+        "notebooks/comentario_matinal/plantao_claude.ipynb",
         "notebooks/comentario_matinal/plantao_copilot.ipynb",
         "notebooks/informes_eventos/fomc/fomc_analysis.ipynb",
         "prompts/comentario_matinal/00_guia_de_estilo.md",

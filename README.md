@@ -29,7 +29,7 @@ mkt_intel/
 │   ├── comentario_matinal/
 │   └── reports/              # sem notebooks/ e sem input/ dentro
 ├── notebooks/
-│   ├── comentario_matinal/   plantao.ipynb, imagens.ipynb
+│   ├── comentario_matinal/   plantao_claude.ipynb, imagens.ipynb
 │   └── informes_eventos/
 │       ├── fomc/             fomc_analysis.ipynb, market_reaction_grid.ipynb
 │       └── payroll/          payroll_analysis.ipynb, payroll_report.ipynb,

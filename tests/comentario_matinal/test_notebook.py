@@ -14,7 +14,7 @@ from comentario_matinal import cli as _cli
 from comentario_matinal.config import RAIZ
 
 NOTEBOOKS = RAIZ / "notebooks" / "comentario_matinal"
-PLANTOES = ("plantao.ipynb", "plantao_copilot.ipynb")
+PLANTOES = ("plantao_claude.ipynb", "plantao_copilot.ipynb")
 COPILOT = NOTEBOOKS / "plantao_copilot.ipynb"
 CLI = Path(_cli.__file__)
 

@@ -8,7 +8,7 @@ ela vive:
 - ``src/``, ``notebooks/``, ``prompts/``, ``templates/``, ``config/``,
   ``.github/prompts/`` e ``etc/``, inteiros, menos: os módulos ``_backend_*.py``
   (o backend local, que depende de uma CLI que as máquinas do BC não têm), o
-  ``wiki.py`` (publica no GitHub pessoal do autor), o ``plantao.ipynb`` (a
+  ``wiki.py`` (publica no GitHub pessoal do autor), o ``plantao_claude.ipynb`` (a
   fachada do backend local; o do branch é o ``plantao_copilot.ipynb``) e o
   ``project_instructions.md`` (o caminho alternativo por um Project, que lá não
   existe);
@@ -79,7 +79,7 @@ INCLUDED_DIRS = (
 ROOT_FILES = ("pyproject.toml", "uv.lock", ".python-version", ".gitattributes")
 EXCLUDED = frozenset(
     {
-        "notebooks/comentario_matinal/plantao.ipynb",
+        "notebooks/comentario_matinal/plantao_claude.ipynb",
         "prompts/comentario_matinal/project_instructions.md",
         "src/comentario_matinal/wiki.py",
     }
