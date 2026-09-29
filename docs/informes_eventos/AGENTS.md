@@ -39,7 +39,7 @@ Tudo roda da raiz do repositório.
 ## Etapas de modelo do FOMC
 
 Resumo, comentários dos bancos e revisão de coerência são etapas de modelo em
-`fomc/core/drafting.py`, disparadas por células do `fomc_analysis.ipynb`. O backend é
+`fomc/core/drafting.py`, disparadas por células do `fomc_analysis.ipynb` ou da cópia `fomc_analysis_copilot.ipynb`, que fixa o backend `copilot` e é a que vai ao branch empresarial. O backend é
 `src/reports/_modelo.py`, **cópia** do `modelo.py` do comentário matinal — nunca
 importar `comentario_matinal`; `tests/informes_eventos/test_independence.py` falha.
 
