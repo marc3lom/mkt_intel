@@ -20,7 +20,11 @@ DOCS = RAIZ / "docs" / PRODUTO
 # únicos documentos fora da aferição, e foi neles que sobreviveram uma contagem
 # de testes velha, uma norma de língua que o código contradizia e uma afirmação
 # sobre qual prompt cita qual seção do guia.
-DOCUMENTOS = sorted(MANUAL.glob("*.md")) + [
+#
+# O manual do Copilot é o que vai ao branch do BC: os colegas o leem sem o
+# autor por perto, e ele passa pela mesma aferição que o do backend local.
+MANUAL_COPILOT = DOCS / "plantao_copilot"
+DOCUMENTOS = sorted(MANUAL.glob("*.md")) + sorted(MANUAL_COPILOT.glob("*.md")) + [
     DOCS / "README.md",
     DOCS / "AGENTS.md",
     DOCS / "CLAUDE.md",
@@ -427,3 +431,29 @@ def test_a_contagem_de_testes_citada_bate_com_a_suite():
         "novo obriga a atualizar o número, ou a tirá-lo do texto — número que "
         "ninguém mantém é pior que nenhum, porque parece conferido."
     )
+
+
+# --- o manual do Copilot -------------------------------------------------------
+
+PAGINAS = ["README.md", "01-primeiro-dia.md", "02-instalacao.md", "03-runbook.md",
+           "04-decisoes.md", "05-quando-da-errado.md"]
+
+
+def test_o_manual_do_copilot_tem_as_mesmas_paginas():
+    """As duas versões do manual contam o mesmo plantão, página por página."""
+    assert sorted(p.name for p in MANUAL.glob("*.md")) == sorted(PAGINAS)
+    assert sorted(p.name for p in MANUAL_COPILOT.glob("*.md")) == sorted(PAGINAS)
+
+
+def test_o_manual_do_copilot_nao_cita_o_backend_local():
+    """Ele vai ao branch do BC, que não menciona o backend local."""
+    citam = [p.name for p in MANUAL_COPILOT.glob("*.md")
+             if "claude" in p.read_text(encoding="utf-8").lower()]
+    assert not citam
+
+
+def test_o_manual_do_copilot_ensina_os_tres_comandos_e_o_notebook():
+    texto = _texto(sorted(MANUAL_COPILOT.glob("*.md")))
+    for etapa in ("triagem", "redacao", "revisao"):
+        assert f"/matinal-{etapa}" in texto, etapa
+    assert "notebooks/comentario_matinal/plantao_copilot.ipynb" in texto

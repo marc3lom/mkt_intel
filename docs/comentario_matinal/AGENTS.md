@@ -22,7 +22,7 @@ Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, 
 | Para quê | Comando | Observação |
 |---|---|---|
 | Instalar | `uv sync`, na raiz | cria a `.venv` única e puxa o `blpapi` do índice da Bloomberg |
-| **Verificar (o padrão)** | `uv run pytest tests/comentario_matinal` | 235 testes, ~7 s, **sem Bloomberg** |
+| **Verificar (o padrão)** | `uv run pytest tests/comentario_matinal` | 238 testes, ~7 s, **sem Bloomberg** |
 | Coletar o mercado | `uv run matinal` | **chama a Bloomberg e grava em `output/comentario_matinal/`** |
 | Coletar sem o BQL | `uv run matinal --sem-calendario` | pula só a consulta do calendário |
 | Só as duas imagens | `uv run matinal imagens` | painel e calendário, sem o bloco direcional |
@@ -43,7 +43,7 @@ Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, 
 
 **Não existe portão de lint.** O `ruff` não é declarado nem configurado; hoje `uvx ruff check .` acusa 38 erros e `uvx ruff format --check .` diz que 30 arquivos seriam reformatados. Não "consertar" isso de passagem, e não acrescentar etapa de lint sem pedido. O portão é o `pytest`.
 
-O `tests/comentario_matinal/test_documentacao.py` prende o `docs/comentario_matinal/plantao/*.md`, o `README.md` e também este arquivo e o `CLAUDE.md` contra o código — flags, subcomandos, a janela, nomes de pasta, âncoras, as seções do guia que a prosa cita e a contagem de testes anunciada aqui em cima. **O que ele não afere é a prosa**: um invariante editorial resumido errado, uma norma inventada, um motivo que deixou de valer — nada disso fica vermelho. Conferir à mão o que for julgamento; a máquina só cuida do que é verificável.
+O `tests/comentario_matinal/test_documentacao.py` prende o `docs/comentario_matinal/plantao/*.md` e o `docs/comentario_matinal/plantao_copilot/*.md` (o manual do Copilot, que vai ao branch empresarial e não pode citar o backend local), o `README.md` e também este arquivo e o `CLAUDE.md` contra o código — flags, subcomandos, a janela, nomes de pasta, âncoras, as seções do guia que a prosa cita e a contagem de testes anunciada aqui em cima. **O que ele não afere é a prosa**: um invariante editorial resumido errado, uma norma inventada, um motivo que deixou de valer — nada disso fica vermelho. Conferir à mão o que for julgamento; a máquina só cuida do que é verificável.
 
 ## 4. Arquitetura do pipeline
 
@@ -128,7 +128,7 @@ Os `[Parágrafo N]` não usados são apagados junto com o espaçador; um sexto m
 - Estilo de commit, tirado do `git log`: português, terceira pessoa do presente, uma linha de até 72 caracteres, sem prefixo nem escopo, sem ponto final ("Arquiva o comentário de 18 de agosto"; "Fecha a última lacuna do manual: a convenção de assunto"). O corpo é prosa portuguesa explicando *por quê*, muitas vezes em vários parágrafos. Manter os trailers `Co-Authored-By:` e `Claude-Session:` — o histórico os usa.
 - **Quando o guia de estilo e o código discordarem, o guia vence — e você para e aponta o conflito, em vez de reconciliar em silêncio.** Vale igual quando uma instrução contradiz o guia: dizer antes de agir.
 - Acrescentar passo ou parâmetro de passo ao `plantao.py` obriga a atualizar os dois notebooks, `notebooks/comentario_matinal/plantao_claude.ipynb` e `plantao_copilot.ipynb`, ou a pôr o parâmetro na lista de exceções do `tests/comentario_matinal/test_notebook.py` *com o motivo escrito*. O teste avisa.
-- Mexer em `docs/comentario_matinal/plantao/` ou no `README.md` obriga a rodar `uv run pytest` — os testes de documentação conferem flags, pastas, âncoras e a janela contra o código.
+- Mexer em `docs/comentario_matinal/plantao/`, em `docs/comentario_matinal/plantao_copilot/` ou no `README.md` obriga a rodar `uv run pytest` — os testes de documentação conferem flags, pastas, âncoras e a janela contra o código.
 
 ## Questões em aberto
 

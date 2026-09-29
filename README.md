@@ -15,7 +15,8 @@ Um projeto uv só: um `pyproject.toml`, um `uv.lock` e uma `.venv`, os três na 
 Instalar é `uv sync`, na raiz; tudo roda **da raiz**, inclusive `uv run jupyter lab`.
 Cada produto tem `AGENTS.md` próprio em `docs/<produto>/`, importado pelo `CLAUDE.md`
 da raiz. O manual de quem roda o plantão do matinal está em
-`docs/comentario_matinal/plantao/`.
+`docs/comentario_matinal/plantao/` (pelo `plantao_claude.ipynb`) e em
+`docs/comentario_matinal/plantao_copilot/` (pelo `plantao_copilot.ipynb`).
 
 ### Estrutura
 
@@ -43,7 +44,7 @@ mkt_intel/
 ├── arquivo/comentario_matinal/AAAA/MM/AAAAMMDD.md
 ├── exemplos/comentario_matinal/{aprovados,rejeitados}/
 ├── docs/
-│   ├── comentario_matinal/   AGENTS.md, CLAUDE.md, README.md, plantao/, superpowers/
+│   ├── comentario_matinal/   AGENTS.md, CLAUDE.md, README.md, plantao/, plantao_copilot/, superpowers/
 │   ├── informes_eventos/     AGENTS.md, README.md, historico-py-bcb.md, superpowers/
 │   └── superpowers/          specs e planos que valem para o repositório
 ├── input/                    # fora do git, inteiro

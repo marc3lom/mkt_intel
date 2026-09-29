@@ -1,7 +1,9 @@
 # comentario_matinal
 
-> **Vai rodar o plantão?** O manual é [`docs/comentario_matinal/plantao/`](plantao/) — instalação,
-> os nove passos, o que é seu decidir e o que fazer quando algo quebra. Este arquivo
+> **Vai rodar o plantão?** Há dois manuais, um por notebook: [`docs/comentario_matinal/plantao/`](plantao/),
+> para o `plantao_claude.ipynb`, e [`docs/comentario_matinal/plantao_copilot/`](plantao_copilot/),
+> para o `plantao_copilot.ipynb` — o que vai ao branch do BC. Instalação, os nove
+> passos, o que é seu decidir e o que fazer quando algo quebra. Este arquivo
 > descreve o repositório para quem mexe no código.
 
 Prompts, guia de estilo e utilitários do Comentário Matinal da Mesa de Investimentos
@@ -28,6 +30,7 @@ mkt_intel/
 │   ├── README.md                 este arquivo — o repositório para quem mexe no código
 │   ├── AGENTS.md                 instruções para quem trabalha no código, humano ou não
 │   ├── CLAUDE.md                 atalho do Claude Code para o AGENTS.md
+│   ├── plantao_copilot/          o mesmo manual, para o plantao_copilot.ipynb
 │   └── plantao/                  o manual de quem roda o plantão
 │       ├── README.md             índice
 │       ├── 01-primeiro-dia.md    o produto, o tempo, as duas formas, a janela
