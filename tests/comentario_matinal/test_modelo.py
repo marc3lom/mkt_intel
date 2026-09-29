@@ -18,6 +18,7 @@ import subprocess
 
 import pytest
 
+from comentario_matinal import _backend_claude as backend
 from comentario_matinal import modelo
 
 
@@ -49,13 +50,13 @@ def chamada(monkeypatch):
         return subprocess.CompletedProcess(
             comando, 0, stdout="resposta do dublê\n", stderr="")
 
-    monkeypatch.setattr(modelo.shutil, "which", lambda _: "/usr/bin/claude")
-    monkeypatch.setattr(modelo.subprocess, "run", falso_run)
+    monkeypatch.setattr(backend.shutil, "which", lambda _: "/usr/bin/claude")
+    monkeypatch.setattr(backend.subprocess, "run", falso_run)
     return vista
 
 
 def executa(**kwargs):
-    return modelo.ClaudeCode().executa(
+    return backend.ClaudeCode().executa(
         "mensagem da etapa", etapa="triagem",
         **{"web": False, "modelo": None, **kwargs})
 
@@ -131,7 +132,7 @@ def test_a_falha_diz_o_motivo_ainda_que_ele_saia_pelo_stdout(
         return subprocess.CompletedProcess(
             comando, 1, stdout="Credit balance is too low", stderr="")
 
-    monkeypatch.setattr(modelo.subprocess, "run", falso_run)
+    monkeypatch.setattr(backend.subprocess, "run", falso_run)
 
     with pytest.raises(modelo.ErroDoModelo) as erro:
         executa()
@@ -179,3 +180,42 @@ def test_o_modelo_so_e_fixado_quando_pedido(chamada):
 
     executa(modelo="opus")
     assert chamada.comando[chamada.comando.index("--model") + 1] == "opus"
+
+
+# --- escolha do backend -------------------------------------------------------
+
+
+def _desliga_opcionais(monkeypatch, disponivel: bool):
+    """Faz todo backend opcional responder `disponivel()` como pedido."""
+    for classe in modelo.BACKENDS.values():
+        if hasattr(classe, "disponivel"):
+            monkeypatch.setattr(classe, "disponivel", staticmethod(lambda: disponivel))
+
+
+def test_sem_variavel_e_com_backend_local_ele_e_o_padrao(monkeypatch):
+    """Na máquina que tem a CLI, nada muda: o padrão continua sendo ela."""
+    monkeypatch.delenv("COMENTARIO_MATINAL_BACKEND", raising=False)
+    _desliga_opcionais(monkeypatch, True)
+    assert modelo.backend_ativo().nome == "claude-code"
+
+
+def test_sem_variavel_e_sem_backend_local_vale_o_copilot(monkeypatch):
+    """Na máquina do BC não há CLI alguma, e ninguém precisa configurar nada."""
+    monkeypatch.delenv("COMENTARIO_MATINAL_BACKEND", raising=False)
+    _desliga_opcionais(monkeypatch, False)
+    assert modelo.padrao() == "copilot"
+
+
+@pytest.mark.xfail(reason="o backend copilot nasce na Task 2", strict=True)
+def test_a_variavel_vence_a_deteccao(monkeypatch):
+    monkeypatch.setenv("COMENTARIO_MATINAL_BACKEND", "copilot")
+    _desliga_opcionais(monkeypatch, True)
+    assert modelo.backend_ativo().nome == "copilot"
+
+
+def test_o_registro_nao_cita_backend_opcional_pelo_nome():
+    """O `modelo.py` vai ao branch empresarial, que não pode mencionar o backend local."""
+    from pathlib import Path
+
+    texto = Path(modelo.__file__).read_text(encoding="utf-8").lower()
+    assert "claude" not in texto

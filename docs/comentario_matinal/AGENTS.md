@@ -14,15 +14,15 @@ Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, 
 - **Bloomberg**: `xbbg` e `blpapi` exigem Windows com o terminal aberto e logado. O `blpapi` não está no PyPI; vem do índice explícito da Bloomberg, declarado no `pyproject.toml` da raiz, e por isso o `uv sync` precisa de rede até ele.
 - Instalação: `uv sync` na raiz do repositório e depois `uv run nbstripout --install` (o filtro de saída dos notebooks, ligado pelo `.gitattributes`).
 - Template: `templates/comentario_matinal/comentario.dotx` (`TEMPLATE_PADRAO` no `config.py`; todo caminho do repositório deriva do `RAIZ`, que está lá).
-- A única variável de ambiente que o código lê é `COMENTARIO_MATINAL_BACKEND` (padrão `claude-code`). As etapas de IA chamam o executável `claude`, que precisa estar no PATH.
-- **A autenticação do backend é a sessão do Claude Code**, não chave de API. O `modelo.py` roda o `claude` com `--safe-mode` — que desliga CLAUDE.md, hooks, skills, plugins, MCP e agentes do ambiente de quem está de plantão, para a etapa render o mesmo em qualquer máquina — e retira `ANTHROPIC_API_KEY` do ambiente do subprocesso, porque uma chave esquecida ali tem precedência e uma chave sem saldo derruba a etapa com código 1. Rodar por chave de API é escrever outro backend, não mexer neste.
+- A única variável de ambiente que o código lê é `COMENTARIO_MATINAL_BACKEND`. Sem ela, vale o backend local (`claude-code`) se o executável `claude` estiver no PATH, e o `copilot` se não estiver. O backend local mora em `src/comentario_matinal/_backend_claude.py` e se registra sozinho: o `modelo.py` importa todo módulo `_backend_*.py` do pacote sem citá-lo, porque vai ao branch empresarial.
+- **A autenticação do backend local é a sessão do Claude Code**, não chave de API. O `_backend_claude.py` roda o `claude` com `--safe-mode` — que desliga CLAUDE.md, hooks, skills, plugins, MCP e agentes do ambiente de quem está de plantão, para a etapa render o mesmo em qualquer máquina — e retira `ANTHROPIC_API_KEY` do ambiente do subprocesso, porque uma chave esquecida ali tem precedência e uma chave sem saldo derruba a etapa com código 1. Rodar por chave de API é escrever outro backend, não mexer neste.
 
 ## 3. Comandos
 
 | Para quê | Comando | Observação |
 |---|---|---|
 | Instalar | `uv sync`, na raiz | cria a `.venv` única e puxa o `blpapi` do índice da Bloomberg |
-| **Verificar (o padrão)** | `uv run pytest tests/comentario_matinal` | 186 testes, ~7 s, **sem Bloomberg** |
+| **Verificar (o padrão)** | `uv run pytest tests/comentario_matinal` | 190 testes, ~7 s, **sem Bloomberg** |
 | Coletar o mercado | `uv run matinal` | **chama a Bloomberg e grava em `output/comentario_matinal/`** |
 | Coletar sem o BQL | `uv run matinal --sem-calendario` | pula só a consulta do calendário |
 | Só as duas imagens | `uv run matinal imagens` | painel e calendário, sem o bloco direcional |

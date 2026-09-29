@@ -174,7 +174,7 @@ def main() -> int:
                         help="Roda a etapa sem o comentário do dia anterior.")
     parser.add_argument("--modelo", type=str, default=None,
                         help="Fixa o modelo da etapa. Sem isto, vale a "
-                             "configuração da CLI do Claude Code.")
+                             "configuração do backend.")
     parser.add_argument("--web", action="store_true",
                         help="Libera busca na web para confirmar dado já "
                              "presente nas fontes. O uso é registrado na "
