@@ -111,7 +111,7 @@ Os `[Parágrafo N]` não usados são apagados junto com o espaçador; um sexto m
 
 ## 9. Não mexer
 
-- **`input/comentario_matinal/`** — os PDFs do dia (Bloomberg, FT, WSJ, sell-side). Fora do git, sujeitos aos termos de uso da Bloomberg. Nunca comitar, nunca reproduzir em extensão, nunca citar além de um trecho curto. Um PDF cujo nome comece por `anterior` é o comentário do dia anterior, não fonte: vai para o campo próprio quando não há `.md` arquivado.
+- **`input/comentario_matinal/`** — os PDFs do dia (Bloomberg, FT, WSJ, sell-side). Fora do git, sujeitos aos termos de uso da Bloomberg. Nunca comitar, nunca reproduzir em extensão, nunca citar além de um trecho curto. Um PDF cujo nome comece por `anterior` é o comentário do dia anterior, não fonte: vai para o campo próprio e vence o `.md` arquivado, que no rodízio pode ser de dias antes.
 - **`output/comentario_matinal/`** — as saídas do dia, inclusive o comentário ainda não enviado. Fora do git.
 - **`*.pdf`, `*.docx`** — fora do git em qualquer lugar. O artefato versionado é o `.md`.
 - **`.env`, `.env.*`, credenciais** — fora do git. Hoje nenhum código deste produto lê `.env`; não acrescentar sem perguntar.

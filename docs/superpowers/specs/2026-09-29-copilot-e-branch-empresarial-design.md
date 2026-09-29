@@ -101,8 +101,11 @@ sai da conversão das fontes (`fontes.converte`) e vai para o slot
 **COMENTÁRIO DO DIA ANTERIOR**. Misturado às fontes, ele seria lido como notícia do dia
 e poderia virar tema (§5.2 do guia).
 
-Precedência: o `.md` de `arquivo/` quando existe; senão o PDF; senão nada, e a etapa
-segue só com as fontes, como hoje. O aviso de progresso diz de onde o anterior veio.
+Precedência (emendada em 29/09, na revisão final): o PDF anexado; senão o `.md` de
+`arquivo/`; senão nada, e a etapa segue só com as fontes, como hoje. No rodízio, o
+arquivo de cada máquina guarda só os comentários de quem a usa, e o mais recente
+pode ser de dias antes; anexar o PDF é o ato deliberado do dia. O aviso de progresso
+diz de onde o anterior veio.
 
 ## 3. Chave do FRED sem 1Password
 
@@ -187,7 +190,7 @@ problemas conhecidos: Bloomberg sem `bbcomm`, proxy do git, código de leitura a
   resposta velha apagada antes de esperar. O mesmo para a cópia em `reports`.
 - Escolha do backend: variável presente, `claude` no PATH, ausente (com `shutil.which`
   dublado).
-- `anterior*.pdf`: sai das fontes, entra no slot, perde para o `.md` arquivado.
+- `anterior*.pdf`: sai das fontes, entra no slot, vence o `.md` arquivado.
 - FRED: variável, `etc/.env`, nenhum dos dois (mensagem de erro).
 - Template do FOMC: o `.dotx` abre e não tem parágrafo de corpo com texto.
 - Script do branch: funções puras de seleção e de reescrita (`.gitignore`,

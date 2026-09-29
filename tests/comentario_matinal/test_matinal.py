@@ -1082,15 +1082,18 @@ def test_sem_arquivado_o_anterior_vem_do_pdf(tmp_path, pdf_falso):
     assert any("anterior.pdf" in a for a in avisos)
 
 
-def test_o_arquivado_vence_o_pdf(tmp_path, pdf_falso):
+def test_o_pdf_anexado_vence_o_arquivado(tmp_path, pdf_falso):
+    """No rodízio, o arquivo local pode ser de dias antes: o de quarta, quando
+    ontem outro colega enviou o de sexta. Anexar o PDF é o ato deliberado do
+    dia, e é ele que vale."""
     from comentario_matinal import plantao
 
     ctx = _ctx(tmp_path)
-    _arquivo_falso(ctx.arquivo, "20260928")
+    _arquivo_falso(ctx.arquivo, "20260924")
     (ctx.fontes / "anterior.pdf").write_bytes(b"%PDF-1.4")
     texto = plantao._do_arquivo(ctx, ctx.asof, lambda _: None)
-    assert "comentário de 20260928" in texto
-    assert "texto de anterior.pdf" not in texto
+    assert "texto de anterior.pdf" in texto
+    assert "comentário de 20260924" not in texto
 
 
 def test_sem_nenhum_dos_dois_a_etapa_segue_so_com_as_fontes(tmp_path, pdf_falso):

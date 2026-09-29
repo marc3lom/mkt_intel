@@ -433,30 +433,31 @@ def monta_bloco(ctx: Contexto, mercado: Mercado, painel: Painel,
 
 def _do_arquivo(ctx: Contexto, asof: datetime,
                 avisa: Callable[[str], None]) -> str | None:
-    """Procura o comentário do dia anterior: no arquivo, senão em PDF nas fontes.
+    """Procura o comentário do dia anterior: em PDF nas fontes, senão no arquivo.
 
     Depender de alguém lembrar de apontar o arquivo fazia as duas checagens que
     ele alimenta — ineditismo e contradição — não acontecerem no dia corrido,
     que é justamente quando elas importam.
 
-    O arquivado vence: é o texto exato que foi enviado, com a data no nome. O
-    PDF é para quem não tem o arquivo — o colega que não fez o plantão de ontem
-    anexa o e-mail impresso junto das fontes.
+    O PDF anexado vence. No rodízio, o arquivo desta máquina guarda só os
+    comentários de quem a usa, e o mais recente dele pode ser de dias antes —
+    o de quarta, quando ontem outro colega enviou o de sexta. Anexar o PDF é o
+    ato deliberado do dia; o arquivado é o que vale quando ninguém anexou nada.
     """
     from comentario_matinal.etapas import com_data, comentario_anterior
     from comentario_matinal.fontes import anterior_em_pdf
-
-    achado = comentario_anterior(ctx.arquivo, asof)
-    if achado is not None:
-        caminho, data = achado
-        avisa(f"Anterior:   {caminho.name} ({data:%d/%m/%Y})")
-        return com_data(caminho.read_text(encoding="utf-8"), data)
 
     em_pdf = anterior_em_pdf(ctx.fontes)
     if em_pdf is not None:
         nome, texto = em_pdf
         avisa(f"Anterior:   {nome} (PDF anexado às fontes)")
         return f"(anexado em PDF, {nome}; data de envio não verificada)\n\n{texto}"
+
+    achado = comentario_anterior(ctx.arquivo, asof)
+    if achado is not None:
+        caminho, data = achado
+        avisa(f"Anterior:   {caminho.name} ({data:%d/%m/%Y})")
+        return com_data(caminho.read_text(encoding="utf-8"), data)
 
     avisa(f"Aviso: nenhum comentário recente em {ctx.arquivo}, nem PDF "
           f"anterior*.pdf em {ctx.fontes}. A etapa roda só com as fontes — a "
