@@ -1103,3 +1103,32 @@ def test_sem_nenhum_dos_dois_a_etapa_segue_so_com_as_fontes(tmp_path, pdf_falso)
     avisos = []
     assert plantao._do_arquivo(ctx, ctx.asof, avisos.append) is None
     assert any("nenhum comentário recente" in a for a in avisos)
+
+
+def test_com_dois_pdfs_do_anterior_vale_o_gravado_por_ultimo(tmp_path, pdf_falso):
+    """A data no nome nem sempre ordena: 01-10 vem antes de 28-09 em ordem de nome."""
+    import os
+
+    from comentario_matinal.fontes import anterior_em_pdf
+
+    velho = tmp_path / "anterior_28-09.pdf"
+    novo = tmp_path / "anterior_01-10.pdf"
+    for pdf in (velho, novo):
+        pdf.write_bytes(b"%PDF-1.4")
+    os.utime(velho, (1_000_000, 1_000_000))
+    os.utime(novo, (2_000_000, 2_000_000))
+    assert anterior_em_pdf(tmp_path)[0] == "anterior_01-10.pdf"
+
+
+def test_pdf_do_anterior_ilegivel_e_avisado(tmp_path, monkeypatch):
+    """Sem aviso, o autor leria "nenhum anterior*.pdf" com o arquivo na pasta."""
+    from comentario_matinal import fontes
+
+    def ruim(pdf):
+        raise ValueError("PDF corrompido")
+
+    monkeypatch.setattr(fontes, "_texto_do_pdf", ruim)
+    (tmp_path / "anterior.pdf").write_bytes(b"%PDF-1.4")
+    avisos = []
+    assert fontes.anterior_em_pdf(tmp_path, avisos.append) is None
+    assert any("anterior.pdf" in a for a in avisos)

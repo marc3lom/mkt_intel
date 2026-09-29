@@ -20,7 +20,7 @@ o `AGENTS.md` não detalha.
 
 ## Escolher quais testes rodar
 
-`uv run pytest tests/comentario_matinal` é o portão do matinal — 233 testes, ~7 s,
+`uv run pytest tests/comentario_matinal` é o portão do matinal — 235 testes, ~7 s,
 sem Bloomberg e sem rede. O portão do repositório inteiro é `uv run pytest`, na raiz.
 Enquanto se itera, dá para estreitar:
 

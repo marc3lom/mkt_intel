@@ -22,7 +22,7 @@ Aqui se produz o **Comentário Matinal** da Mesa de Investimentos (DEPIN/DIRIN, 
 | Para quê | Comando | Observação |
 |---|---|---|
 | Instalar | `uv sync`, na raiz | cria a `.venv` única e puxa o `blpapi` do índice da Bloomberg |
-| **Verificar (o padrão)** | `uv run pytest tests/comentario_matinal` | 233 testes, ~7 s, **sem Bloomberg** |
+| **Verificar (o padrão)** | `uv run pytest tests/comentario_matinal` | 235 testes, ~7 s, **sem Bloomberg** |
 | Coletar o mercado | `uv run matinal` | **chama a Bloomberg e grava em `output/comentario_matinal/`** |
 | Coletar sem o BQL | `uv run matinal --sem-calendario` | pula só a consulta do calendário |
 | Só as duas imagens | `uv run matinal imagens` | painel e calendário, sem o bloco direcional |

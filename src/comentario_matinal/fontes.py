@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
+from collections.abc import Callable
 from pathlib import Path
 
 
@@ -39,24 +40,37 @@ def _texto_do_pdf(pdf: Path) -> str:
     return "\n".join((p.extract_text() or "") for p in leitor.pages).strip()
 
 
-def anterior_em_pdf(origem: Path) -> tuple[str, str] | None:
+def anterior_em_pdf(origem: Path,
+                    avisa: Callable[[str], None] | None = None
+                    ) -> tuple[str, str] | None:
     """O (nome, texto) do PDF do comentário anterior, se houver um com texto.
 
-    Com mais de um, vale o último em ordem de nome — com data no nome, o mais
-    recente.
+    Com mais de um, vale o gravado por último. A data no nome não serve para
+    ordenar: cada um a escreve de um jeito, e "01-10" vem antes de "28-09" em
+    ordem de nome.
+
+    O PDF que não rende texto é dito por ``avisa``: sem isso, o autor leria que
+    não há ``anterior*.pdf`` algum com o arquivo ali na pasta.
     """
     if not origem.is_dir():
         return None
-    candidatos = sorted(p for p in origem.iterdir()
-                        if p.is_file() and p.suffix.lower() == ".pdf"
-                        and e_anterior(p))
-    for pdf in reversed(candidatos):
+    candidatos = sorted((p for p in origem.iterdir()
+                         if p.is_file() and p.suffix.lower() == ".pdf"
+                         and e_anterior(p)),
+                        key=lambda p: (p.stat().st_mtime, p.name), reverse=True)
+    for pdf in candidatos:
         try:
             texto = _texto_do_pdf(pdf)
-        except Exception:  # noqa: BLE001 — PDF ruim não derruba a etapa
-            continue
+        except Exception as e:  # noqa: BLE001 — PDF ruim não derruba a etapa
+            texto = ""
+            motivo = f" ({type(e).__name__}: {e})"
+        else:
+            motivo = " (sem texto — digitalização sem OCR?)"
         if texto:
             return pdf.name, texto
+        if avisa is not None:
+            avisa(f"Aviso: o comentário anterior em {pdf.name} não pôde ser "
+                  f"lido{motivo}.")
     return None
 
 

@@ -447,7 +447,7 @@ def _do_arquivo(ctx: Contexto, asof: datetime,
     from comentario_matinal.etapas import com_data, comentario_anterior
     from comentario_matinal.fontes import anterior_em_pdf
 
-    em_pdf = anterior_em_pdf(ctx.fontes)
+    em_pdf = anterior_em_pdf(ctx.fontes, avisa)
     if em_pdf is not None:
         nome, texto = em_pdf
         avisa(f"Anterior:   {nome} (PDF anexado às fontes)")
