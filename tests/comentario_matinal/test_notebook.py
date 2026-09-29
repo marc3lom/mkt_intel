@@ -14,7 +14,8 @@ from comentario_matinal import cli as _cli
 from comentario_matinal.config import RAIZ
 
 NOTEBOOKS = RAIZ / "notebooks" / "comentario_matinal"
-NOTEBOOK = NOTEBOOKS / "plantao.ipynb"
+PLANTOES = ("plantao.ipynb", "plantao_copilot.ipynb")
+COPILOT = NOTEBOOKS / "plantao_copilot.ipynb"
 CLI = Path(_cli.__file__)
 
 # O fechamento do plantão fica fora do notebook de propósito: apaga
@@ -79,24 +80,30 @@ PARAMETROS_FORA_DO_NOTEBOOK = {
 }
 
 
-def _notebook():
+@pytest.fixture(params=PLANTOES)
+def notebook(request) -> Path:
+    """Os dois notebooks do plantão são fachadas do mesmo núcleo, e os dois são cobrados."""
+    return NOTEBOOKS / request.param
+
+
+def _notebook(caminho: Path):
     import nbformat
 
-    return nbformat.read(NOTEBOOK, as_version=4)
+    return nbformat.read(caminho, as_version=4)
 
 
-def _celulas_de_codigo() -> list[tuple[int, str]]:
+def _celulas_de_codigo(caminho: Path) -> list[tuple[int, str]]:
     """As células de código, numeradas como o notebook as mostra na tela.
 
     A contagem é 1-based e inclui as de markdown, porque é assim que se aponta
     uma célula para alguém — e é o número que a mensagem de falha precisa dar.
     """
-    return [(i, c.source) for i, c in enumerate(_notebook().cells, 1)
+    return [(i, c.source) for i, c in enumerate(_notebook(caminho).cells, 1)
             if c.cell_type == "code"]
 
 
-def _codigo() -> str:
-    return "\n".join(fonte for _, fonte in _celulas_de_codigo())
+def _codigo(caminho: Path) -> str:
+    return "\n".join(fonte for _, fonte in _celulas_de_codigo(caminho))
 
 
 def _parametros_dos_passos(plantao):
@@ -127,10 +134,10 @@ def _nome_da_constante(plantao, valor: str) -> str:
     return valor
 
 
-def test_notebook_cobre_todo_passo_do_nucleo():
+def test_notebook_cobre_todo_passo_do_nucleo(notebook):
     from comentario_matinal import plantao
 
-    codigo = _codigo()
+    codigo = _codigo(notebook)
     faltando = sorted(p for p in plantao.PASSOS
                       if p not in FORA_DO_NOTEBOOK and f"plantao.{p}" not in codigo)
     assert not faltando, (
@@ -140,7 +147,7 @@ def test_notebook_cobre_todo_passo_do_nucleo():
     )
 
 
-def test_o_notebook_segue_a_ordem_dos_passos_do_nucleo():
+def test_o_notebook_segue_a_ordem_dos_passos_do_nucleo(notebook):
     """O que o README promete: é a SEQUÊNCIA que este arquivo prende.
 
     Procurar cada passo no código concatenado só provava presença — trocar duas
@@ -150,7 +157,7 @@ def test_o_notebook_segue_a_ordem_dos_passos_do_nucleo():
     """
     from comentario_matinal import plantao
 
-    celulas = _celulas_de_codigo()
+    celulas = _celulas_de_codigo(notebook)
     # Passo ausente é assunto do teste de cobertura. Aqui ele é pulado, e não
     # contado como fora de ordem: uma falta só precisa de um vermelho.
     presentes = [
@@ -176,7 +183,7 @@ def test_o_notebook_segue_a_ordem_dos_passos_do_nucleo():
     )
 
 
-def test_o_notebook_decide_sobre_todo_parametro_dos_passos():
+def test_o_notebook_decide_sobre_todo_parametro_dos_passos(notebook):
     """Parâmetro novo obriga a decidir se o notebook o exercita, e como.
 
     `roda_etapa` sozinha tem cinco, e o notebook usava dois; os demais existem no
@@ -191,7 +198,7 @@ def test_o_notebook_decide_sobre_todo_parametro_dos_passos():
     """
     from comentario_matinal import plantao
 
-    codigo = _codigo()
+    codigo = _codigo(notebook)
     faltando = sorted(
         f"{passo}({nome})"
         for passo, nome in _parametros_dos_passos(plantao)
@@ -205,7 +212,7 @@ def test_o_notebook_decide_sobre_todo_parametro_dos_passos():
     )
 
 
-def test_o_relatorio_da_conferencia_tem_um_dono_so():
+def test_o_relatorio_da_conferencia_tem_um_dono_so(notebook):
     """O texto do `confere` não pode voltar a existir em duas cópias.
 
     Ele existia palavra por palavra no `cli.py` e numa célula. A frase que explica
@@ -214,7 +221,7 @@ def test_o_relatorio_da_conferencia_tem_um_dono_so():
     as duas fachadas continuariam verdes, dizendo coisas diferentes.
     """
     frase = "Se a alteração foi intencional"
-    for onde, fonte in (("o notebook", _codigo()),
+    for onde, fonte in (("o notebook", _codigo(notebook)),
                         ("o cli.py", CLI.read_text(encoding="utf-8"))):
         assert frase not in fonte, (
             f"{onde} voltou a escrever o relatório da conferência. Ele sai de "
@@ -278,10 +285,10 @@ def test_o_notebook_das_imagens_para_onde_o_subcomando_para():
     )
 
 
-def test_notebook_cobre_todo_subcomando_do_terminal():
+def test_notebook_cobre_todo_subcomando_do_terminal(notebook):
     from comentario_matinal.cli import SUBCOMANDOS
 
-    codigo = _codigo()
+    codigo = _codigo(notebook)
     faltando = sorted(c for c in SUBCOMANDOS
                       if c in EQUIVALENTE and EQUIVALENTE[c] not in codigo)
     assert not faltando, (
@@ -290,7 +297,7 @@ def test_notebook_cobre_todo_subcomando_do_terminal():
     )
 
 
-def test_as_saidas_das_etapas_saem_renderizadas():
+def test_as_saidas_das_etapas_saem_renderizadas(notebook):
     """Triagem, redação e revisão são documentos Markdown; `print` os despeja crus.
 
     Na primeira rodada de verdade a tabela de temas candidatos saiu como uma
@@ -302,7 +309,7 @@ def test_as_saidas_das_etapas_saem_renderizadas():
     Markdown desmancharia o alinhamento das colunas.
     """
     sem_renderizar = [
-        n for n, fonte in _celulas_de_codigo()
+        n for n, fonte in _celulas_de_codigo(notebook)
         if "roda_etapa(" in fonte and "Markdown(" not in fonte
     ]
     assert not sem_renderizar, (
@@ -312,7 +319,7 @@ def test_as_saidas_das_etapas_saem_renderizadas():
     )
 
 
-def _notebook_no_indice():
+def _notebook_no_indice(caminho: Path):
     """O notebook como o git o guardaria, e não como ele está em disco.
 
     Com o filtro `nbstripout` instalado, rodar o notebook suja a árvore de
@@ -332,7 +339,7 @@ def _notebook_no_indice():
         # `:caminho` resolve a partir do topo do repositório, que é onde os
         # notebooks moram agora.
         bruto = subprocess.run(
-            ["git", "show", ":notebooks/comentario_matinal/plantao.ipynb"],
+            ["git", "show", f":notebooks/comentario_matinal/{caminho.name}"],
             capture_output=True, cwd=RAIZ, check=True,
         ).stdout.decode("utf-8")
     except (OSError, subprocess.CalledProcessError) as e:
@@ -340,20 +347,20 @@ def _notebook_no_indice():
     return nbformat.reads(bruto, as_version=4)
 
 
-def test_notebook_comitado_nao_carrega_saida():
-    sujas = [i for i, c in enumerate(_notebook_no_indice().cells, 1)
+def test_notebook_comitado_nao_carrega_saida(notebook):
+    sujas = [i for i, c in enumerate(_notebook_no_indice(notebook).cells, 1)
              if c.cell_type == "code" and (c.get("outputs")
                                            or c.get("execution_count"))]
     assert not sujas, (
         f"As células {sujas} carregam saída de execução. Comitar assim leva dados "
         "de mercado — e possivelmente o texto do comentário antes de ele ter sido "
         "enviado — para o histórico do git. Rodar `uv run nbstripout "
-        "notebooks/comentario_matinal/plantao.ipynb`, ou instalar o filtro com "
+        f"notebooks/comentario_matinal/{notebook.name}`, ou instalar o filtro com "
         "`uv run nbstripout --install`."
     )
 
 
-def test_o_fechamento_do_plantao_nao_entra_no_notebook():
+def test_o_fechamento_do_plantao_nao_entra_no_notebook(notebook):
     """A restrição mais dura do projeto, aferida em vez de combinada.
 
     O `FORA_DO_NOTEBOOK` só dispensa o `fecha_plantao` da cobertura; nada impedia
@@ -362,7 +369,7 @@ def test_o_fechamento_do_plantao_nao_entra_no_notebook():
     comentário do dia anterior, e notebook é onde se re-executa célula sem
     querer.
     """
-    assert "fecha_plantao" not in _codigo(), (
+    assert "fecha_plantao" not in _codigo(notebook), (
         "`fecha_plantao` apareceu numa célula. É o único passo destrutivo do "
         "processo: apaga input/comentario_matinal/ e output/comentario_matinal/ "
         "e grava o arquivo que a triagem de "
@@ -371,7 +378,7 @@ def test_o_fechamento_do_plantao_nao_entra_no_notebook():
     )
 
 
-def test_o_notebook_tem_frase_para_todo_codigo_do_nucleo():
+def test_o_notebook_tem_frase_para_todo_codigo_do_nucleo(notebook):
     """O outro lado do `test_o_terminal_tem_frase_para_todo_codigo_do_nucleo`.
 
     O `REMEDIO.get(..., "")` da célula 2 não falha quando um código novo aparece:
@@ -381,7 +388,7 @@ def test_o_notebook_tem_frase_para_todo_codigo_do_nucleo():
     """
     from comentario_matinal import plantao
 
-    codigo = _codigo()
+    codigo = _codigo(notebook)
     faltando = sorted(
         nome
         for nome in (_nome_da_constante(plantao, valor)
@@ -395,7 +402,7 @@ def test_o_notebook_tem_frase_para_todo_codigo_do_nucleo():
     )
 
 
-def test_o_passo_3_para_o_run_all():
+def test_o_passo_3_para_o_run_all(notebook):
     """A única decisão humana do processo não pode ser atravessada por um Run All.
 
     O terminal tem a parada de graça: `matinal triagem` e `matinal redacao` são
@@ -408,7 +415,7 @@ def test_o_passo_3_para_o_run_all():
     aqui: depois dela, o `TEMAS` já teria sido montado com a escolha velha, e o
     Passo 4 rodado sozinho o consumiria sem que nada tivesse sido decidido.
     """
-    celulas = _celulas_de_codigo()
+    celulas = _celulas_de_codigo(notebook)
     # A célula que *chama* a parada, não a que a define: o bootstrap escreve
     # `def parada(` e não é ele que interrompe coisa alguma.
     n_parada = next((n for n, fonte in celulas
@@ -431,3 +438,27 @@ def test_o_passo_3_para_o_run_all():
         "escolha anterior, e parar ali deixa de proteger o que a parada existe "
         "para proteger."
     )
+
+
+# --- o notebook do Copilot -----------------------------------------------------
+
+
+def test_o_notebook_do_copilot_fixa_o_backend():
+    """Detecção automática mudaria de backend conforme a máquina; aqui é sempre o Copilot."""
+    primeira = _celulas_de_codigo(COPILOT)[0][1]
+    assert 'os.environ["COMENTARIO_MATINAL_BACKEND"] = "copilot"' in primeira
+
+
+def test_o_notebook_do_copilot_ensina_os_tres_comandos():
+    texto = COPILOT.read_text(encoding="utf-8")
+    for etapa in ("triagem", "redacao", "revisao"):
+        assert f"/matinal-{etapa}" in texto, etapa
+
+
+def test_o_notebook_do_copilot_fala_do_anterior_em_pdf():
+    assert "anterior*.pdf" in COPILOT.read_text(encoding="utf-8")
+
+
+def test_o_notebook_do_copilot_nao_cita_o_backend_local():
+    """Ele vai ao branch empresarial, que não menciona o backend local."""
+    assert "claude" not in COPILOT.read_text(encoding="utf-8").lower()
