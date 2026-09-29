@@ -97,3 +97,24 @@ def test_timeout_names_the_command(folder, monkeypatch):
 
 def test_copilot_is_registered():
     assert _modelo.BACKENDS["copilot"] is _modelo.Copilot
+
+
+# --- os prompt files que o chat roda ---------------------------------------------
+
+TOOLS = "tools: ['read/readFile', 'edit/createFile', 'edit/editFiles']"
+
+
+@pytest.mark.parametrize("stage", ["bancos", "resumo", "revisao"])
+def test_each_stage_has_a_prompt_file_matching_the_backend_paths(stage):
+    """O prompt file é o outro lado do backend: os caminhos têm de casar."""
+    from reports import _paths
+
+    path = _paths.ROOT / ".github" / "prompts" / f"{_modelo.COMMAND}-{stage}.prompt.md"
+    assert path.is_file(), f"missing {path}"
+    text = path.read_text(encoding="utf-8")
+    folder = _modelo.COPILOT_DIR.relative_to(_paths.ROOT).as_posix()
+    assert f"{folder}/{stage}.mensagem.md" in text
+    assert f"{folder}/{stage}.resposta.md" in text
+    assert TOOLS in text
+    assert "agent: agent" in text
+    assert "claude" not in text.lower()

@@ -139,3 +139,25 @@ def test_o_pedido_ensina_o_comando(pasta, capsys):
 
 def test_o_copilot_esta_registrado():
     assert modelo.BACKENDS["copilot"] is modelo.Copilot
+
+
+# --- os prompt files que o chat roda ----------------------------------------
+
+FERRAMENTAS = "tools: ['read/readFile', 'edit/createFile', 'edit/editFiles']"
+
+
+@pytest.mark.parametrize("etapa", ["redacao", "revisao", "triagem"])
+def test_cada_etapa_tem_prompt_file_que_le_e_grava_onde_o_backend_espera(etapa):
+    """O prompt file é o outro lado do backend: os caminhos têm de casar."""
+    from comentario_matinal.config import PROMPT_ETAPA, RAIZ
+
+    assert etapa in PROMPT_ETAPA
+    caminho = RAIZ / ".github" / "prompts" / f"{modelo.COMANDO}-{etapa}.prompt.md"
+    assert caminho.is_file(), f"falta {caminho}"
+    texto = caminho.read_text(encoding="utf-8")
+    pasta = modelo.PASTA_COPILOT.relative_to(RAIZ).as_posix()
+    assert f"{pasta}/{etapa}.mensagem.md" in texto
+    assert f"{pasta}/{etapa}.resposta.md" in texto
+    assert FERRAMENTAS in texto, "o agente só lê e grava arquivos: sem terminal, sem web"
+    assert "agent: agent" in texto
+    assert "claude" not in texto.lower()
