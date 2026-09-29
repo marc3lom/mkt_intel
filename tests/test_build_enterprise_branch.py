@@ -99,7 +99,10 @@ def test_pyproject_loses_the_wiki_publisher_only():
         ("src/x.py", b"# nada aqui", False),
         ("README.md", b"CLAUDE.md", True),
         (".gitignore", b".claude/", True),
-        ("templates/x.dotx", b"PK\x03\x04 claude", False),  # binário não é lido
+        ("templates/x.dotx", b"PK\x03\x04\x00\x00 claude", False),  # binário não é lido
+        ("config/novo.json", b'{"x": "Claude"}', True),  # extensão nova também
+        ("scripts/roda.ps1", b"# claude", True),
+        ("etc/Makefile", b"claude:", True),  # sem extensão alguma
     ],
 )
 def test_mentions_claude(path, content, expected):

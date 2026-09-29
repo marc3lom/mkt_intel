@@ -84,20 +84,12 @@ EXCLUDED = frozenset(
         "src/comentario_matinal/wiki.py",
     }
 )
-# Só nos arquivos de texto a busca por menção ao backend local faz sentido: num
-# binário (.dotx, .png) a sequência de bytes pode aparecer por acaso.
-TEXT_SUFFIXES = (
-    ".py",
-    ".ipynb",
-    ".md",
-    ".toml",
-    ".lock",
-    ".txt",
-    ".exemplo",
-    ".gitignore",
-    ".gitattributes",
-    ".python-version",
-)
+# A busca por menção ao backend local vale para todo arquivo de texto, com
+# qualquer extensão ou nenhuma: uma lista de extensões deixaria passar o .json
+# ou o .ps1 que alguém acrescente amanhã. Só o binário fica de fora — num .dotx
+# ou num .png a sequência de bytes pode aparecer por acaso —, e binário é o que
+# tem byte nulo no começo, o mesmo critério do git.
+BINARY_PROBE = 8000
 
 BRANCH_IGNORE = """
 # --- Deste branch --------------------------------------------------------------
@@ -181,7 +173,8 @@ def pyproject_for_branch(text: str) -> str:
 
 
 def mentions_claude(path: str, content: bytes) -> bool:
-    if not path.endswith(TEXT_SUFFIXES):
+    """O arquivo de texto cita o backend local? Binário nunca é acusado."""
+    if b"\0" in content[:BINARY_PROBE]:
         return False
     return b"claude" in content.lower()
 
@@ -277,10 +270,13 @@ def build(base: str, dry_run: bool, bundle: bool) -> int:
     with tempfile.TemporaryDirectory() as tmp:
         env = {**os.environ, "GIT_INDEX_FILE": str(Path(tmp) / "index")}
         _git("read-tree", "--empty", env=env)
+        # -z, como o ls-tree de onde os caminhos vieram: separado por quebra de
+        # linha, um caminho com aspas ou com quebra de linha seria mal lido.
         _git(
             "update-index",
+            "-z",
             "--index-info",
-            stdin=("\n".join(lines) + "\n").encode("utf-8"),
+            stdin=("\0".join(lines) + "\0").encode("utf-8"),
             env=env,
         )
         tree = _git("write-tree", env=env).decode().strip()
