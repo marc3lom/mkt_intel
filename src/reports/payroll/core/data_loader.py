@@ -256,6 +256,11 @@ def get_latest_release() -> dict[str, dict[str, Any]]:
     if "ticker" in data.columns and "value" in data.columns:
         data = data.pivot(index="ticker", columns="field", values="value")
         data.columns = [c.lower() for c in data.columns]
+        # A coluna `value` vem como texto; só os campos numéricos viram número,
+        # porque OBSERVATION_PERIOD e ECO_RELEASE_DT são texto de verdade.
+        for col in ("px_last", "prev_close_val", "bn_survey_median"):
+            if col in data.columns:
+                data[col] = pd.to_numeric(data[col], errors="coerce")
 
     result: dict[str, dict[str, Any]] = {}
 

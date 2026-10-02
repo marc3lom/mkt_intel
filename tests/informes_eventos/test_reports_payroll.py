@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from docx import Document
 
-from reports.payroll.core import data_loader
+from reports.payroll.core import bls_scraper, data_loader
 from reports.payroll.core.calculations import (
     calculate_moving_averages,
     format_date_ptbr,
@@ -88,6 +88,95 @@ class TestFormatReleaseSummary:
                 "Revisao": "",
             },
         ]
+
+
+class TestGetLatestRelease:
+    def test_numeric_fields_arrive_as_numbers(self, monkeypatch):
+        """No formato longo do xbbg 1.x a coluna `value` vem como texto; os campos
+        numéricos têm de sair como número, ou `format_release_summary` quebra."""
+        long = pd.DataFrame(
+            [
+                ("NFP TCH Index", "PX_LAST", "22.0"),
+                ("NFP TCH Index", "PREV_CLOSE_VAL", "79.0"),
+                ("NFP TCH Index", "BN_SURVEY_MEDIAN", "75.0"),
+                ("NFP TCH Index", "ECO_RELEASE_DT", "2026-09-04"),
+                ("NFP TCH Index", "OBSERVATION_PERIOD", "2026-08"),
+            ],
+            columns=["ticker", "field", "value"],
+        )
+
+        class FakeBlp:
+            async def abdp(self, **kwargs):
+                return long
+
+        monkeypatch.setattr(data_loader, "_get_bloomberg_client", FakeBlp)
+        nfp = data_loader.get_latest_release()["NFP"]
+        assert (nfp["actual"], nfp["prior"], nfp["survey"]) == (22.0, 79.0, 75.0)
+        assert nfp["period"] == "2026-08"
+        assert format_release_summary({"NFP": nfp})["Atual"].tolist() == ["22k"]
+
+
+class TestParseBlsResponse:
+    @staticmethod
+    def _series(series_id, values):
+        """`values` em ordem cronológica, a partir de jan/2025; a API devolve do mais novo."""
+        months = pd.period_range("2025-01", periods=len(values), freq="M")
+        data = [
+            {"year": str(m.year), "period": f"M{m.month:02d}", "value": str(v)}
+            for m, v in zip(months, values)
+        ]
+        return {"seriesID": series_id, "data": data[::-1]}
+
+    def test_changes_are_level_differences(self):
+        """Mês corrente, mês anterior e doze meses, em diferença de nível."""
+        payload = {
+            "status": "REQUEST_SUCCEEDED",
+            "Results": {
+                "series": [
+                    self._series("CES0000000001", [100.0 + i for i in range(13)] + [120.0]),
+                    self._series("CES2000000001", [50.0, 52.0, 51.0]),
+                ]
+            },
+        }
+        df = bls_scraper.parse_bls_response(payload)
+        assert pd.isna(df.loc[1, "prior_year"])  # menos de 13 meses: sem variação anual
+        df.loc[1, "prior_year"] = None
+        assert df.astype(object).where(df.notna(), None).to_dict("records") == [
+            {
+                "industry": "Total nonfarm",
+                "level": 0,
+                "prior_year": 120.0 - 101.0,
+                "prior_month": 1.0,
+                "current_month": 120.0 - 112.0,
+            },
+            {
+                "industry": "Construction",
+                "level": 2,
+                "prior_year": None,
+                "prior_month": 2.0,
+                "current_month": -1.0,
+            },
+        ]
+
+    def test_api_failure_raises(self):
+        with pytest.raises(RuntimeError, match="threshold"):
+            bls_scraper.parse_bls_response(
+                {"status": "REQUEST_NOT_PROCESSED", "message": ["daily threshold reached"]}
+            )
+
+    def test_notebook_sectors_are_all_mapped(self):
+        """Todo setor que o gráfico dos notebooks procura tem série."""
+        import json
+
+        from reports import _paths
+
+        nb = _paths.ROOT /"notebooks/informes_eventos/payroll/payroll_report.ipynb"
+        source = "".join(
+            "".join(c["source"]) for c in json.loads(nb.read_text(encoding="utf-8"))["cells"]
+        )
+        block = source.split("INDUSTRY_ORDER = [", 1)[1].split("]", 1)[0]
+        wanted = [s.strip().strip("'\"") for s in block.split(",") if s.strip()]
+        assert wanted and set(wanted) <= set(bls_scraper.BLS_SERIES)
 
 
 class TestGeneratePayrollReport:
